@@ -24,6 +24,10 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 
 Le site est en ligne à l'adresse https://guy-demessimy.github.io/boites-a-classer/ (GitHub Pages, branche `gh-pages` = contenu de `site/`). Code source : https://github.com/Guy-deMessimy/boites-a-classer
 
+## Version mobile
+
+`app/` est aussi une application web installable (PWA) : `manifest.webmanifest` et `sw.js` (fonctionnement hors connexion). À chaque publication d'une nouvelle version, augmenter `VERSION` dans `app/sw.js` pour que les téléphones récupèrent la mise à jour. `site/qr-mobile.svg` est un QR code vers https://guy-demessimy.github.io/boites-a-classer/app/index.html (à refaire si l'adresse change).
+
 ## Fiches à imprimer
 
 Après avoir modifié `app/collections.js`, régénérer les fiches avec `npm install` (une seule fois) puis `npm run fiches` (Google Chrome requis). On peut aussi ouvrir `outils/fiches.html?collection=jardin&version=corrige` dans un navigateur et l'imprimer en A4 paysage.

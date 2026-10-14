@@ -2,27 +2,45 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Boîtes à classer</title>
+  <meta name="theme-color" content="#2f6fde">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Boîtes">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icone.png">
+  <link rel="apple-touch-icon" href="icone-apple.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="barre">
     <h1>📦 Boîtes à classer</h1>
-    <label class="choix">Collection
-      <select id="collection"></select>
+    <label class="choix"><span class="long">Collection</span>
+      <select id="collection" aria-label="Collection"></select>
     </label>
     <div class="actions">
-      <button id="nouvelle" class="principal">＋ Nouvelle boîte</button>
+      <button id="nouvelle" class="principal">＋ <span class="long">Nouvelle boîte</span><span class="court">Boîte</span></button>
       <button id="verifier">✔ Vérifier</button>
-      <button id="ranger" title="Remettre tous les êtres vivants en bas de l'écran">↺ Tout ranger</button>
-      <button id="effacer" title="Supprimer les boîtes et tout ranger">Recommencer</button>
+      <button id="ranger" title="Remettre tous les êtres vivants en bas de l'écran" aria-label="Tout ranger">↺<span class="long"> Tout ranger</span></button>
+      <button id="effacer" title="Supprimer les boîtes et tout ranger" aria-label="Recommencer">
+        <span class="txt-normal"><span class="long">Recommencer</span><span class="court">🗑</span></span><span class="txt-confirmer">Confirmer ?</span>
+      </button>
       <button id="imprimer">Imprimer</button>
     </div>
   </header>
 
-  <main id="espace" aria-label="Plan de travail"></main>
+  <main id="zone">
+    <div id="espace" aria-label="Plan de travail">
+      <div id="toile"><div id="calque"></div></div>
+    </div>
+    <div class="zoom" role="group" aria-label="Zoom">
+      <button id="zoom-moins" aria-label="Dézoomer">−</button>
+      <span id="zoom-niveau">100 %</span>
+      <button id="zoom-plus" aria-label="Zoomer">+</button>
+      <button id="zoom-tout" title="Tout voir" aria-label="Tout voir">⤢</button>
+    </div>
+  </main>
 
   <aside id="bilan" hidden>
     <div class="bilan-tete">
@@ -32,7 +50,7 @@
     <ul id="bilan-liste"></ul>
   </aside>
 
-  <div id="info">Survole un être vivant pour voir ses caractéristiques.</div>
+  <div id="info">Touche ou survole un être vivant pour voir ses caractéristiques.</div>
   <footer id="plateau" aria-label="Êtres vivants à classer"></footer>
 
   <script src="collections.js"></script>

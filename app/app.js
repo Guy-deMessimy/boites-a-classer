@@ -5,18 +5,25 @@
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
   const GRIS = '#8a8f98';
-  const ETRE = { l: 88, h: 76 };
-  const BOITE_MIN = { l: 140, h: 90 };
+  const ETRE = { l: 88, h: 76 }; // taille d'une carte sur le plan de travail (avant zoom)
+  const BOITE_MIN = { l: 120, h: 80 };
+  const ZOOM = { min: 0.35, max: 1.6 };
+  const SEUIL = 5; // déplacement (px) avant qu'un appui devienne un glisser
 
   const $ = (s) => document.querySelector(s);
   const espace = $('#espace');
+  const toile = $('#toile');
+  const calque = $('#calque');
   const plateau = $('#plateau');
   const selColl = $('#collection');
   const info = $('#info');
   const bilan = $('#bilan');
   const bilanListe = $('#bilan-liste');
   const boutonEffacer = $('#effacer');
+  const niveauZoom = $('#zoom-niveau');
   const infoDefaut = info.textContent;
+  const petitEcran = window.matchMedia('(max-width: 700px)');
+  const tactile = window.matchMedia('(pointer: coarse)');
 
   let coll = null;
   let etat = null; // { boites: [{ id, x, y, w, h, attr, texte }], positions: { idEtre: { x, y } } }
@@ -24,6 +31,7 @@
   let elBoites = new Map();
   let elEtres = new Map();
   let menu = null;
+  let zoom = 1;
 
   /* ---------- Outils ---------- */
 
@@ -35,6 +43,7 @@
     return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
   }
 
+  const borne = (v, min, max) => Math.min(max, Math.max(min, v));
   const dansRect = (x, y, r) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   const contient = (b, x, y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
   const englobe = (a, b) => b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h;
@@ -52,17 +61,28 @@
     return null;
   }
 
+  // Convertit une position à l'écran en coordonnées du plan de travail (zoom compris).
+  function versCalque(clientX, clientY) {
+    const r = toile.getBoundingClientRect();
+    return { x: (clientX - r.left) / zoom, y: (clientY - r.top) / zoom };
+  }
+
   /* ---------- Sauvegarde (dans le navigateur) ---------- */
 
   const cle = () => 'boites-a-classer:' + coll.id;
 
-  function sauver() {
-    try { localStorage.setItem(cle(), JSON.stringify(etat)); } catch (e) { /* stockage indisponible */ }
+  function lire(k) {
+    try { return localStorage.getItem(k); } catch (e) { return null; }
   }
+  function ecrire(k, v) {
+    try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ }
+  }
+
+  const sauver = () => ecrire(cle(), JSON.stringify(etat));
 
   function charger() {
     try {
-      const o = JSON.parse(localStorage.getItem(cle()));
+      const o = JSON.parse(lire(cle()));
       if (o && Array.isArray(o.boites) && o.positions && typeof o.positions === 'object') {
         const ids = new Set(coll.etres.map((e) => e.id));
         for (const id of Object.keys(o.positions)) if (!ids.has(id)) delete o.positions[id];
@@ -80,14 +100,14 @@
     attrParId = new Map(coll.attributs.map((a, i) =>
       [a.id, { ...a, couleur: a.couleur || PALETTE[i % PALETTE.length] }]));
     etat = charger();
-    try { localStorage.setItem('boites-a-classer:collection', coll.id); } catch (e) { /* idem */ }
+    ecrire('boites-a-classer:collection', coll.id);
     fermerBilan();
     rendre();
   }
 
   function rendre() {
     fermerMenu();
-    espace.querySelectorAll('.boite, .etre').forEach((n) => n.remove());
+    calque.replaceChildren();
     plateau.replaceChildren();
     elBoites = new Map();
     elEtres = new Map();
@@ -98,15 +118,16 @@
       const el = creerBoite(b);
       el.style.zIndex = String(i + 1);
       elBoites.set(b.id, el);
-      espace.appendChild(el);
+      calque.appendChild(el);
     });
 
     for (const e of coll.etres) {
       const el = creerEtre(e);
       elEtres.set(e.id, el);
       const p = etat.positions[e.id];
-      if (p) { placer(el, p); espace.appendChild(el); } else plateau.appendChild(el);
+      if (p) { placer(el, p); calque.appendChild(el); } else plateau.appendChild(el);
     }
+    ajusterToile();
   }
 
   function placer(el, p) {
@@ -128,6 +149,26 @@
     }
   }
 
+  function etendue() {
+    let w = 0, h = 0;
+    for (const b of etat.boites) { w = Math.max(w, b.x + b.w); h = Math.max(h, b.y + b.h); }
+    for (const p of Object.values(etat.positions)) { w = Math.max(w, p.x + ETRE.l); h = Math.max(h, p.y + ETRE.h); }
+    return { w, h };
+  }
+
+  // La toile a la taille du contenu zoomé (plus une marge) : c'est elle qui fixe la zone de défilement.
+  function ajusterToile() {
+    const { w, h } = etendue();
+    const W = Math.max(w + 160, Math.floor(espace.clientWidth / zoom));
+    const H = Math.max(h + 160, Math.floor(espace.clientHeight / zoom));
+    calque.style.width = W + 'px';
+    calque.style.height = H + 'px';
+    calque.style.transform = `scale(${zoom})`;
+    toile.style.width = Math.floor(W * zoom) + 'px';
+    toile.style.height = Math.floor(H * zoom) + 'px';
+    niveauZoom.textContent = Math.round(zoom * 100) + ' %';
+  }
+
   function colorer(el, b) {
     const c = couleurBoite(b);
     el.style.setProperty('--c', c);
@@ -145,7 +186,10 @@
 
     const tete = document.createElement('div');
     tete.className = 'boite-tete';
-    el.title = 'Glisser pour déplacer la boîte et son contenu';
+
+    const poignee = document.createElement('span');
+    poignee.className = 'poignee';
+    poignee.textContent = '⠿';
 
     const titre = document.createElement('input');
     titre.className = 'boite-titre';
@@ -178,16 +222,22 @@
       rendre();
     });
 
-    const poignee = document.createElement('span');
-    poignee.className = 'poignee';
-    poignee.textContent = '⠿';
-
     tete.append(poignee, titre, btnMenu, btnSuppr);
-    // On déplace la boîte en la saisissant par sa poignée, son bandeau ou son fond.
+
+    // Souris : on saisit la boîte par son bandeau ou son fond.
+    // Doigt : seulement par le bandeau (titre compris : un appui écrit, un glisser déplace),
+    // pour que le fond de la boîte laisse défiler le plan de travail.
     el.addEventListener('pointerdown', (ev) => {
-      if (ev.target.closest('input, button, .boite-coin')) return;
-      glisserBoite(ev, b);
+      if (ev.target.closest('button, .boite-coin')) return;
+      const doigt = ev.pointerType === 'touch';
+      if (ev.target.closest('input')) {
+        if (doigt) glisserBoite(ev, b, SEUIL);
+        return;
+      }
+      if (doigt && !ev.target.closest('.boite-tete')) return;
+      glisserBoite(ev, b, 0);
     });
+    el.title = 'Glisser pour déplacer la boîte et son contenu';
 
     const coin = document.createElement('div');
     coin.className = 'boite-coin';
@@ -221,7 +271,9 @@
 
     el.append(ico, nom);
     el.addEventListener('pointerenter', () => montrerInfo(e));
-    el.addEventListener('pointerleave', () => { info.textContent = infoDefaut; });
+    el.addEventListener('pointerleave', (ev) => {
+      if (ev.pointerType === 'mouse') info.textContent = infoDefaut;
+    });
     el.addEventListener('pointerdown', (ev) => glisserEtre(ev, el, e));
     return el;
   }
@@ -247,43 +299,52 @@
 
   function glisserEtre(ev, el, e) {
     if (ev.button !== 0) return;
-    ev.preventDefault();
-    fermerMenu();
-    oublierVerification();
+    if (ev.pointerType !== 'touch') ev.preventDefault();
     montrerInfo(e);
 
     const r = el.getBoundingClientRect();
-    const dx = ev.clientX - r.left;
-    const dy = ev.clientY - r.top;
-    el.classList.add('en-main');
-    document.body.appendChild(el);
+    const rx = (ev.clientX - r.left) / r.width;
+    const ry = (ev.clientY - r.top) / r.height;
+    let actif = false;
+
+    // Le glisser ne commence qu'après un petit déplacement : un simple appui affiche les caractéristiques,
+    // et dans la réserve un geste horizontal fait défiler la liste au lieu de saisir la carte.
     const bouger = (m) => {
-      el.style.left = (m.clientX - dx) + 'px';
-      el.style.top = (m.clientY - dy) + 'px';
+      if (!actif) {
+        if (Math.hypot(m.clientX - ev.clientX, m.clientY - ev.clientY) < SEUIL) return;
+        actif = true;
+        fermerMenu();
+        oublierVerification();
+        el.classList.add('en-main');
+        el.style.transformOrigin = `${rx * 100}% ${ry * 100}%`;
+        el.style.transform = `scale(${zoom})`;
+        document.body.appendChild(el);
+      }
+      el.style.left = (m.clientX - rx * ETRE.l) + 'px';
+      el.style.top = (m.clientY - ry * ETRE.h) + 'px';
     };
-    bouger(ev);
 
     suivre(bouger, (u) => {
+      if (!actif) return;
       el.remove();
-      const re = espace.getBoundingClientRect();
-      if (dansRect(u.clientX, u.clientY, re)) {
-        etat.positions[e.id] = borner({
-          x: u.clientX - dx - re.left + espace.scrollLeft,
-          y: u.clientY - dy - re.top + espace.scrollTop,
-        });
-      } else {
-        delete etat.positions[e.id];
+      if (u.type !== 'pointercancel') {
+        if (dansRect(u.clientX, u.clientY, espace.getBoundingClientRect())) {
+          const p = versCalque(u.clientX, u.clientY);
+          etat.positions[e.id] = borner({ x: p.x - rx * ETRE.l, y: p.y - ry * ETRE.h });
+        } else {
+          delete etat.positions[e.id];
+        }
+        sauver();
       }
-      sauver();
       rendre();
     });
   }
 
-  function glisserBoite(ev, b) {
+  function glisserBoite(ev, b, seuil) {
     if (ev.button !== 0) return;
-    ev.preventDefault();
-    fermerMenu();
-    oublierVerification();
+    if (!seuil) ev.preventDefault();
+    let actif = !seuil;
+    if (actif) { fermerMenu(); oublierVerification(); }
 
     // La boîte emporte ce qu'elle contient : êtres vivants et boîtes intérieures.
     const etres = Object.entries(etat.positions)
@@ -293,14 +354,21 @@
     const x0 = b.x, y0 = b.y;
 
     suivre((m) => {
-      const dx = Math.max(-x0, m.clientX - ev.clientX);
-      const dy = Math.max(-y0, m.clientY - ev.clientY);
+      if (!actif) {
+        if (Math.hypot(m.clientX - ev.clientX, m.clientY - ev.clientY) < seuil) return;
+        actif = true;
+        fermerMenu();
+        oublierVerification();
+        if (document.activeElement) document.activeElement.blur();
+      }
+      const dx = Math.max(-x0, Math.round((m.clientX - ev.clientX) / zoom));
+      const dy = Math.max(-y0, Math.round((m.clientY - ev.clientY) / zoom));
       b.x = x0 + dx;
       b.y = y0 + dy;
       for (const o of boites) { o.c.x = o.x + dx; o.c.y = o.y + dy; }
       for (const o of etres) etat.positions[o.id] = { x: o.x + dx, y: o.y + dy };
       majPositions();
-    }, () => { sauver(); rendre(); });
+    }, () => { if (actif) { sauver(); rendre(); } });
   }
 
   function redimensionner(ev, b, el) {
@@ -311,12 +379,50 @@
     oublierVerification();
     const w0 = b.w, h0 = b.h;
     suivre((m) => {
-      b.w = Math.max(BOITE_MIN.l, Math.round(w0 + m.clientX - ev.clientX));
-      b.h = Math.max(BOITE_MIN.h, Math.round(h0 + m.clientY - ev.clientY));
+      b.w = Math.max(BOITE_MIN.l, Math.round(w0 + (m.clientX - ev.clientX) / zoom));
+      b.h = Math.max(BOITE_MIN.h, Math.round(h0 + (m.clientY - ev.clientY) / zoom));
       el.style.width = b.w + 'px';
       el.style.height = b.h + 'px';
     }, () => { sauver(); rendre(); });
   }
+
+  /* ---------- Zoom ---------- */
+
+  const zoomParDefaut = () => (petitEcran.matches ? 0.8 : 1);
+
+  // Change le zoom en gardant immobile le point visé (par défaut, le centre du plan de travail).
+  function changerZoom(z, point) {
+    const re = espace.getBoundingClientRect();
+    const px = point ? point.x : re.left + espace.clientWidth / 2;
+    const py = point ? point.y : re.top + espace.clientHeight / 2;
+    const vise = versCalque(px, py);
+    zoom = borne(Math.round(z * 100) / 100, ZOOM.min, ZOOM.max);
+    ecrire('boites-a-classer:zoom', String(zoom));
+    ajusterToile();
+    espace.scrollLeft = vise.x * zoom - (px - re.left);
+    espace.scrollTop = vise.y * zoom - (py - re.top);
+  }
+
+  function toutVoir() {
+    const { w, h } = etendue();
+    if (!w || !h) { changerZoom(zoomParDefaut()); return; }
+    zoom = borne(Math.min(espace.clientWidth / (w + 16), espace.clientHeight / (h + 16), 1.2), ZOOM.min, ZOOM.max);
+    zoom = Math.floor(zoom * 100) / 100;
+    ecrire('boites-a-classer:zoom', String(zoom));
+    ajusterToile();
+    espace.scrollLeft = 0;
+    espace.scrollTop = 0;
+  }
+
+  $('#zoom-moins').addEventListener('click', () => changerZoom(zoom / 1.2));
+  $('#zoom-plus').addEventListener('click', () => changerZoom(zoom * 1.2));
+  $('#zoom-tout').addEventListener('click', toutVoir);
+  // Ctrl + molette, ou pincement sur le pavé tactile d'un ordinateur portable.
+  espace.addEventListener('wheel', (ev) => {
+    if (!ev.ctrlKey) return;
+    ev.preventDefault();
+    changerZoom(zoom * Math.exp(-ev.deltaY / 300), { x: ev.clientX, y: ev.clientY });
+  }, { passive: false });
 
   /* ---------- Menu des attributs ---------- */
 
@@ -347,8 +453,10 @@
 
     const r = ancre.getBoundingClientRect();
     const larg = menu.offsetWidth;
-    menu.style.left = Math.max(8, Math.min(r.right - larg, window.innerWidth - larg - 8)) + 'px';
-    menu.style.top = (r.bottom + 4) + 'px';
+    const haut = menu.offsetHeight;
+    menu.style.left = borne(r.right - larg, 8, window.innerWidth - larg - 8) + 'px';
+    const dessous = r.bottom + 4;
+    menu.style.top = (dessous + haut > window.innerHeight - 8 ? Math.max(8, r.top - haut - 4) : dessous) + 'px';
   }
 
   function fermerMenu() {
@@ -380,7 +488,7 @@
     const dans = (b, e) => centres.has(e.id) && contient(b, centres.get(e.id).x, centres.get(e.id).y);
 
     if (etat.boites.length === 0) {
-      lignes.push(['info', 'Crée une boîte avec « ＋ Nouvelle boîte », puis choisis un attribut.']);
+      lignes.push(['info', 'Crée une boîte avec « ＋ », puis choisis un attribut.']);
     }
 
     for (const b of etat.boites) {
@@ -448,12 +556,14 @@
 
   function nouvelleBoite() {
     const n = etat.boites.length;
+    const visibleL = espace.clientWidth / zoom;
+    const visibleH = espace.clientHeight / zoom;
     const b = {
       id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      x: espace.scrollLeft + 16 + (n % 6) * 28,
-      y: espace.scrollTop + 16 + (n % 6) * 28,
-      w: Math.min(320, Math.max(BOITE_MIN.l, espace.clientWidth - 40)),
-      h: Math.min(220, Math.max(BOITE_MIN.h, espace.clientHeight - 40)),
+      x: Math.round(espace.scrollLeft / zoom + 16 + (n % 6) * 28),
+      y: Math.round(espace.scrollTop / zoom + 16 + (n % 6) * 28),
+      w: Math.round(Math.min(320, Math.max(BOITE_MIN.l, visibleL - 40))),
+      h: Math.round(Math.min(220, Math.max(BOITE_MIN.h, visibleH - 40))),
       attr: null,
       texte: '',
     };
@@ -461,15 +571,16 @@
     sauver();
     oublierVerification();
     rendre();
-    const champ = elBoites.get(b.id).querySelector('.boite-titre');
-    champ.focus();
+    // Sur écran tactile, on propose directement la liste des attributs plutôt que le clavier.
+    const el = elBoites.get(b.id);
+    if (tactile.matches) ouvrirMenu(el.querySelector('.boite-menu'), b);
+    else el.querySelector('.boite-titre').focus();
   }
 
   let attenteEffacer = null;
   function effacer() {
     if (!attenteEffacer) {
-      boutonEffacer.textContent = 'Confirmer ?';
-      boutonEffacer.classList.add('attention');
+      boutonEffacer.classList.add('attention', 'confirmer');
       attenteEffacer = setTimeout(remettreEffacer, 3000);
       return;
     }
@@ -482,8 +593,7 @@
   function remettreEffacer() {
     clearTimeout(attenteEffacer);
     attenteEffacer = null;
-    boutonEffacer.textContent = 'Recommencer';
-    boutonEffacer.classList.remove('attention');
+    boutonEffacer.classList.remove('attention', 'confirmer');
   }
 
   $('#nouvelle').addEventListener('click', nouvelleBoite);
@@ -496,11 +606,18 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') { fermerMenu(); fermerBilan(); }
   });
+  window.addEventListener('resize', ajusterToile);
 
   /* ---------- Démarrage ---------- */
 
+  const zoomSauve = parseFloat(lire('boites-a-classer:zoom'));
+  zoom = Number.isFinite(zoomSauve) ? borne(zoomSauve, ZOOM.min, ZOOM.max) : zoomParDefaut();
+
   for (const c of COLLECTIONS) selColl.add(new Option(c.nom, c.id));
-  let derniere = null;
-  try { derniere = localStorage.getItem('boites-a-classer:collection'); } catch (e) { /* idem */ }
-  choisirCollection(derniere);
+  choisirCollection(lire('boites-a-classer:collection'));
+
+  // Version installable (écran d'accueil du téléphone) et utilisable hors connexion, seulement en ligne.
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* pas de hors-ligne */ });
+  }
 })();

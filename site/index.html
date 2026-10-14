@@ -87,6 +87,9 @@
     .carte p, .carte ol { margin: 0; color: var(--doux); font-size: .95rem; }
     .carte ol { padding-left: 1.2em; }
     .carte .liens { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+    .qr { display: flex; gap: 12px; align-items: center; }
+    .qr img { width: 112px; height: 112px; flex: none; border-radius: 8px; border: 1px solid var(--ligne); background: #fff; }
+    @media (max-width: 700px) { .qr { display: none; } }
     code { background: var(--code); padding: .1em .35em; border-radius: 5px; font-size: .88em; overflow-wrap: anywhere; }
 
     .fonctions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; padding: 0; list-style: none; }
@@ -114,6 +117,20 @@
 
     <h2>Télécharger</h2>
     <div class="grille">
+      <article class="carte" data-os="mobile">
+        <h3>Téléphone et tablette <span class="pour-vous">votre appareil</span></h3>
+        <div class="qr">
+          <img src="qr-mobile.svg" alt="QR code vers la version en ligne">
+          <p>Scanner ce code avec l'appareil photo pour ouvrir le logiciel.</p>
+        </div>
+        <ol>
+          <li>iPhone, iPad : dans Safari, bouton Partager, puis <em>Sur l'écran d'accueil</em>.</li>
+          <li>Android : dans Chrome, menu ⋮, puis <em>Installer l'application</em>.</li>
+        </ol>
+        <p>Une fois installé, il fonctionne aussi sans connexion.</p>
+        <div class="liens"><a class="bouton" href="app/index.html">Ouvrir sur cet appareil</a></div>
+      </article>
+
       <article class="carte" data-os="windows">
         <h3>Windows <span class="pour-vous">votre système</span></h3>
         <ol>
@@ -154,12 +171,13 @@
       <li>Nommer une boîte avec un attribut : bouche, squelette interne, plumes…</li>
       <li>Glisser les êtres vivants dans les boîtes ; leurs caractéristiques s'affichent au survol.</li>
       <li>Vérifier la classification : les erreurs sont signalées une par une.</li>
-      <li>Fonctionne à la souris et au doigt sur tablette.</li>
+      <li>Fonctionne sur ordinateur, tablette et téléphone, à la souris ou au doigt, avec un zoom.</li>
+      <li>S'installe sur l'écran d'accueil d'un téléphone et marche sans connexion.</li>
       <li>Le travail est conservé d'une séance à l'autre.</li>
     </ul>
 
     <footer>
-      Version <span id="version">1.0.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a>
+      Version <span id="version">1.1.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a>
     </footer>
   </main>
 
@@ -167,9 +185,11 @@
     // Met en avant la version adaptée au système du visiteur.
     (function () {
       var ua = navigator.userAgent;
-      var os = /Windows/.test(ua) ? 'windows'
-        : /Macintosh|Mac OS X/.test(ua) && !('ontouchend' in document) ? 'mac'
-        : /Linux|X11/.test(ua) && !/Android/.test(ua) ? 'linux'
+      var mobile = /iPhone|iPad|iPod|Android/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
+      var os = mobile ? 'mobile'
+        : /Windows/.test(ua) ? 'windows'
+        : /Macintosh|Mac OS X/.test(ua) ? 'mac'
+        : /Linux|X11/.test(ua) ? 'linux'
         : null;
       if (!os) return;
       var carte = document.querySelector('.carte[data-os="' + os + '"]');
