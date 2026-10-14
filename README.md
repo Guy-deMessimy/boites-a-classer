@@ -20,7 +20,9 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 1. Modifier `app/` (par exemple ajouter une collection dans `collections.js`) et tester en ouvrant `app/index.html` dans un navigateur.
 2. Pour une nouvelle version, changer `version` dans `desktop/neutralino.config.json` et dans le pied de `site/index.html`.
 3. Lancer `./build.sh` (Node.js requis ; sur un Mac pour signer l'application macOS).
-4. Mettre en ligne le contenu de `site/`.
+4. Lancer `./publier.sh "Ce qui a changé"` : le code part sur GitHub et le site se met à jour.
+
+Le site est en ligne à l'adresse https://guy-demessimy.github.io/boites-a-classer/ (GitHub Pages, branche `gh-pages` = contenu de `site/`). Code source : https://github.com/Guy-deMessimy/boites-a-classer
 
 ## Fiches à imprimer
 
