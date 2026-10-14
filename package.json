@@ -1,0 +1,11 @@
+{
+  "name": "boites-a-classer",
+  "private": true,
+  "scripts": {
+    "fiches": "node outils/generer-fiches.js",
+    "build": "./build.sh"
+  },
+  "devDependencies": {
+    "playwright-core": "1.48.2"
+  }
+}

@@ -1,0 +1,48 @@
+# Boîtes à classer
+
+Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîtées, à partir des attributs qu'ils partagent.
+
+## Organisation
+
+| Dossier | Contenu |
+|---|---|
+| `app/` | Le programme (HTML, CSS, JavaScript, sans dépendance). S'ouvre directement dans un navigateur. |
+| `app/collections.js` | Les collections d'êtres vivants et leurs attributs : c'est ici qu'on en ajoute. |
+| `desktop/` | Configuration Neutralino, qui transforme `app/` en logiciel de bureau. |
+| `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
+| `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
+| `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
+| `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. |
+| `outils/` | Générateur des fiches (`fiches.html` + `generer-fiches.js`). |
+
+## Modifier puis publier
+
+1. Modifier `app/` (par exemple ajouter une collection dans `collections.js`) et tester en ouvrant `app/index.html` dans un navigateur.
+2. Pour une nouvelle version, changer `version` dans `desktop/neutralino.config.json` et dans le pied de `site/index.html`.
+3. Lancer `./build.sh` (Node.js requis ; sur un Mac pour signer l'application macOS).
+4. Mettre en ligne le contenu de `site/`.
+
+## Fiches à imprimer
+
+Après avoir modifié `app/collections.js`, régénérer les fiches avec `npm install` (une seule fois) puis `npm run fiches` (Google Chrome requis). On peut aussi ouvrir `outils/fiches.html?collection=jardin&version=corrige` dans un navigateur et l'imprimer en A4 paysage.
+
+## Fichiers produits
+
+| Fichier | Système |
+|---|---|
+| `boites-a-classer-windows.zip` | Windows 10/11, 64 bits (WebView2, déjà présent) |
+| `boites-a-classer-macos.zip` | macOS 10.15+, Intel et Apple Silicon (signature ad hoc, non notarisée) |
+| `boites-a-classer-linux-x64.tar.gz` | Linux PC (WebKitGTK requis) |
+| `boites-a-classer-linux-arm64.tar.gz` | Linux ARM 64 bits (Raspberry Pi) |
+
+## Limites connues
+
+- L'application macOS n'est pas notarisée : au premier lancement, il faut l'autoriser dans Réglages Système. Pour l'éviter, il faut un compte Apple Developer (99 €/an).
+- Windows peut afficher SmartScreen pour la même raison (pas de certificat de signature de code).
+- Le fichier `.exe` garde l'icône par défaut de Neutralino (la changer demande l'outil `rcedit` sous Windows).
+- Le bouton « Imprimer » n'a pas été testé dans les versions de bureau ; il fonctionne dans un navigateur.
+- Les dessins des êtres vivants sont des emojis : leur apparence change d'un système à l'autre. On peut les remplacer par des images (`image: "images/lapin.png"` dans `collections.js`).
+
+## Licence
+
+Logiciel libre sous licence GNU GPL v3 (voir `LICENSE`).

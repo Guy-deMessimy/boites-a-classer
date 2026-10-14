@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boîtes à classer</title>
+  <link rel="icon" href="icone.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="barre">
+    <h1>📦 Boîtes à classer</h1>
+    <label class="choix">Collection
+      <select id="collection"></select>
+    </label>
+    <div class="actions">
+      <button id="nouvelle" class="principal">＋ Nouvelle boîte</button>
+      <button id="verifier">✔ Vérifier</button>
+      <button id="ranger" title="Remettre tous les êtres vivants en bas de l'écran">↺ Tout ranger</button>
+      <button id="effacer" title="Supprimer les boîtes et tout ranger">Recommencer</button>
+      <button id="imprimer">Imprimer</button>
+    </div>
+  </header>
+
+  <main id="espace" aria-label="Plan de travail"></main>
+
+  <aside id="bilan" hidden>
+    <div class="bilan-tete">
+      <strong>Vérification</strong>
+      <button id="fermer-bilan" aria-label="Fermer">×</button>
+    </div>
+    <ul id="bilan-liste"></ul>
+  </aside>
+
+  <div id="info">Survole un être vivant pour voir ses caractéristiques.</div>
+  <footer id="plateau" aria-label="Êtres vivants à classer"></footer>
+
+  <script src="collections.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

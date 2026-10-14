@@ -1,0 +1,36 @@
+{
+  "applicationId": "fr.boitesaclasser.app",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 47821,
+  "documentRoot": "/resources/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": false,
+  "tokenSecurity": "one-time",
+  "modes": {
+    "window": {
+      "title": "Boîtes à classer",
+      "width": 1200,
+      "height": 800,
+      "minWidth": 800,
+      "minHeight": 560,
+      "center": true,
+      "resizable": true,
+      "exitProcessOnClose": true,
+      "enableInspector": false,
+      "icon": "/resources/icone.png"
+    }
+  },
+  "cli": {
+    "binaryName": "boites-a-classer",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "binaryVersion": "6.10.0",
+    "clientVersion": "6.10.0"
+  },
+  "logging": {
+    "enabled": false,
+    "writeToLogFile": false
+  }
+}

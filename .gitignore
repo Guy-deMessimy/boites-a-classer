@@ -1,0 +1,7 @@
+desktop/node_modules/
+desktop/bin/
+desktop/dist/
+desktop/resources/
+desktop/.tmp/
+.DS_Store
+node_modules/

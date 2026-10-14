@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boîtes à classer</title>
+  <meta name="description" content="Logiciel gratuit pour apprendre à classer les êtres vivants dans des boîtes emboîtées. Windows, macOS, Linux ou directement en ligne.">
+  <link rel="icon" href="icone.png">
+  <style>
+    :root {
+      --fond: #f6f4ef;
+      --carte: #ffffff;
+      --encre: #1f2430;
+      --doux: #5f6675;
+      --ligne: #e2ddd2;
+      --accent: #2f6fde;
+      --accent-encre: #ffffff;
+      --accent-doux: #e8effc;
+      --code: #f1efe9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fond: #15171c;
+        --carte: #1e2128;
+        --encre: #ecedf0;
+        --doux: #a3a8b4;
+        --ligne: #30343d;
+        --accent: #5b8ff0;
+        --accent-encre: #0d1220;
+        --accent-doux: #1f2a40;
+        --code: #262a32;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--fond);
+      color: var(--encre);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+    }
+    main { max-width: 960px; margin: 0 auto; padding: 48px 16px 32px; }
+    header { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+    header img { width: 96px; height: 96px; }
+    h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.1; }
+    .sous-titre { margin: .4rem 0 0; color: var(--doux); font-size: 1.1rem; max-width: 40em; }
+
+    .en-ligne {
+      margin: 32px 0 8px;
+      padding: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 24px;
+      background: var(--accent-doux);
+      border-radius: 14px;
+    }
+    .en-ligne p { margin: 0; }
+    .bouton {
+      display: inline-block;
+      padding: .65rem 1.1rem;
+      border-radius: 10px;
+      background: var(--accent);
+      color: var(--accent-encre);
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .bouton:hover { filter: brightness(1.08); }
+    .bouton.secondaire { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+
+    h2 { margin: 40px 0 16px; font-size: 1.35rem; }
+    .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .carte {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 20px;
+      background: var(--carte);
+      border: 1px solid var(--ligne);
+      border-radius: 14px;
+    }
+    .carte.detecte { border: 2px solid var(--accent); }
+    .carte h3 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+    .carte .pour-vous { font-size: .75rem; font-weight: 600; color: var(--accent); display: none; }
+    .carte.detecte .pour-vous { display: inline; }
+    .carte p, .carte ol { margin: 0; color: var(--doux); font-size: .95rem; }
+    .carte ol { padding-left: 1.2em; }
+    .carte .liens { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+    code { background: var(--code); padding: .1em .35em; border-radius: 5px; font-size: .88em; overflow-wrap: anywhere; }
+
+    .fonctions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; padding: 0; list-style: none; }
+    .fonctions li { padding-left: 1.4em; position: relative; }
+    .fonctions li::before { content: "▣"; position: absolute; left: 0; color: var(--accent); }
+
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--ligne); color: var(--doux); font-size: .9rem; }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="icone.png" alt="">
+      <div>
+        <h1>Boîtes à classer</h1>
+        <p class="sous-titre">Un logiciel gratuit pour apprendre à classer les êtres vivants dans des boîtes emboîtées, selon les attributs qu'ils partagent.</p>
+      </div>
+    </header>
+
+    <section class="en-ligne">
+      <p><strong>Sans rien installer :</strong> le logiciel fonctionne directement dans le navigateur, sur ordinateur ou tablette.</p>
+      <a class="bouton" href="app/index.html">Utiliser en ligne</a>
+    </section>
+
+    <h2>Télécharger</h2>
+    <div class="grille">
+      <article class="carte" data-os="windows">
+        <h3>Windows <span class="pour-vous">votre système</span></h3>
+        <ol>
+          <li>Décompresser le fichier zip.</li>
+          <li>Double-cliquer sur <code>Boites-a-classer.exe</code>.</li>
+        </ol>
+        <p>Si Windows affiche « Windows a protégé votre ordinateur » : cliquer sur <em>Informations complémentaires</em>, puis <em>Exécuter quand même</em>. Windows 10 ou 11.</p>
+        <div class="liens"><a class="bouton" href="telechargements/boites-a-classer-windows.zip" download>Télécharger pour Windows</a></div>
+      </article>
+
+      <article class="carte" data-os="mac">
+        <h3>macOS <span class="pour-vous">votre système</span></h3>
+        <ol>
+          <li>Décompresser le fichier zip.</li>
+          <li>Glisser <code>Boîtes à classer</code> dans le dossier Applications.</li>
+        </ol>
+        <p>Au premier lancement, macOS bloque l'application : ouvrir <em>Réglages Système → Confidentialité et sécurité</em>, puis cliquer sur <em>Ouvrir quand même</em>. macOS 10.15 ou plus récent, puces Intel et Apple.</p>
+        <div class="liens"><a class="bouton" href="telechargements/boites-a-classer-macos.zip" download>Télécharger pour macOS</a></div>
+      </article>
+
+      <article class="carte" data-os="linux">
+        <h3>Linux <span class="pour-vous">votre système</span></h3>
+        <ol>
+          <li>Décompresser : <code>tar xzf boites-a-classer-linux-x64.tar.gz</code></li>
+          <li>Lancer <code>boites-a-classer/boites-a-classer</code>, ou <code>installer.sh</code> pour l'ajouter au menu.</li>
+        </ol>
+        <p>Nécessite WebKitGTK (paquet <code>libwebkit2gtk-4.1-0</code> sur Debian et Ubuntu).</p>
+        <div class="liens">
+          <a class="bouton" href="telechargements/boites-a-classer-linux-x64.tar.gz" download>Linux (PC)</a>
+          <a class="bouton secondaire" href="telechargements/boites-a-classer-linux-arm64.tar.gz" download>Linux ARM (Raspberry Pi)</a>
+        </div>
+      </article>
+    </div>
+
+    <h2>Ce que permet le logiciel</h2>
+    <ul class="fonctions">
+      <li>Créer des boîtes, les déplacer, les agrandir et les emboîter.</li>
+      <li>Nommer une boîte avec un attribut : bouche, squelette interne, plumes…</li>
+      <li>Glisser les êtres vivants dans les boîtes ; leurs caractéristiques s'affichent au survol.</li>
+      <li>Vérifier la classification : les erreurs sont signalées une par une.</li>
+      <li>Fonctionne à la souris et au doigt sur tablette.</li>
+      <li>Le travail est conservé d'une séance à l'autre.</li>
+    </ul>
+
+    <footer>
+      Version <span id="version">1.0.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a>
+    </footer>
+  </main>
+
+  <script>
+    // Met en avant la version adaptée au système du visiteur.
+    (function () {
+      var ua = navigator.userAgent;
+      var os = /Windows/.test(ua) ? 'windows'
+        : /Macintosh|Mac OS X/.test(ua) && !('ontouchend' in document) ? 'mac'
+        : /Linux|X11/.test(ua) && !/Android/.test(ua) ? 'linux'
+        : null;
+      if (!os) return;
+      var carte = document.querySelector('.carte[data-os="' + os + '"]');
+      if (!carte) return;
+      carte.classList.add('detecte');
+      carte.parentNode.insertBefore(carte, carte.parentNode.firstChild);
+    })();
+  </script>
+</body>
+</html>

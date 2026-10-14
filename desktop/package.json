@@ -1,0 +1,7 @@
+{
+  "name": "boites-a-classer-desktop",
+  "private": true,
+  "devDependencies": {
+    "@neutralinojs/neu": "11.8.0"
+  }
+}
