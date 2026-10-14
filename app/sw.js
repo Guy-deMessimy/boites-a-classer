@@ -1,6 +1,6 @@
 // Garde le logiciel en cache pour qu'il fonctionne sans connexion une fois installé.
 // Changer VERSION à chaque publication pour que les appareils récupèrent la nouvelle version.
-const VERSION = 'boites-a-classer-1.2.0';
+const VERSION = 'boites-a-classer-1.2.1';
 const FICHIERS = [
   './', './index.html', './style.css', './app.js', './collections.js', './manifest.webmanifest',
   './icone.png', './icone-apple.png', './icone-192.png', './icone-512.png', './icone-maskable.png',
@@ -17,10 +17,11 @@ self.addEventListener('activate', (ev) => {
 });
 
 // Réseau d'abord (pour avoir la dernière version), cache si hors connexion.
+// « no-cache » oblige à revérifier auprès du serveur au lieu de reprendre une copie gardée par le navigateur.
 self.addEventListener('fetch', (ev) => {
   const req = ev.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-  ev.respondWith(fetch(req)
+  ev.respondWith(fetch(req, { cache: 'no-cache' })
     .then((rep) => {
       if (rep.ok) { const copie = rep.clone(); caches.open(VERSION).then((c) => c.put(req, copie)); }
       return rep;
