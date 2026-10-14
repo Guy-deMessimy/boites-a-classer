@@ -10,6 +10,11 @@ echo "→ Ressources de l'application"
 rm -rf desktop/resources
 mkdir -p desktop/resources
 cp app/* desktop/resources/
+# Bibliothèque Neutralino (fenêtre « Enregistrer sous » pour l'export PDF)
+mkdir -p desktop/resources/js
+cp desktop/neutralino.js desktop/resources/js/neutralino.js
+cp desktop/neutralino-init.js desktop/resources/js/neutralino-init.js
+perl -pi -e 's#  <meta charset="utf-8">#  <meta charset="utf-8">\n  <script src="js/neutralino.js"></script>\n  <script src="js/neutralino-init.js"></script>#' desktop/resources/index.html
 
 echo "→ Binaires Neutralino"
 cd desktop

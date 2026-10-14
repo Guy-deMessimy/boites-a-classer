@@ -1,12 +1,12 @@
 {
   "applicationId": "fr.boitesaclasser.app",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "defaultMode": "window",
   "port": 47821,
   "documentRoot": "/resources/",
   "url": "/",
   "enableServer": true,
-  "enableNativeAPI": false,
+  "enableNativeAPI": true,
   "tokenSecurity": "one-time",
   "modes": {
     "window": {
@@ -27,10 +27,20 @@
     "resourcesPath": "/resources/",
     "extensionsPath": "/extensions/",
     "binaryVersion": "6.10.0",
-    "clientVersion": "6.10.0"
+    "clientVersion": "6.10.0",
+    "clientLibrary": "/resources/js/neutralino.js"
   },
   "logging": {
     "enabled": false,
     "writeToLogFile": false
-  }
+  },
+  "nativeAllowList": [
+    "app.*",
+    "events.*",
+    "os.getPath",
+    "os.showSaveDialog",
+    "filesystem.writeBinaryFile"
+  ],
+  "injectGlobals": true,
+  "injectClientLibrary": false
 }

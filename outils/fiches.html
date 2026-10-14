@@ -37,7 +37,7 @@
     table { border-collapse: collapse; margin: 0 auto; }
     th, td { border: 1px solid #555; text-align: center; vertical-align: middle; }
     thead th { height: 34mm; width: 11mm; padding: 1.5mm 0; font-weight: 600; font-size: 9.5pt; }
-    thead th .vertical { writing-mode: vertical-rl; transform: rotate(180deg); display: inline-block; white-space: nowrap; }
+    thead th .vertical { writing-mode: vertical-rl; transform: rotate(180deg); display: inline-block; height: 31mm; white-space: normal; text-align: left; line-height: 1.15; }
     thead th.coin { width: auto; vertical-align: bottom; text-align: left; padding: 2mm; font-size: 9pt; color: #5f6675; font-weight: 400; }
     tbody th { text-align: left; padding: 0 3mm 0 2mm; font-weight: 500; white-space: nowrap; height: 8.6mm; }
     tbody th .ico { display: inline-block; width: 7mm; font-size: 12pt; }
@@ -110,7 +110,7 @@
       }
 
       function tableau(lignes, cols, remplir, colorer) {
-        var tab = el('table', lignes.length > 12 ? 'compact' : '');
+        var tab = el('table', lignes.length >= 12 ? 'compact' : '');
         var thead = el('thead');
         var tr = el('tr');
         tr.appendChild(el('th', 'coin', 'Êtres vivants ↓   Attributs →'));

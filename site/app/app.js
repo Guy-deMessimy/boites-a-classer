@@ -424,6 +424,234 @@
     changerZoom(zoom * Math.exp(-ev.deltaY / 300), { x: ev.clientX, y: ev.clientY });
   }, { passive: false });
 
+  /* ---------- Export PDF ---------- */
+
+  const POLICE = 'system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif';
+
+  function bornes() {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const ajout = (x, y, l, h) => {
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x + l); y1 = Math.max(y1, y + h);
+    };
+    for (const b of etat.boites) ajout(b.x, b.y, b.w, b.h);
+    for (const p of Object.values(etat.positions)) ajout(p.x, p.y, ETRE.l, ETRE.h);
+    return x0 === Infinity ? null : { x0, y0, x1, y1 };
+  }
+
+  function rectArrondi(g, x, y, l, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + l, y, x + l, y + h, r);
+    g.arcTo(x + l, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + l, y, r);
+    g.closePath();
+  }
+
+  // Raccourcit un texte (avec « … ») pour qu'il tienne dans la largeur donnée.
+  function ajuster(g, texte, largeur) {
+    if (g.measureText(texte).width <= largeur) return texte;
+    let t = texte;
+    while (t.length > 1 && g.measureText(t + '…').width > largeur) t = t.slice(0, -1);
+    return t + '…';
+  }
+
+  function lignes(g, texte, largeur) {
+    const mots = texte.split(' ');
+    const res = [];
+    let ligne = '';
+    for (const m of mots) {
+      const essai = ligne ? ligne + ' ' + m : m;
+      if (ligne && g.measureText(essai).width > largeur) { res.push(ligne); ligne = m; } else ligne = essai;
+    }
+    if (ligne) res.push(ligne);
+    return res;
+  }
+
+  // Dessine une page A4 (200 ppp) : titre, date, plan de travail mis à l'échelle, êtres vivants non placés.
+  function dessinerPage() {
+    const zoneContenu = bornes();
+    const portrait = zoneContenu && (zoneContenu.y1 - zoneContenu.y0) > (zoneContenu.x1 - zoneContenu.x0) * 1.15;
+    const P = portrait ? { l: 1654, h: 2339 } : { l: 2339, h: 1654 };
+    const toileA4 = document.createElement('canvas');
+    toileA4.width = P.l;
+    toileA4.height = P.h;
+    const g = toileA4.getContext('2d');
+    const marge = 100;
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, P.l, P.h);
+
+    g.fillStyle = '#1f2430';
+    g.font = `700 54px ${POLICE}`;
+    g.fillText(ajuster(g, 'Boîtes à classer — ' + coll.nom, P.l - 2 * marge), marge, marge + 40);
+    g.font = `400 32px ${POLICE}`;
+    g.fillStyle = '#5f6675';
+    g.fillText(new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }), marge, marge + 100);
+    const nom = 'Nom : ..................................................';
+    g.fillText(nom, P.l - marge - g.measureText(nom).width, marge + 100);
+    g.fillStyle = '#1f2430';
+    g.fillRect(marge, marge + 130, P.l - 2 * marge, 3);
+
+    const restants = coll.etres.filter((e) => !etat.positions[e.id]);
+    g.font = `400 30px ${POLICE}`;
+    const texteRestants = restants.length
+      ? lignes(g, 'Non placés : ' + restants.map((e) => e.nom).join(', '), P.l - 2 * marge)
+      : [];
+    const zone = { x: marge, y: marge + 175, l: P.l - 2 * marge };
+    zone.h = P.h - zone.y - marge - texteRestants.length * 44;
+
+    if (!zoneContenu) {
+      g.fillStyle = '#5f6675';
+      g.font = `400 36px ${POLICE}`;
+      g.fillText('Aucune boîte ni aucun être vivant placé.', zone.x, zone.y + 60);
+    } else {
+      const l = zoneContenu.x1 - zoneContenu.x0, h = zoneContenu.y1 - zoneContenu.y0;
+      const ech = Math.min(zone.l / l, zone.h / h, 2.6);
+      g.save();
+      g.translate(zone.x, zone.y);
+      g.scale(ech, ech);
+      g.translate(-zoneContenu.x0, -zoneContenu.y0);
+
+      for (const b of [...etat.boites].sort((a, c) => c.w * c.h - a.w * a.h)) {
+        const c = couleurBoite(b);
+        rectArrondi(g, b.x, b.y, b.w, b.h, 10);
+        g.fillStyle = rgba(c, 0.09);
+        g.fill();
+        g.save();
+        g.clip();
+        g.fillStyle = c;
+        g.fillRect(b.x, b.y, b.w, 30);
+        g.restore();
+        rectArrondi(g, b.x, b.y, b.w, b.h, 10);
+        g.lineWidth = 3;
+        g.strokeStyle = c;
+        g.stroke();
+        g.fillStyle = '#ffffff';
+        g.font = `700 15px ${POLICE}`;
+        g.textAlign = 'left';
+        g.textBaseline = 'middle';
+        g.fillText(ajuster(g, b.texte || '(sans attribut)', b.w - 20), b.x + 10, b.y + 16);
+      }
+
+      for (const e of coll.etres) {
+        const p = etat.positions[e.id];
+        if (!p) continue;
+        rectArrondi(g, p.x, p.y, ETRE.l, ETRE.h, 10);
+        g.fillStyle = '#ffffff';
+        g.fill();
+        g.lineWidth = 2;
+        g.strokeStyle = '#c9c2b2';
+        g.stroke();
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillStyle = '#1f2430';
+        g.font = `30px ${POLICE}`;
+        g.fillText(e.emoji || '❓', p.x + ETRE.l / 2, p.y + 30);
+        g.font = `500 12px ${POLICE}`;
+        g.fillText(ajuster(g, e.nom, ETRE.l - 6), p.x + ETRE.l / 2, p.y + 60);
+      }
+      g.restore();
+    }
+
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#5f6675';
+    g.font = `400 30px ${POLICE}`;
+    texteRestants.forEach((t, i) => g.fillText(t, marge, P.h - marge - (texteRestants.length - 1 - i) * 44));
+    return { toileA4, portrait };
+  }
+
+  // Fabrique un PDF d'une page contenant l'image JPEG en pleine page.
+  function pdfDepuisJpeg(jpeg, larg, haut, portrait) {
+    const W = portrait ? 595.28 : 841.89;
+    const H = portrait ? 841.89 : 595.28;
+    const enc = new TextEncoder();
+    const morceaux = [];
+    const positions = [];
+    let taille = 0;
+    const ajouter = (x) => {
+      const b = typeof x === 'string' ? enc.encode(x) : x;
+      morceaux.push(b);
+      taille += b.length;
+    };
+    const objet = (n, ...corps) => {
+      positions[n] = taille;
+      ajouter(`${n} 0 obj\n`);
+      corps.forEach(ajouter);
+      ajouter('\nendobj\n');
+    };
+    const dessin = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+
+    ajouter('%PDF-1.4\n');
+    ajouter(new Uint8Array([37, 226, 227, 207, 211, 10]));
+    objet(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    objet(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    objet(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+    objet(4, `<< /Type /XObject /Subtype /Image /Width ${larg} /Height ${haut} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`, jpeg, '\nendstream');
+    objet(5, `<< /Length ${dessin.length} >>\nstream\n${dessin}\nendstream`);
+    const debutXref = taille;
+    let xref = 'xref\n0 6\n0000000000 65535 f \n';
+    for (let i = 1; i <= 5; i++) xref += String(positions[i]).padStart(10, '0') + ' 00000 n \n';
+    ajouter(`${xref}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${debutXref}\n%%EOF\n`);
+    return new Blob(morceaux, { type: 'application/pdf' });
+  }
+
+  // Dans l'application de bureau (Neutralino), on passe par la fenêtre « Enregistrer sous » du système.
+  // build.sh ajoute à la page de bureau les scripts qui connectent Neutralino (desktop/neutralino-init.js).
+  const natif = () => (window.Neutralino && window.NL_PRET ? window.Neutralino : null);
+
+  async function exporterPdf() {
+    fermerMenu();
+    info.textContent = 'Préparation du PDF…';
+    try {
+      const { toileA4, portrait } = dessinerPage();
+      const image = await new Promise((ok) => toileA4.toBlob(ok, 'image/jpeg', 0.9));
+      const jpeg = new Uint8Array(await image.arrayBuffer());
+      const pdf = pdfDepuisJpeg(jpeg, toileA4.width, toileA4.height, portrait);
+      const nom = `Boîtes à classer - ${coll.nom} - ${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      const N = natif();
+      if (N) {
+        let dossier = '';
+        try { dossier = await N.os.getPath('documents'); } catch (e) { /* dossier par défaut */ }
+        const chemin = await N.os.showSaveDialog('Enregistrer en PDF', {
+          defaultPath: dossier ? `${dossier}/${nom}` : nom,
+          filters: [{ name: 'PDF', extensions: ['pdf'] }],
+        });
+        if (!chemin) { info.textContent = infoDefaut; return; }
+        const fichier = /\.pdf$/i.test(chemin) ? chemin : chemin + '.pdf';
+        await N.filesystem.writeBinaryFile(fichier, await pdf.arrayBuffer());
+        info.textContent = 'PDF enregistré : ' + fichier;
+        return;
+      }
+
+      // Téléphone ou tablette : menu de partage (Fichiers, mail, ENT…) quand il est disponible.
+      const fichier = new File([pdf], nom, { type: 'application/pdf' });
+      if (tactile.matches && navigator.canShare && navigator.canShare({ files: [fichier] })) {
+        try {
+          await navigator.share({ files: [fichier], title: nom });
+          info.textContent = 'PDF partagé.';
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') { info.textContent = infoDefaut; return; }
+          // Partage refusé : on télécharge à la place.
+        }
+      }
+
+      const url = URL.createObjectURL(pdf);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nom;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      info.textContent = 'PDF téléchargé : ' + nom;
+    } catch (e) {
+      info.textContent = 'Impossible de créer le PDF : ' + (e && e.message ? e.message : e);
+    }
+  }
+
   /* ---------- Menu des attributs ---------- */
 
   function ouvrirMenu(ancre, b) {
@@ -601,6 +829,7 @@
   $('#ranger').addEventListener('click', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); });
   boutonEffacer.addEventListener('click', effacer);
   $('#imprimer').addEventListener('click', () => window.print());
+  $('#pdf').addEventListener('click', exporterPdf);
   $('#fermer-bilan').addEventListener('click', fermerBilan);
   selColl.addEventListener('change', () => choisirCollection(selColl.value));
   document.addEventListener('keydown', (ev) => {
