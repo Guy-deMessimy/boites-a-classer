@@ -5,3 +5,5 @@ desktop/resources/
 desktop/.tmp/
 .DS_Store
 node_modules/
+# Corrigés en clair : seule la version chiffrée (site/enseignant/) est publiée
+fiche à imprimer/

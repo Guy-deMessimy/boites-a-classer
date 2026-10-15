@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "fiches": "node outils/generer-fiches.js",
+    "chiffrer": "node outils/chiffrer-fiches.js",
     "build": "./build.sh"
   },
   "devDependencies": {

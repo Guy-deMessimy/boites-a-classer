@@ -12,7 +12,7 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 | `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
 | `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
 | `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
-| `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. |
+| `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. Non publié (voir Espace enseignant). |
 | `outils/` | Générateur des fiches (`fiches.html` + `generer-fiches.js`). |
 
 ## Modifier puis publier
@@ -35,6 +35,12 @@ Le bouton « PDF » dessine le plan de travail sur une page A4 (canvas) et fabri
 ## Fiches à imprimer
 
 Après avoir modifié `app/collections.js`, régénérer les fiches avec `npm install` (une seule fois) puis `npm run fiches` (Google Chrome requis). On peut aussi ouvrir `outils/fiches.html?collection=jardin&version=corrige` dans un navigateur et l'imprimer en A4 paysage.
+
+## Espace enseignant
+
+Le bouton « Je suis enseignant » de la page d'accueil demande un code d'accès puis propose les fiches élève et les corrigés. Les PDF sont publiés **chiffrés** dans `site/enseignant/` (AES-GCM, clé dérivée du code par PBKDF2) : le code n'est écrit nulle part, ni dans le site ni dans le dépôt, et sans lui les fichiers sont illisibles. Le dossier `fiche à imprimer/` (PDF en clair) n'est pas envoyé sur GitHub.
+
+Après avoir régénéré les fiches, ou pour changer de code : `npm run chiffrer` (le code est demandé), puis `./publier.sh`. Les fichiers d'avant le 15/10/2026 restent dans l'historique Git du dépôt public.
 
 ## Fichiers produits
 
