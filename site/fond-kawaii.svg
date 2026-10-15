@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280">
+  <!-- Motif de fond de la page d'accueil, répété en mosaïque. -->
+  <defs>
+    <g id="visage">
+      <circle cx="-7" cy="0" r="2.6" fill="#5b4a63"/>
+      <circle cx="7" cy="0" r="2.6" fill="#5b4a63"/>
+      <path d="M-3.5 4.5 q3.5 3.5 7 0" fill="none" stroke="#5b4a63" stroke-width="2" stroke-linecap="round"/>
+      <ellipse cx="-12.5" cy="5" rx="3.6" ry="2.2" fill="#ff8fb3" opacity=".8"/>
+      <ellipse cx="12.5" cy="5" rx="3.6" ry="2.2" fill="#ff8fb3" opacity=".8"/>
+    </g>
+    <path id="eclat" d="M0 -8 Q1.2 -1.2 8 0 Q1.2 1.2 0 8 Q-1.2 1.2 -8 0 Q-1.2 -1.2 0 -8Z"/>
+  </defs>
+
+  <!-- Boîte jaune -->
+  <g transform="translate(58 62) rotate(-8)">
+    <rect x="-28" y="-20" width="56" height="44" rx="12" fill="#ffe08a"/>
+    <rect x="-31" y="-26" width="62" height="12" rx="6" fill="#ffd060"/>
+    <use href="#visage" y="6"/>
+  </g>
+
+  <!-- Étoile rose -->
+  <g transform="translate(196 50) rotate(10)">
+    <path d="M0 -17 L5 -6 L16 -5 L8 3 L10 15 L0 9 L-10 15 L-8 3 L-16 -5 L-5 -6Z" fill="#ffb6cf" stroke="#ffb6cf" stroke-width="6" stroke-linejoin="round"/>
+    <g transform="scale(.6) translate(0 2)"><use href="#visage"/></g>
+  </g>
+
+  <!-- Nuage bleu -->
+  <g transform="translate(212 178)">
+    <circle cx="-16" cy="4" r="14" fill="#b9dcff"/>
+    <circle cx="2" cy="-6" r="18" fill="#b9dcff"/>
+    <circle cx="20" cy="4" r="13" fill="#b9dcff"/>
+    <rect x="-30" y="2" width="62" height="16" rx="8" fill="#b9dcff"/>
+    <use href="#visage" x="2" y="4"/>
+  </g>
+
+  <!-- Cœur lavande -->
+  <path transform="translate(128 140) rotate(-12)" d="M0 -4 C-6 -16 -24 -10 -18 4 C-14 12 -4 16 0 22 C4 16 14 12 18 4 C24 -10 6 -16 0 -4Z" fill="#cdb8ff"/>
+
+  <!-- Feuille verte -->
+  <g transform="translate(62 214) rotate(-35)">
+    <path d="M0 -24 C16 -14 16 12 0 24 C-16 12 -16 -14 0 -24Z" fill="#bdeccb"/>
+    <path d="M0 -16 L0 30" stroke="#93d6a6" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Petite boîte rose -->
+  <g transform="translate(150 246) rotate(9)">
+    <rect x="-20" y="-14" width="40" height="30" rx="9" fill="#ffc9dc"/>
+    <rect x="-22" y="-19" width="44" height="9" rx="4.5" fill="#ffb0cb"/>
+    <g transform="scale(.75) translate(0 4)"><use href="#visage"/></g>
+  </g>
+
+  <!-- Éclats et pois -->
+  <use href="#eclat" x="130" y="58" fill="#ffd36e"/>
+  <use href="#eclat" x="258" y="112" fill="#cdb8ff"/>
+  <use href="#eclat" x="24" y="140" fill="#ffb6cf"/>
+  <use href="#eclat" x="250" y="258" fill="#ffd36e"/>
+  <circle cx="102" cy="104" r="4" fill="#b9dcff"/>
+  <circle cx="176" cy="110" r="3" fill="#ffd36e"/>
+  <circle cx="18" cy="262" r="3.5" fill="#cdb8ff"/>
+  <circle cx="98" cy="18" r="3" fill="#bdeccb"/>
+  <circle cx="268" cy="22" r="3.5" fill="#ffb6cf"/>
+</svg>

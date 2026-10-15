@@ -7,6 +7,21 @@
   <meta name="description" content="Logiciel gratuit pour apprendre à classer les êtres vivants dans des boîtes emboîtées. Windows, macOS, Linux ou directement en ligne.">
   <link rel="icon" href="icone.png">
   <style>
+    /* Police Fredoka (SIL Open Font License, voir polices/OFL-fredoka.txt), hébergée avec le site. */
+    @font-face {
+      font-family: "Fredoka";
+      font-weight: 400 700;
+      font-display: swap;
+      src: url(polices/fredoka-latin.woff2) format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: "Fredoka";
+      font-weight: 400 700;
+      font-display: swap;
+      src: url(polices/fredoka-latin-ext.woff2) format("woff2");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
     :root {
       --fond: #f6f4ef;
       --carte: #ffffff;
@@ -17,6 +32,10 @@
       --accent-encre: #ffffff;
       --accent-doux: #e8effc;
       --code: #f1efe9;
+      --degrade: linear-gradient(160deg, #fff1f7 0%, #f4eeff 45%, #eaf5ff 100%);
+      --motif-opacite: .7;
+      --voile: rgb(255 255 255 / .78);
+      --ombre: 0 6px 18px rgb(214 140 180 / .18);
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -29,19 +48,58 @@
         --accent-encre: #0d1220;
         --accent-doux: #1f2a40;
         --code: #262a32;
+        --degrade: linear-gradient(160deg, #241a33 0%, #1c1b36 45%, #152238 100%);
+        --motif-opacite: .16;
+        --voile: rgb(24 22 38 / .82);
+        --ombre: 0 6px 18px rgb(0 0 0 / .35);
       }
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: var(--fond);
+      background: var(--fond) var(--degrade) fixed;
       color: var(--encre);
-      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      font: 17px/1.55 "Fredoka", "Arial Rounded MT Bold", system-ui, sans-serif;
     }
-    main { max-width: 960px; margin: 0 auto; padding: 48px 16px 32px; }
+    /* Motif kawaii (fond-kawaii.svg) sur un calque fixe, derrière tout le contenu. */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: url(fond-kawaii.svg) 0 0 / 280px 280px;
+      opacity: var(--motif-opacite);
+      pointer-events: none;
+    }
+    main { max-width: 960px; margin: 0 auto; padding: 24px 16px 32px; }
+    /* Panneaux voilés : le texte reste lisible au-dessus du motif. */
+    .panneau {
+      padding: 20px;
+      background: var(--voile);
+      border-radius: 22px;
+      box-shadow: var(--ombre);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    .annonce {
+      display: flex;
+      justify-content: center;
+      margin: 0 0 16px;
+    }
+    .annonce p {
+      margin: 0;
+      padding: .55rem 1.3rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ffe08a, #ffc2d8);
+      color: #4a3550;
+      font-weight: 600;
+      font-size: 1.05rem;
+      box-shadow: var(--ombre);
+      text-align: center;
+    }
     header { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
     header img { width: 96px; height: 96px; }
-    h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.1; }
+    h1 { margin: 0; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; font-weight: 700; }
     .sous-titre { margin: .4rem 0 0; color: var(--doux); font-size: 1.1rem; max-width: 40em; }
     .auteur { margin: .5rem 0 0; font-size: .95rem; font-weight: 600; color: var(--accent); }
 
@@ -54,13 +112,14 @@
       justify-content: space-between;
       gap: 12px 24px;
       background: var(--accent-doux);
-      border-radius: 14px;
+      border-radius: 22px;
+      box-shadow: var(--ombre);
     }
     .en-ligne p { margin: 0; }
     .bouton {
       display: inline-block;
       padding: .65rem 1.1rem;
-      border-radius: 10px;
+      border-radius: 999px;
       background: var(--accent);
       color: var(--accent-encre);
       font-weight: 600;
@@ -70,7 +129,7 @@
     .bouton:hover { filter: brightness(1.08); }
     .bouton.secondaire { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
 
-    h2 { margin: 40px 0 16px; font-size: 1.35rem; }
+    h2 { margin: 40px 0 16px; font-size: 1.5rem; font-weight: 600; }
     .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
     .carte {
       display: flex;
@@ -79,10 +138,11 @@
       padding: 20px;
       background: var(--carte);
       border: 1px solid var(--ligne);
-      border-radius: 14px;
+      border-radius: 22px;
+      box-shadow: var(--ombre);
     }
     .carte.detecte { border: 2px solid var(--accent); }
-    .carte h3 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+    .carte h3 { margin: 0; font-size: 1.3rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
     .carte .pour-vous { font-size: .75rem; font-weight: 600; color: var(--accent); display: none; }
     .carte.detecte .pour-vous { display: inline; }
     .carte p, .carte ol { margin: 0; color: var(--doux); font-size: .95rem; }
@@ -93,9 +153,9 @@
     @media (max-width: 700px) { .qr { display: none; } }
     code { background: var(--code); padding: .1em .35em; border-radius: 5px; font-size: .88em; overflow-wrap: anywhere; }
 
-    .fonctions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; padding: 0; list-style: none; }
-    .fonctions li { padding-left: 1.4em; position: relative; }
-    .fonctions li::before { content: "▣"; position: absolute; left: 0; color: var(--accent); }
+    .fonctions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; margin: 0; list-style: none; }
+    .fonctions li { padding-left: 1.5em; position: relative; }
+    .fonctions li::before { content: "✿"; position: absolute; left: 0; color: var(--accent); }
 
     header .enseignant { margin-left: auto; font: inherit; font-weight: 600; cursor: pointer; }
 
@@ -104,7 +164,7 @@
       max-height: calc(100vh - 32px);
       padding: 24px;
       border: 1px solid var(--ligne);
-      border-radius: 14px;
+      border-radius: 22px;
       background: var(--carte);
       color: var(--encre);
     }
@@ -116,7 +176,7 @@
       flex: 1 1 200px;
       padding: .6rem .8rem;
       border: 1px solid var(--ligne);
-      border-radius: 10px;
+      border-radius: 999px;
       background: var(--fond);
       color: var(--encre);
       font: inherit;
@@ -125,17 +185,21 @@
     dialog .erreur { min-height: 1.5em; margin: 8px 0 0; color: #c0392b; font-weight: 600; }
     dialog .fermer { position: absolute; top: 12px; right: 12px; padding: 4px 10px; background: none; color: var(--doux); font-size: 1.4rem; line-height: 1; }
     .fiches { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-    .fiches li { padding: 12px 14px; border: 1px solid var(--ligne); border-radius: 10px; }
+    .fiches li { padding: 12px 14px; border: 1px solid var(--ligne); border-radius: 16px; }
     .fiches strong { display: block; margin-bottom: 8px; }
     .fiches .liens { display: flex; flex-wrap: wrap; gap: 8px; }
 
-    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--ligne); color: var(--doux); font-size: .9rem; }
+    footer { margin-top: 48px; padding: 14px 20px; color: var(--doux); font-size: .9rem; }
     footer a { color: var(--accent); }
   </style>
 </head>
 <body>
   <main>
-    <header>
+    <aside class="annonce" aria-label="Annonce">
+      <p>✨ Prochaine mise à jour 2.0 ✨</p>
+    </aside>
+
+    <header class="panneau">
       <img src="icone.png" alt="">
       <div>
         <h1>Boîtes à classer</h1>
@@ -201,7 +265,7 @@
     </div>
 
     <h2>Ce que permet le logiciel</h2>
-    <ul class="fonctions">
+    <ul class="fonctions panneau">
       <li>Créer des boîtes, les déplacer, les agrandir et les emboîter.</li>
       <li>Nommer une boîte avec un attribut : bouche, squelette interne, plumes…</li>
       <li>Glisser les êtres vivants dans les boîtes ; leurs caractéristiques s'affichent au survol.</li>
@@ -213,7 +277,7 @@
       <li>Le travail est conservé d'une séance à l'autre.</li>
     </ul>
 
-    <footer>
+    <footer class="panneau">
       Version <span id="version">1.2.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a>
     </footer>
   </main>
