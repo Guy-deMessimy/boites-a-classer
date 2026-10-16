@@ -7,3 +7,5 @@ desktop/.tmp/
 node_modules/
 # Corrigés en clair : seule la version chiffrée (site/enseignant/) est publiée
 fiche à imprimer/
+# Données locales de wrangler (base D1 de test)
+.wrangler/

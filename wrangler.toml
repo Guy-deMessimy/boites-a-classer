@@ -1,0 +1,12 @@
+# Configuration Cloudflare Pages : le site (dossier site/) et l'API de sauvegarde en ligne (functions/, base D1).
+# Voir README, « Sauvegarde en ligne ».
+name = "boites-a-classer"
+pages_build_output_dir = "site"
+compatibility_date = "2026-10-01"
+
+# Base créée avec : npx wrangler d1 create boites-a-classer --jurisdiction eu   (données gardées dans l'Union européenne)
+[[d1_databases]]
+binding = "DB"
+database_name = "boites-a-classer"
+database_id = "eebffbd4-41c0-464f-8a31-9cf20ae29091"
+migrations_dir = "migrations"

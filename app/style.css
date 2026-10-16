@@ -411,6 +411,29 @@ button { touch-action: manipulation; }
 }
 .ed-alertes li.erreur { border-color: var(--faux); background: #fdeeee; font-weight: 600; }
 
+.fenetre h3 { margin: 1.2rem 0 .5rem; font-size: 1rem; }
+.sv-form { display: flex; flex-wrap: wrap; gap: .5rem; }
+.sv-form input[type="text"] { flex: 1 1 220px; }
+.sv-code {
+  margin: .2rem 0 .6rem;
+  padding: .5rem .8rem;
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.sv-etat { min-height: 1.4em; margin: .6rem 0 0; font-size: .9rem; color: var(--ok); }
+.sv-etat.erreur { color: var(--faux); }
+.sv-versions { margin: 0 0 .8rem; padding: 0; list-style: none; font-size: .9rem; }
+.sv-versions li { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; padding: .3rem 0; border-bottom: 1px solid #eee8db; }
+.sv-versions .btn { padding: .2rem .55rem; font-size: .82rem; }
+
 /* Bilan de vérification */
 
 #bilan {

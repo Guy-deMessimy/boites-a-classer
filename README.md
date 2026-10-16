@@ -12,6 +12,7 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 | `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
 | `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
 | `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
+| `functions/`, `migrations/`, `wrangler.toml` | Sauvegarde en ligne : API Cloudflare Pages Functions et base D1 (voir Sauvegarde en ligne). |
 | `redirection/` | Archive : pages qui redirigeaient l'ancienne adresse (GitHub Pages, supprimée) vers la nouvelle. |
 | `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. Non publié (voir Espace enseignant). |
 | `outils/` | Générateur des fiches (`fiches.html` + `generer-fiches.js`). |
@@ -45,6 +46,20 @@ Un fichier `.boites` est du JSON : `{ format: "boites-a-classer", type: "travail
 - une **collection** s'ajoute à « Mes collections » ; si on l'a déjà à l'identique, elle est simplement choisie ; si on a une version différente sous le même identifiant, la nouvelle est ajoutée à côté (rien n'est écrasé).
 
 Ces fichiers circulent entre élèves : tout ce qui est lu est vérifié et borné (`nettoyerCollection`, `nettoyerEtat` dans `app.js`), les images ne sont acceptées qu'en `data:image/png|jpeg|webp|gif`, et rien n'est jamais inséré comme HTML.
+
+## Sauvegarde en ligne
+
+Menu « Fichier → Sauvegarde en ligne ». En l'activant, l'élève reçoit un code de quatre mots tirés au hasard parmi 256 (`MOTS` dans `app.js`, environ 4 milliards de codes), par exemple `lapin-tomate-nuage-velo`. Tout ce que le logiciel garde dans le navigateur (plans de travail et Mes collections, mais pas le zoom ni la collection choisie) est alors envoyé, compressé en gzip, 2,5 secondes après chaque changement. Sur un autre appareil, « J'ai déjà un code » remplace le travail du navigateur par celui du code (un second appui est demandé s'il y avait déjà du travail), et la sauvegarde continue avec ce code.
+
+- Au démarrage et au retour sur l'onglet, si le serveur a une version plus récente et que l'appareil n'a rien en attente, elle est prise ; sinon l'appareil envoie la sienne. Hors connexion, l'envoi attend le retour du réseau.
+- Le serveur garde les 10 dernières versions de chaque code ; « Revenir à celle-ci » rétablit une version, qui devient la plus récente.
+- « Arrêter sur cet appareil » oublie le code ; le travail reste dans le navigateur et sur le serveur.
+
+Côté serveur (Cloudflare) : `functions/api/sauvegarde.js` (Pages Functions) et la base D1 `boites-a-classer` (`wrangler.toml`, créée avec `--jurisdiction eu` : données gardées dans l'Union européenne ; table dans `migrations/`). Le serveur ne lit pas le contenu, le range sous l'empreinte SHA-256 du code (le code n'est pas stocké), refuse plus de 1,9 Mo (limite d'une valeur D1) et efface ce qui n'a pas été modifié depuis un an. Le code passe dans l'en-tête `X-Code-Sauvegarde`, jamais dans l'adresse. L'API accepte les appels d'autres origines (CORS) pour l'application de bureau, qui l'appelle à l'adresse du site.
+
+Tester en local : `npx wrangler d1 migrations apply boites-a-classer --local`, puis `npx wrangler pages dev` (http://localhost:8788, base locale). Modifier la table : nouveau fichier dans `migrations/`, puis `npx wrangler d1 migrations apply boites-a-classer --remote`.
+
+Limites : n'importe qui connaissant un code peut lire et modifier le travail correspondant ; il n'y a pas de limite du nombre d'envois (offre gratuite Cloudflare : 100 000 requêtes par jour, 5 Go de base). Navigateurs trop anciens (sans `CompressionStream`, par exemple iOS 15) : la sauvegarde en ligne n'est pas proposée.
 
 ## Mes collections
 

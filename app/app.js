@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -83,6 +83,7 @@
   }
   function ecrire(k, v) {
     try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ }
+    signalerChangement(k);
   }
 
   const sauver = () => ecrire(cle(), JSON.stringify(etat));
@@ -925,40 +926,53 @@
   // après « #transfert= », ce qu'elle avait gardé (voir redirection/demenagement.js). Le fragment n'est jamais envoyé au serveur.
   // Le même contenu peut aussi arriver dans un fichier « sauvegarde » quand il est trop gros pour l'adresse.
 
-  // Récupère ces données sans jamais remplacer ce qui existe déjà ici. Renvoie le nombre d'éléments récupérés.
-  function importerSauvegarde(donnees) {
+  // Récupère ces données sans jamais remplacer ce qui existe déjà ici, sauf avec « ecraser » (version reçue de la
+  // sauvegarde en ligne, qui devient alors l'état de ce navigateur). Renvoie le nombre d'éléments récupérés.
+  function importerSauvegarde(donnees, ecraser) {
     const PREFIXE = 'boites-a-classer:';
     const entrees = Object.entries(donnees)
       .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE) && idSur(k.slice(PREFIXE.length)));
     const lireJSON = (v) => { try { return JSON.parse(v); } catch (e) { return null; } };
     let n = 0;
 
-    // 1. Collections personnelles qu'on n'a pas encore.
+    // 1. Collections personnelles : celles qu'on n'a pas encore, ou toute la liste reçue avec « ecraser ».
     const recues = entrees.find(([k]) => k === CLE_MES_COLLECTIONS);
     const liste = recues ? lireJSON(recues[1]) : null;
     const ajout = [];
     for (const c of Array.isArray(liste) ? liste : []) {
       try {
         const propre = nettoyerCollection(c);
-        if (!toutes().some((x) => x.id === propre.id) && !ajout.some((x) => x.id === propre.id)) {
+        if (ecraser) {
+          if (!ajout.some((x) => x.id === propre.id)) ajout.push(propre);
+        } else if (!toutes().some((x) => x.id === propre.id) && !ajout.some((x) => x.id === propre.id)) {
           ajout.push({ ...propre, nom: nomLibre(propre.nom) });
         }
       } catch (e) { /* collection abîmée : ignorée */ }
     }
-    if (ajout.length) {
+    if (ecraser) {
+      if (JSON.stringify(ajout) !== JSON.stringify(mesCollections)) sauverMesCollections(ajout);
+    } else if (ajout.length) {
       sauverMesCollections([...mesCollections, ...ajout]);
       n += ajout.length;
     }
 
     // 2. Plans de travail, collection choisie et zoom.
     for (const [k, v] of entrees) {
-      if (k === CLE_MES_COLLECTIONS || lire(k) !== null) continue;
+      if (k === CLE_MES_COLLECTIONS || (!ecraser && lire(k) !== null)) continue;
       if (k === PREFIXE + 'collection' || k === PREFIXE + 'zoom') { ecrire(k, v.slice(0, 80)); continue; }
       const c = toutes().find((x) => PREFIXE + x.id === k);
       const o = lireJSON(v);
       if (!c || !o) continue;
       ecrire(k, JSON.stringify(nettoyerEtat(o, c)));
       n++;
+    }
+
+    // 3. Avec « ecraser » : les plans de travail absents de la version reçue disparaissent aussi d'ici.
+    if (ecraser) {
+      const gardes = new Set(entrees.map(([k]) => k));
+      for (const k of Object.keys(donneesLocales())) {
+        if (k !== CLE_MES_COLLECTIONS && !gardes.has(k)) oublier(k);
+      }
     }
     return n;
   }
@@ -1008,6 +1022,7 @@
     }
     mesCollections = liste;
     remplirSelect();
+    signalerChangement(CLE_MES_COLLECTIONS);
   }
 
   function remplirSelect() {
@@ -1133,6 +1148,7 @@
       return;
     }
     try { localStorage.removeItem('boites-a-classer:' + c.id); } catch (e) { /* stockage indisponible */ }
+    signalerChangement('boites-a-classer:' + c.id);
     if (c === coll) choisirCollection(FOURNIES[0].id);
     remplirListeCollections();
     fenCollections.querySelector('.message').textContent = `Collection « ${c.nom} » supprimée.`;
@@ -1611,6 +1627,7 @@
       m.append(
         entreeMenu('💾 Enregistrer mon travail', enregistrerTravail),
         entreeMenu('📂 Ouvrir un fichier…', ouvrir),
+        entreeMenu(codeSauvegarde() ? '☁️ Sauvegarde en ligne (activée)' : '☁️ Sauvegarde en ligne…', ouvrirSauvegarde),
         document.createElement('hr'),
         entreeMenu('📄 Enregistrer en PDF', exporterPdf),
       );
@@ -1768,6 +1785,330 @@
   });
   window.addEventListener('resize', ajusterToile);
 
+  /* ---------- Sauvegarde en ligne ---------- */
+
+  // Avec un code de quatre mots, ce que le logiciel garde dans le navigateur (plans de travail, Mes collections) est aussi
+  // envoyé, compressé, au serveur du site (functions/api/sauvegarde.js) quelques secondes après chaque changement.
+  // Sur un autre appareil, on tape le code pour retrouver son travail. Le serveur garde les 10 dernières versions.
+  // Au démarrage (et au retour sur l'onglet), si le serveur a une version plus récente et que cet appareil n'a rien en attente,
+  // on la prend ; sinon c'est cet appareil qui envoie la sienne (la précédente reste dans les versions du serveur).
+
+  // Sur le site (https) ou avec « wrangler pages dev » (port 8788), l'API est à la même adresse ;
+  // l'application de bureau (http://localhost:47821) et un fichier ouvert en local passent par le site.
+  const API = location.protocol === 'https:' || location.port === '8788'
+    ? '/api/sauvegarde'
+    : 'https://boites-a-classer.pages.dev/api/sauvegarde';
+  // Ces clés n'ont pas le préfixe « boites-a-classer: » : elles ne font pas partie de ce qu'on sauvegarde.
+  const CLE_CODE = 'boites-a-classer-sauvegarde:code';
+  const CLE_VERSION = 'boites-a-classer-sauvegarde:version';
+  const CLE_DATE = 'boites-a-classer-sauvegarde:date';
+  const CLE_ATTENTE = 'boites-a-classer-sauvegarde:attente';
+  const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
+  const FORME_CODE = /^[a-z]{2,12}(-[a-z]{2,12}){3}$/;
+  const TAILLE_MAX_EN_LIGNE = 1900000;
+  const MOTS = (
+    'abeille agneau aigle ane baleine bison castor chat chameau cheval chevre chien cigale cigogne crabe ' +
+    'criquet cygne dauphin dinde faucon fourmi gazelle girafe gorille grillon hamster hibou homard jaguar ' +
+    'koala lama lapin lezard lion loup loutre lynx marmotte merle mouette mouton panda paon phoque poney ' +
+    'poule renard requin saumon singe souris tigre tortue truite vache zebre moineau pigeon canard ' +
+    'blaireau chouette corbeau pie caille colibri toucan pelican flamant manchot morse otarie orque thon ' +
+    'sardine carpe poulpe calmar meduse etoile oursin moule huitre crevette papillon libellule coccinelle ' +
+    'scarabee guepe bourdon chenille escargot limace ver araignee scorpion pomme poire prune cerise ' +
+    'fraise framboise myrtille banane ananas mangue citron orange kiwi melon raisin figue datte abricot ' +
+    'peche carotte tomate radis navet poireau oignon chou salade courge potiron haricot mais ble riz ' +
+    'chene sapin pin bouleau erable hetre saule tilleul olivier palmier bambou cactus fougere mousse ' +
+    'lierre trefle rose tulipe lilas iris jonquille lavande menthe thym basilic persil nuage soleil lune ' +
+    'pluie neige orage vent arc brume givre eclair comete planete galaxie riviere ruisseau lac mer ocean ' +
+    'vague plage dune colline montagne volcan vallee foret prairie desert ile rocher caillou sable galet ' +
+    'grotte source cascade glacier rouge bleu vert jaune violet blanc noir gris marron dore argent velo ' +
+    'train bateau avion fusee ballon cerf tambour flute piano guitare violon trompette harpe livre crayon ' +
+    'gomme cahier regle compas loupe boussole lampe bougie cle porte fenetre chaise table tapis coussin ' +
+    'panier seau pelle rateau arrosoir brouette echelle corde bouton pain gateau tarte crepe biscuit miel ' +
+    'confiture fromage beurre yaourt chocolat bonbon caramel'
+  ).split(' '); // 256 mots : un octet de hasard par mot
+  const enLignePossible = 'CompressionStream' in window && 'DecompressionStream' in window && 'fetch' in window;
+  let minuterieEnvoi = null;
+  let envoiEnCours = false;
+  let changements = 0; // compte les changements, pour savoir s'il en est arrivé pendant un envoi
+  let enApplication = false; // pendant qu'on applique une version reçue : pas de renvoi
+  let etatEnLigne = { texte: '', erreur: false };
+  let derniereSynchro = 0;
+
+  const codeSauvegarde = () => lire(CLE_CODE);
+  const oublier = (k) => { try { localStorage.removeItem(k); } catch (e) { /* stockage indisponible */ } };
+  const normaliserCode = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z]+/g, '-').replace(/^-+|-+$/g, '');
+  const dateLisible = (iso) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+  function nouveauCode() {
+    const hasard = crypto.getRandomValues(new Uint8Array(4));
+    return [...hasard].map((o) => MOTS[o]).join('-');
+  }
+
+  function donneesLocales() {
+    const d = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('boites-a-classer:') && !HORS_SAUVEGARDE.has(k)) d[k] = localStorage.getItem(k);
+      }
+    } catch (e) { /* stockage indisponible */ }
+    return d;
+  }
+
+  const compresser = async (texte) => new Uint8Array(await new Response(
+    new Blob([new TextEncoder().encode(texte)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  const decompresser = (octets) => new Response(new Blob([octets]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+
+  // Appelé à chaque écriture dans la mémoire du navigateur (ecrire, sauverMesCollections, supprimerCollection).
+  function signalerChangement(k) {
+    if (enApplication || !k.startsWith('boites-a-classer:') || HORS_SAUVEGARDE.has(k) || !codeSauvegarde()) return;
+    changements++;
+    ecrire(CLE_ATTENTE, '1');
+    clearTimeout(minuterieEnvoi);
+    minuterieEnvoi = setTimeout(envoyer, 2500);
+  }
+
+  async function envoyer() {
+    clearTimeout(minuterieEnvoi);
+    const code = codeSauvegarde();
+    // Rien en attente, ou envoi déjà en cours (s'il arrive un changement entre-temps, l'envoi en cours relancera).
+    if (!code || !enLignePossible || !lire(CLE_ATTENTE) || envoiEnCours) return;
+    envoiEnCours = true;
+    const vus = changements;
+    let relancer = false;
+    majEtatEnLigne('Envoi en cours…');
+    try {
+      const corps = await compresser(JSON.stringify(donneesLocales()));
+      if (corps.length > TAILLE_MAX_EN_LIGNE) {
+        majEtatEnLigne('Trop de photos pour la sauvegarde en ligne (1,9 Mo au plus) : retire des photos, ou enregistre ton travail dans un fichier.', true);
+        return;
+      }
+      const rep = await fetch(API, {
+        method: 'PUT',
+        headers: { 'X-Code-Sauvegarde': code, 'Content-Type': 'application/octet-stream' },
+        body: corps,
+      });
+      if (!rep.ok) throw new Error('serveur ' + rep.status);
+      const r = await rep.json();
+      if (codeSauvegarde() !== code) return; // sauvegarde arrêtée ou code changé pendant l'envoi
+      ecrire(CLE_VERSION, String(r.version));
+      ecrire(CLE_DATE, r.date);
+      if (changements === vus) oublier(CLE_ATTENTE); else relancer = true;
+      majEtatEnLigne('');
+      if (fenSauvegarde.open && !$('#sv-active').hidden) chargerVersions();
+    } catch (e) {
+      majEtatEnLigne('Pas de connexion au serveur : ton travail sera envoyé dès que possible.', true);
+      minuterieEnvoi = setTimeout(envoyer, 60000);
+    } finally {
+      envoiEnCours = false;
+      if (relancer) envoyer();
+    }
+  }
+
+  // Remplace ce que garde ce navigateur par une version reçue du serveur, puis réaffiche.
+  function appliquerVersion(donnees, version, date) {
+    enApplication = true;
+    try {
+      importerSauvegarde(donnees, true);
+    } finally {
+      enApplication = false;
+    }
+    ecrire(CLE_VERSION, String(version));
+    ecrire(CLE_DATE, date);
+    oublier(CLE_ATTENTE);
+    choisirCollection(lire('boites-a-classer:collection') || coll.id);
+  }
+
+  async function lireVersion(code, version) {
+    const rep = await fetch(API + (version ? '?version=' + version : ''), { headers: { 'X-Code-Sauvegarde': code } });
+    if (rep.status === 404) return null;
+    if (!rep.ok) throw new Error('serveur ' + rep.status);
+    const donnees = JSON.parse(await decompresser(new Uint8Array(await rep.arrayBuffer())));
+    if (!donnees || typeof donnees !== 'object') throw new Error('sauvegarde illisible');
+    return { donnees, version: rep.headers.get('X-Version'), date: rep.headers.get('X-Date') };
+  }
+
+  // Au démarrage et au retour sur l'onglet : prend la version du serveur si elle est plus récente.
+  async function synchroniser() {
+    const code = codeSauvegarde();
+    if (!code || !enLignePossible || Date.now() - derniereSynchro < 20000) return;
+    derniereSynchro = Date.now();
+    if (lire(CLE_ATTENTE)) { envoyer(); return; } // cet appareil a du nouveau : il passe en premier
+    try {
+      const rep = await fetch(API, { headers: { 'X-Code-Sauvegarde': code, 'X-Version-Connue': lire(CLE_VERSION) || '' } });
+      if (rep.status === 204) return;
+      if (rep.status === 404) { ecrire(CLE_ATTENTE, '1'); envoyer(); return; }
+      if (!rep.ok) throw new Error('serveur ' + rep.status);
+      if (lire(CLE_ATTENTE) || codeSauvegarde() !== code) return; // changement pendant la requête
+      const donnees = JSON.parse(await decompresser(new Uint8Array(await rep.arrayBuffer())));
+      appliquerVersion(donnees, rep.headers.get('X-Version'), rep.headers.get('X-Date'));
+      info.textContent = 'Travail mis à jour depuis la sauvegarde en ligne.';
+    } catch (e) {
+      majEtatEnLigne('Pas de connexion au serveur.', true);
+    }
+  }
+
+  /* Fenêtre « Sauvegarde en ligne » */
+
+  const fenSauvegarde = $('#fen-sauvegarde');
+  const svMessage = fenSauvegarde.querySelector('.message');
+  const boutonRecuperer = $('#sv-recuperer');
+
+  function majEtatEnLigne(texte, erreur) {
+    if (texte !== undefined) etatEnLigne = { texte, erreur: !!erreur };
+    const el = $('#sv-etat');
+    const date = lire(CLE_DATE);
+    el.textContent = etatEnLigne.texte
+      || (lire(CLE_ATTENTE) ? 'Envoi en attente…' : date ? `Dernière sauvegarde : ${dateLisible(date)}` : '');
+    el.classList.toggle('erreur', etatEnLigne.erreur);
+  }
+
+  function ouvrirSauvegarde() {
+    fermerMenu();
+    svMessage.textContent = '';
+    rendreSauvegarde();
+    fenSauvegarde.showModal();
+  }
+
+  function rendreSauvegarde() {
+    const code = codeSauvegarde();
+    $('#sv-inactive').hidden = !!code;
+    $('#sv-active').hidden = !code;
+    $('#sv-impossible').hidden = enLignePossible;
+    $('#sv-activer').disabled = boutonRecuperer.disabled = !enLignePossible;
+    remettreConfirmation(boutonRecuperer);
+    remettreConfirmation($('#sv-arreter'));
+    if (code) {
+      $('#sv-code-affiche').textContent = code;
+      majEtatEnLigne();
+      chargerVersions();
+    }
+  }
+
+  // Boutons à double appui (« Confirmer ? ») : le premier arme, le second agit.
+  function confirme(bouton) {
+    if (bouton.classList.contains('confirmer')) { remettreConfirmation(bouton); return true; }
+    bouton.classList.add('attention', 'confirmer');
+    clearTimeout(bouton.minuterie);
+    bouton.minuterie = setTimeout(() => remettreConfirmation(bouton), 4000);
+    return false;
+  }
+  function remettreConfirmation(bouton) {
+    clearTimeout(bouton.minuterie);
+    bouton.classList.remove('attention', 'confirmer');
+  }
+
+  async function chargerVersions() {
+    const ul = $('#sv-versions');
+    const ligne = (texte) => { const li = document.createElement('li'); li.textContent = texte; return li; };
+    ul.replaceChildren(ligne('Chargement…'));
+    try {
+      const rep = await fetch(API + '?liste=1', { headers: { 'X-Code-Sauvegarde': codeSauvegarde() } });
+      if (!rep.ok) throw new Error();
+      const liste = await rep.json();
+      if (!liste.length) { ul.replaceChildren(ligne('Aucune pour l\'instant.')); return; }
+      ul.replaceChildren(...liste.map((v, i) => {
+        const li = ligne(`${dateLisible(v.date)} · ${Math.max(1, Math.round(v.taille / 1024))} Ko`);
+        if (i === 0) {
+          li.append(' (la plus récente)');
+        } else {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'btn';
+          b.innerHTML = '<span class="txt-normal">Revenir à celle-ci</span><span class="txt-confirmer">Confirmer ?</span>';
+          b.addEventListener('click', () => { if (confirme(b)) revenirA(v.version, v.date); });
+          li.appendChild(b);
+        }
+        return li;
+      }));
+    } catch (e) {
+      ul.replaceChildren(ligne('Impossible de joindre le serveur.'));
+    }
+  }
+
+  async function revenirA(version, date) {
+    try {
+      const v = await lireVersion(codeSauvegarde(), version);
+      if (!v) throw new Error('version introuvable');
+      appliquerVersion(v.donnees, v.version, v.date);
+      ecrire(CLE_ATTENTE, '1'); // elle devient la plus récente : les autres versions restent sur le serveur
+      envoyer();
+      fermerFenetres();
+      info.textContent = `Travail remis comme le ${dateLisible(date)}.`;
+    } catch (e) {
+      svMessage.textContent = 'Impossible de revenir à cette version : ' + (e && e.message ? e.message : e);
+    }
+  }
+
+  $('#sv-activer').addEventListener('click', () => {
+    ecrire(CLE_CODE, nouveauCode());
+    oublier(CLE_VERSION);
+    oublier(CLE_DATE);
+    ecrire(CLE_ATTENTE, '1');
+    envoyer();
+    rendreSauvegarde();
+    svMessage.textContent = 'Sauvegarde en ligne activée. Note bien ton code !';
+  });
+
+  $('#sv-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const champ = $('#sv-code');
+    const code = normaliserCode(champ.value);
+    if (!FORME_CODE.test(code)) { svMessage.textContent = 'Un code est fait de quatre mots, par exemple lapin-tomate-nuage-velo.'; return; }
+    // Ce qui est dans ce navigateur va être remplacé : un second appui est demandé s'il y a déjà du travail.
+    const local = Object.keys(donneesLocales()).length > 0;
+    if (local && !boutonRecuperer.classList.contains('confirmer')) {
+      confirme(boutonRecuperer);
+      svMessage.textContent = 'Le travail actuellement dans ce navigateur sera remplacé par celui du code. Appuie encore pour confirmer.';
+      return;
+    }
+    remettreConfirmation(boutonRecuperer);
+    boutonRecuperer.disabled = true;
+    svMessage.textContent = 'Recherche…';
+    try {
+      const v = await lireVersion(code);
+      if (!v) { svMessage.textContent = 'Aucune sauvegarde avec ce code : vérifie les quatre mots.'; return; }
+      ecrire(CLE_CODE, code);
+      appliquerVersion(v.donnees, v.version, v.date);
+      champ.value = '';
+      fermerFenetres();
+      info.textContent = `Travail récupéré (sauvegarde du ${dateLisible(v.date)}). La sauvegarde en ligne continue avec ce code.`;
+    } catch (e) {
+      svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
+    } finally {
+      boutonRecuperer.disabled = false;
+    }
+  });
+
+  $('#sv-copier').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(codeSauvegarde());
+      svMessage.textContent = 'Code copié.';
+    } catch (e) {
+      const r = document.createRange();
+      r.selectNodeContents($('#sv-code-affiche'));
+      getSelection().removeAllRanges();
+      getSelection().addRange(r);
+      svMessage.textContent = 'Le code est sélectionné : copie-le avec Ctrl+C (ou ⌘C).';
+    }
+  });
+
+  $('#sv-arreter').addEventListener('click', (ev) => {
+    if (!confirme(ev.currentTarget)) return;
+    clearTimeout(minuterieEnvoi);
+    for (const k of [CLE_CODE, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+    etatEnLigne = { texte: '', erreur: false };
+    rendreSauvegarde();
+    svMessage.textContent = 'Sauvegarde en ligne arrêtée sur cet appareil. Ton travail reste dans ce navigateur, et sur le serveur avec ton code.';
+  });
+
+  fenSauvegarde.querySelector('.fermer').addEventListener('click', () => fenSauvegarde.close());
+  window.addEventListener('online', () => { if (lire(CLE_ATTENTE)) envoyer(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { if (lire(CLE_ATTENTE)) envoyer(); } else synchroniser();
+  });
+
   /* ---------- Démarrage ---------- */
 
   const zoomSauve = parseFloat(lire('boites-a-classer:zoom'));
@@ -1778,6 +2119,7 @@
     remplirSelect();
     choisirCollection(lire('boites-a-classer:collection'));
     if (recus) info.textContent = `Le site a changé d'adresse : ton travail a suivi (${pluriel(recus, 'élément récupéré', 'éléments récupérés')}).`;
+    synchroniser();
   }
   if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer); else demarrer(0);
 
