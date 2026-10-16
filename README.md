@@ -12,7 +12,7 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 | `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
 | `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
 | `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
-| `redirection/` | Pages publiées à l'ancienne adresse (GitHub Pages) : renvoient vers la nouvelle avec le travail gardé dans le navigateur. |
+| `redirection/` | Archive : pages qui redirigeaient l'ancienne adresse (GitHub Pages, supprimée) vers la nouvelle. |
 | `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. Non publié (voir Espace enseignant). |
 | `outils/` | Générateur des fiches (`fiches.html` + `generer-fiches.js`). |
 
@@ -29,9 +29,7 @@ Le site est en ligne à l'adresse https://boites-a-classer.pages.dev/ (Cloudflar
 
 ### Ancienne adresse (GitHub Pages)
 
-Jusqu'au 16/10/2026, le site était à https://guy-demessimy.github.io/boites-a-classer/. La branche `gh-pages` contient désormais le dossier `redirection/` : chaque page (et `404.html` pour toutes les autres adresses) renvoie vers la même page à la nouvelle adresse. Comme la mémoire du navigateur est propre à chaque adresse, `redirection/demenagement.js` joint au passage ce qui y était gardé (clés `boites-a-classer:*`, compressées, dans le fragment `#transfert=…` que les serveurs ne reçoivent pas) ; `app/app.js` le récupère sans rien écraser. Si c'est trop gros pour une adresse, la page propose un fichier de sauvegarde à rouvrir avec « Fichier → Ouvrir un fichier ». `redirection/app/sw.js` efface l'ancien service worker des versions installées.
-
-Pour modifier cette redirection : `git subtree split --prefix redirection -b redirection-pages` puis `git push -f origin redirection-pages:gh-pages`.
+Du 14 au 16/10/2026, le site était à https://guy-demessimy.github.io/boites-a-classer/. Cette adresse est supprimée depuis le 16/10/2026 (branche `gh-pages` effacée) : elle répond « 404 ». Le dossier `redirection/` garde les pages qui y redirigeaient vers la nouvelle adresse en transférant le travail gardé dans le navigateur (non publiées ; `app/app.js` sait toujours recevoir ce transfert et les fichiers de sauvegarde).
 
 ## Version mobile
 
