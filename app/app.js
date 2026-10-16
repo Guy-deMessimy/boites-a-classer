@@ -815,6 +815,10 @@
     let o = null;
     try { o = JSON.parse(new TextDecoder().decode(octets)); } catch (e) { /* pas du JSON */ }
     if (!o || o.format !== FORMAT) throw new Error("ce n'est pas un fichier Boîtes à classer");
+    if (o.type === 'sauvegarde') {
+      if (!o.donnees || typeof o.donnees !== 'object') throw new Error('la sauvegarde est illisible');
+      return { type: 'sauvegarde', donnees: o.donnees };
+    }
     const collection = nettoyerCollection(o.collection);
     if (o.type === 'collection') return { type: 'collection', collection };
     if (o.type === 'travail') return { type: 'travail', collection, etat: nettoyerEtat(o.etat, collection) };
@@ -882,6 +886,15 @@
       });
       if (!f) return;
       const lu = lireContenu(f.octets);
+      if (lu.type === 'sauvegarde') {
+        const n = importerSauvegarde(lu.donnees);
+        fermerFenetres();
+        choisirCollection(lire('boites-a-classer:collection') || coll.id);
+        info.textContent = n
+          ? `Sauvegarde récupérée : ${pluriel(n, 'élément', 'éléments')}.`
+          : 'Rien de nouveau dans cette sauvegarde : tout était déjà là.';
+        return;
+      }
       const c = integrerCollection(lu.collection);
       fermerFenetres();
       if (lu.type === 'travail') {
@@ -903,6 +916,69 @@
   function signaler(texte) {
     const zone = fenetreActive() && fenetreActive().querySelector('.message');
     if (zone) zone.textContent = texte; else info.textContent = texte;
+  }
+
+  /* ---------- Déménagement depuis l'ancienne adresse du site ---------- */
+
+  // Le site était à l'adresse guy-demessimy.github.io/boites-a-classer. Le navigateur y garde ce qui a été fait,
+  // et cette mémoire ne suit pas un changement d'adresse : l'ancienne adresse renvoie donc ici en joignant,
+  // après « #transfert= », ce qu'elle avait gardé (voir redirection/demenagement.js). Le fragment n'est jamais envoyé au serveur.
+  // Le même contenu peut aussi arriver dans un fichier « sauvegarde » quand il est trop gros pour l'adresse.
+
+  // Récupère ces données sans jamais remplacer ce qui existe déjà ici. Renvoie le nombre d'éléments récupérés.
+  function importerSauvegarde(donnees) {
+    const PREFIXE = 'boites-a-classer:';
+    const entrees = Object.entries(donnees)
+      .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE) && idSur(k.slice(PREFIXE.length)));
+    const lireJSON = (v) => { try { return JSON.parse(v); } catch (e) { return null; } };
+    let n = 0;
+
+    // 1. Collections personnelles qu'on n'a pas encore.
+    const recues = entrees.find(([k]) => k === CLE_MES_COLLECTIONS);
+    const liste = recues ? lireJSON(recues[1]) : null;
+    const ajout = [];
+    for (const c of Array.isArray(liste) ? liste : []) {
+      try {
+        const propre = nettoyerCollection(c);
+        if (!toutes().some((x) => x.id === propre.id) && !ajout.some((x) => x.id === propre.id)) {
+          ajout.push({ ...propre, nom: nomLibre(propre.nom) });
+        }
+      } catch (e) { /* collection abîmée : ignorée */ }
+    }
+    if (ajout.length) {
+      sauverMesCollections([...mesCollections, ...ajout]);
+      n += ajout.length;
+    }
+
+    // 2. Plans de travail, collection choisie et zoom.
+    for (const [k, v] of entrees) {
+      if (k === CLE_MES_COLLECTIONS || lire(k) !== null) continue;
+      if (k === PREFIXE + 'collection' || k === PREFIXE + 'zoom') { ecrire(k, v.slice(0, 80)); continue; }
+      const c = toutes().find((x) => PREFIXE + x.id === k);
+      const o = lireJSON(v);
+      if (!c || !o) continue;
+      ecrire(k, JSON.stringify(nettoyerEtat(o, c)));
+      n++;
+    }
+    return n;
+  }
+
+  // Lit « #transfert=z… » (JSON compressé en gzip) ou « #transfert=j… » (JSON simple), en base64url.
+  async function recevoirTransfert() {
+    const m = /^#transfert=([zj])([A-Za-z0-9_-]+)$/.exec(location.hash);
+    history.replaceState(null, '', location.pathname + location.search);
+    if (!m) return 0;
+    try {
+      const binaire = atob(m[2].replace(/-/g, '+').replace(/_/g, '/'));
+      const octets = Uint8Array.from(binaire, (c) => c.charCodeAt(0));
+      const texte = m[1] === 'z'
+        ? await new Response(new Blob([octets]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
+        : new TextDecoder().decode(octets);
+      const donnees = JSON.parse(texte);
+      return donnees && typeof donnees === 'object' ? importerSauvegarde(donnees) : 0;
+    } catch (e) {
+      return 0;
+    }
   }
 
   /* ---------- Mes collections ---------- */
@@ -1698,8 +1774,12 @@
   zoom = Number.isFinite(zoomSauve) ? borne(zoomSauve, ZOOM.min, ZOOM.max) : zoomParDefaut();
 
   mesCollections = lireMesCollections();
-  remplirSelect();
-  choisirCollection(lire('boites-a-classer:collection'));
+  function demarrer(recus) {
+    remplirSelect();
+    choisirCollection(lire('boites-a-classer:collection'));
+    if (recus) info.textContent = `Le site a changé d'adresse : ton travail a suivi (${pluriel(recus, 'élément récupéré', 'éléments récupérés')}).`;
+  }
+  if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer); else demarrer(0);
 
   // Version installable (écran d'accueil du téléphone) et utilisable hors connexion, seulement en ligne.
   if ('serviceWorker' in navigator && location.protocol === 'https:') {

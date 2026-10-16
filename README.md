@@ -12,6 +12,7 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 | `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
 | `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
 | `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
+| `redirection/` | Pages publiées à l'ancienne adresse (GitHub Pages) : renvoient vers la nouvelle avec le travail gardé dans le navigateur. |
 | `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. Non publié (voir Espace enseignant). |
 | `outils/` | Générateur des fiches (`fiches.html` + `generer-fiches.js`). |
 
@@ -20,13 +21,21 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 1. Modifier `app/` (par exemple ajouter une collection dans `collections.js`) et tester en ouvrant `app/index.html` dans un navigateur.
 2. Pour une nouvelle version, changer `version` dans `desktop/neutralino.config.json`, `VERSION` en haut de `app/app.js` et dans le pied de `site/index.html`.
 3. Lancer `./build.sh` (Node.js requis ; sur un Mac pour signer l'application macOS).
-4. Lancer `./publier.sh "Ce qui a changé"` : le code part sur GitHub et le site se met à jour.
+4. Lancer `./publier.sh "Ce qui a changé"` : le code part sur GitHub et le site se met à jour sur Cloudflare.
 
-Le site est en ligne à l'adresse https://guy-demessimy.github.io/boites-a-classer/ (GitHub Pages, branche `gh-pages` = contenu de `site/`). Code source : https://github.com/Guy-deMessimy/boites-a-classer
+Le site est en ligne à l'adresse https://boites-a-classer.pages.dev/ (Cloudflare Pages, projet `boites-a-classer`, contenu de `site/` envoyé par `npx wrangler pages deploy`). Code source : https://github.com/Guy-deMessimy/boites-a-classer
+
+`publier.sh` utilise wrangler (installé dans le projet par `npm install`) : il faut l'avoir relié une fois au compte Cloudflare avec `npx wrangler login`.
+
+### Ancienne adresse (GitHub Pages)
+
+Jusqu'au 16/10/2026, le site était à https://guy-demessimy.github.io/boites-a-classer/. La branche `gh-pages` contient désormais le dossier `redirection/` : chaque page (et `404.html` pour toutes les autres adresses) renvoie vers la même page à la nouvelle adresse. Comme la mémoire du navigateur est propre à chaque adresse, `redirection/demenagement.js` joint au passage ce qui y était gardé (clés `boites-a-classer:*`, compressées, dans le fragment `#transfert=…` que les serveurs ne reçoivent pas) ; `app/app.js` le récupère sans rien écraser. Si c'est trop gros pour une adresse, la page propose un fichier de sauvegarde à rouvrir avec « Fichier → Ouvrir un fichier ». `redirection/app/sw.js` efface l'ancien service worker des versions installées.
+
+Pour modifier cette redirection : `git subtree split --prefix redirection -b redirection-pages` puis `git push -f origin redirection-pages:gh-pages`.
 
 ## Version mobile
 
-`app/` est aussi une application web installable (PWA) : `manifest.webmanifest` et `sw.js` (fonctionnement hors connexion). À chaque publication d'une nouvelle version, augmenter `VERSION` dans `app/sw.js` pour que les téléphones récupèrent la mise à jour. `site/qr-mobile.svg` est un QR code vers https://guy-demessimy.github.io/boites-a-classer/app/index.html (à refaire si l'adresse change).
+`app/` est aussi une application web installable (PWA) : `manifest.webmanifest` et `sw.js` (fonctionnement hors connexion). À chaque publication d'une nouvelle version, augmenter `VERSION` dans `app/sw.js` pour que les téléphones récupèrent la mise à jour. `site/qr-mobile.svg` est un QR code vers https://boites-a-classer.pages.dev/app/index.html (à refaire si l'adresse change : `npx qrcode@1.5.4 -t svg -q 1 -o site/qr-mobile.svg "<adresse>"`).
 
 ## Enregistrer et ouvrir (fichiers `.boites`)
 
