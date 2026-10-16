@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <!-- Motif de fond de la page d'accueil (thème sciences), répété en mosaïque.
+       Icônes Lucide (https://lucide.dev), licence ISC :
+       Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT).
+       All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+       Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee
+       is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. -->
+  <g fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#3a7bd5" transform="translate(58 60) rotate(-8) scale(2.1) translate(-12 -12)"><!-- microscope -->
+      <path d="M6 18h8"/>
+      <path d="M3 22h18"/>
+      <path d="M14 22a7 7 0 1 0 0-14h-1"/>
+      <path d="M9 14h2"/>
+      <path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/>
+      <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/>
+    </g>
+    <g stroke="#3f9d63" transform="translate(166 44) rotate(18) scale(2.0) translate(-12 -12)"><!-- dna -->
+      <path d="m10 16 1.5 1.5"/>
+      <path d="m14 8-1.5-1.5"/>
+      <path d="M15 2c-1.798 1.998-2.518 3.995-2.807 5.993"/>
+      <path d="m16.5 10.5 1 1"/>
+      <path d="m17 6-2.891-2.891"/>
+      <path d="M2 15c6.667-6 13.333 0 20-6"/>
+      <path d="m20 9 .891.891"/>
+      <path d="M3.109 14.109 4 15"/>
+      <path d="m6.5 12.5 1 1"/>
+      <path d="m7 18 2.891 2.891"/>
+      <path d="M9 22c1.798-1.998 2.518-3.995 2.807-5.993"/>
+    </g>
+    <g stroke="#8a63d2" transform="translate(268 76) rotate(0) scale(2.0) translate(-12 -12)"><!-- atom -->
+      <circle cx="12" cy="12" r="1"/>
+      <path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/>
+      <path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/>
+    </g>
+    <g stroke="#1f9aa0" transform="translate(108 150) rotate(10) scale(2.0) translate(-12 -12)"><!-- flask-conical -->
+      <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
+      <path d="M8.5 2h7"/>
+      <path d="M7 16h10"/>
+    </g>
+    <g stroke="#3f9d63" transform="translate(214 156) rotate(-14) scale(1.9) translate(-12 -12)"><!-- leaf -->
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+    </g>
+    <g stroke="#e08a2c" transform="translate(44 236) rotate(-4) scale(1.9) translate(-12 -12)"><!-- snail -->
+      <path d="M2 13a6 6 0 1 0 12 0 4 4 0 1 0-8 0 2 2 0 0 0 4 0"/>
+      <circle cx="10" cy="13" r="8"/>
+      <path d="M2 21h12c4.4 0 8-3.6 8-8V7a2 2 0 1 0-4 0v6"/>
+      <path d="M18 3 19.1 5.2"/>
+      <path d="M22 3 20.9 5.2"/>
+    </g>
+    <g stroke="#d6457b" transform="translate(152 244) rotate(8) scale(1.9) translate(-12 -12)"><!-- test-tubes -->
+      <path d="M9 2v17.5A2.5 2.5 0 0 1 6.5 22A2.5 2.5 0 0 1 4 19.5V2"/>
+      <path d="M20 2v17.5a2.5 2.5 0 0 1-2.5 2.5a2.5 2.5 0 0 1-2.5-2.5V2"/>
+      <path d="M3 2h7"/>
+      <path d="M14 2h7"/>
+      <path d="M9 16H4"/>
+      <path d="M20 16h-5"/>
+    </g>
+    <g stroke="#3a7bd5" transform="translate(262 250) rotate(-10) scale(1.8) translate(-12 -12)"><!-- search -->
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.3-4.3"/>
+    </g>
+    <g stroke="#1f9aa0" color="#1f9aa0" stroke-width="2.5" transform="translate(296 168) rotate(12)"><path d="M-14 6 L0 -2 L14 6 M0 -2 V-16"/><circle cx="-14" cy="6" r="4" fill="currentColor"/><circle cx="14" cy="6" r="4" fill="currentColor"/><circle cx="0" cy="-2" r="5" fill="currentColor"/><circle cx="0" cy="-16" r="3.5" fill="currentColor"/></g>
+    <g stroke="#8a63d2" color="#8a63d2" stroke-width="2.5" transform="translate(30 140) rotate(-20)"><path d="M-14 6 L0 -2 L14 6 M0 -2 V-16"/><circle cx="-14" cy="6" r="4" fill="currentColor"/><circle cx="14" cy="6" r="4" fill="currentColor"/><circle cx="0" cy="-2" r="5" fill="currentColor"/><circle cx="0" cy="-16" r="3.5" fill="currentColor"/></g>
+    <polygon stroke="#e08a2c" stroke-width="2.5" points="213.5,305.5 204.0,311.0 194.5,305.5 194.5,294.5 204.0,289.0 213.5,294.5"/><circle stroke="#e08a2c" stroke-width="2" cx="204" cy="300" r="5.5"/>
+    <polygon stroke="#d6457b" stroke-width="2.5" points="229.8,102.5 222.0,107.0 214.2,102.5 214.2,93.5 222.0,89.0 229.8,93.5"/><circle stroke="#d6457b" stroke-width="2" cx="222" cy="98" r="4.5"/>
+  </g>
+</svg>

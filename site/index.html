@@ -7,20 +7,20 @@
   <meta name="description" content="Logiciel gratuit pour apprendre à classer les êtres vivants dans des boîtes emboîtées. Windows, macOS, Linux ou directement en ligne.">
   <link rel="icon" href="icone.png">
   <style>
-    /* Police Fredoka (SIL Open Font License, voir polices/OFL-fredoka.txt), hébergée avec le site. */
+    /* Police Space Grotesk (SIL Open Font License, voir polices/OFL-space-grotesk.txt), hébergée avec le site. */
     @font-face {
-      font-family: "Fredoka";
-      font-weight: 400 700;
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
       font-display: swap;
-      src: url(polices/fredoka-latin.woff2) format("woff2");
+      src: url(polices/space-grotesk-latin.woff2) format("woff2");
       unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
     }
     @font-face {
-      font-family: "Fredoka";
-      font-weight: 400 700;
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
       font-display: swap;
-      src: url(polices/fredoka-latin-ext.woff2) format("woff2");
-      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      src: url(polices/space-grotesk-latin-ext.woff2) format("woff2");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
     }
     :root {
       --fond: #f6f4ef;
@@ -32,10 +32,12 @@
       --accent-encre: #ffffff;
       --accent-doux: #e8effc;
       --code: #f1efe9;
-      --degrade: linear-gradient(160deg, #fff1f7 0%, #f4eeff 45%, #eaf5ff 100%);
-      --motif-opacite: .7;
-      --voile: rgb(255 255 255 / .78);
-      --ombre: 0 6px 18px rgb(214 140 180 / .18);
+      --degrade: linear-gradient(160deg, #eaf6f4 0%, #eef3fc 50%, #f3effb 100%);
+      --grille: rgb(58 123 213 / .07);
+      --grille-forte: rgb(58 123 213 / .14);
+      --motif-opacite: .5;
+      --voile: rgb(255 255 255 / .82);
+      --ombre: 0 6px 18px rgb(58 110 170 / .14);
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -48,8 +50,10 @@
         --accent-encre: #0d1220;
         --accent-doux: #1f2a40;
         --code: #262a32;
-        --degrade: linear-gradient(160deg, #241a33 0%, #1c1b36 45%, #152238 100%);
-        --motif-opacite: .16;
+        --degrade: linear-gradient(160deg, #0f1f22 0%, #131b2c 50%, #1a1730 100%);
+        --grille: rgb(120 165 235 / .06);
+        --grille-forte: rgb(120 165 235 / .12);
+        --motif-opacite: .22;
         --voile: rgb(24 22 38 / .82);
         --ombre: 0 6px 18px rgb(0 0 0 / .35);
       }
@@ -57,17 +61,23 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: var(--fond) var(--degrade) fixed;
+      /* Papier millimétré : un trait tous les 24 px, un trait plus marqué tous les 120 px. */
+      background:
+        linear-gradient(var(--grille-forte) 1px, transparent 1px) 0 0 / 120px 120px fixed,
+        linear-gradient(90deg, var(--grille-forte) 1px, transparent 1px) 0 0 / 120px 120px fixed,
+        linear-gradient(var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed,
+        linear-gradient(90deg, var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed,
+        var(--fond) var(--degrade) fixed;
       color: var(--encre);
-      font: 17px/1.55 "Fredoka", "Arial Rounded MT Bold", system-ui, sans-serif;
+      font: 17px/1.55 "Space Grotesk", system-ui, sans-serif;
     }
-    /* Motif kawaii (fond-kawaii.svg) sur un calque fixe, derrière tout le contenu. */
+    /* Instruments de science (fond-sciences.svg) sur un calque fixe, derrière tout le contenu. */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       z-index: -1;
-      background: url(fond-kawaii.svg) 0 0 / 280px 280px;
+      background: url(fond-sciences.svg) 0 0 / 320px 320px;
       opacity: var(--motif-opacite);
       pointer-events: none;
     }
@@ -139,7 +149,16 @@
 
     .fonctions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; margin: 0; list-style: none; }
     .fonctions li { padding-left: 1.5em; position: relative; }
-    .fonctions li::before { content: "✿"; position: absolute; left: 0; color: var(--accent); }
+    .fonctions li::before {
+      content: "";
+      position: absolute;
+      left: .1em;
+      top: .45em;
+      width: .75em;
+      height: .65em;
+      background: var(--accent);
+      clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+    }
 
     header .enseignant { margin-left: auto; font: inherit; font-weight: 600; cursor: pointer; }
 
