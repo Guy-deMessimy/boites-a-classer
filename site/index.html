@@ -81,22 +81,6 @@
       -webkit-backdrop-filter: blur(4px);
       backdrop-filter: blur(4px);
     }
-    .annonce {
-      display: flex;
-      justify-content: center;
-      margin: 0 0 16px;
-    }
-    .annonce p {
-      margin: 0;
-      padding: .55rem 1.3rem;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #ffe08a, #ffc2d8);
-      color: #4a3550;
-      font-weight: 600;
-      font-size: 1.05rem;
-      box-shadow: var(--ombre);
-      text-align: center;
-    }
     header { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
     header img { width: 96px; height: 96px; }
     h1 { margin: 0; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; font-weight: 700; }
@@ -195,10 +179,6 @@
 </head>
 <body>
   <main>
-    <aside class="annonce" aria-label="Annonce">
-      <p>✨ Prochaine mise à jour 2.0 ✨</p>
-    </aside>
-
     <header class="panneau">
       <img src="icone.png" alt="">
       <div>
@@ -270,15 +250,17 @@
       <li>Nommer une boîte avec un attribut : bouche, squelette interne, plumes…</li>
       <li>Glisser les êtres vivants dans les boîtes ; leurs caractéristiques s'affichent au survol.</li>
       <li>Vérifier la classification : les erreurs sont signalées une par une.</li>
+      <li>Enregistrer son travail dans un fichier, le rouvrir plus tard ou le rendre à l'enseignant.</li>
       <li>Enregistrer son travail en PDF, pour l'imprimer ou l'envoyer.</li>
-      <li>Quatre collections : jardin et mare, vertébrés, plantes, animaux marins.</li>
+      <li>Six collections : jardin et mare, vertébrés, plantes, animaux marins, petites bêtes, animaux de la ferme.</li>
+      <li>Créer ses propres collections (êtres vivants, photos, attributs) et les partager avec la classe.</li>
       <li>Fonctionne sur ordinateur, tablette et téléphone, à la souris ou au doigt, avec un zoom.</li>
       <li>S'installe sur l'écran d'accueil d'un téléphone et marche sans connexion.</li>
       <li>Le travail est conservé d'une séance à l'autre.</li>
     </ul>
 
     <footer class="panneau">
-      Version <span id="version">1.2.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a>
+      Version <span id="version">2.0.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a>
     </footer>
   </main>
 

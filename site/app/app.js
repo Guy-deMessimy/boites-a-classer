@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const COLLECTIONS = window.COLLECTIONS || [];
+  const VERSION = '2.0.0';
+  const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
   const GRIS = '#8a8f98';
@@ -9,6 +10,7 @@
   const BOITE_MIN = { l: 120, h: 80 };
   const ZOOM = { min: 0.35, max: 1.6 };
   const SEUIL = 5; // déplacement (px) avant qu'un appui devienne un glisser
+  const MAX_XY = 20000; // coordonnée maximale acceptée depuis un fichier
 
   const $ = (s) => document.querySelector(s);
   const espace = $('#espace');
@@ -20,6 +22,7 @@
   const bilan = $('#bilan');
   const bilanListe = $('#bilan-liste');
   const boutonEffacer = $('#effacer');
+  const boutonFichier = $('#fichier');
   const niveauZoom = $('#zoom-niveau');
   const infoDefaut = info.textContent;
   const petitEcran = window.matchMedia('(max-width: 700px)');
@@ -32,6 +35,7 @@
   let elEtres = new Map();
   let menu = null;
   let zoom = 1;
+  let mesCollections = []; // collections créées ou importées, gardées dans le navigateur
 
   /* ---------- Outils ---------- */
 
@@ -49,7 +53,10 @@
   const englobe = (a, b) => b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h;
   const chevauche = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const centre = (p) => ({ x: p.x + ETRE.l / 2, y: p.y + ETRE.h / 2 });
-  const borner = (p) => ({ x: Math.max(0, Math.round(p.x)), y: Math.max(0, Math.round(p.y)) });
+  const borner = (p) => ({ x: borne(Math.round(p.x), 0, MAX_XY), y: borne(Math.round(p.y), 0, MAX_XY) });
+  const nouvelId = (prefixe) => prefixe + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const toutes = () => [...FOURNIES, ...mesCollections];
+  const estPerso = (c) => mesCollections.includes(c);
 
   const nomAttr = (id) => (attrParId.get(id) || { nom: id }).nom;
   const couleurBoite = (b) => (b.attr && attrParId.has(b.attr) ? attrParId.get(b.attr).couleur : GRIS);
@@ -83,23 +90,37 @@
   function charger() {
     try {
       const o = JSON.parse(lire(cle()));
-      if (o && Array.isArray(o.boites) && o.positions && typeof o.positions === 'object') {
-        const ids = new Set(coll.etres.map((e) => e.id));
-        for (const id of Object.keys(o.positions)) if (!ids.has(id)) delete o.positions[id];
-        return o;
-      }
+      if (o && Array.isArray(o.boites) && o.positions && typeof o.positions === 'object') return accorder(o);
     } catch (e) { /* rien de sauvegardé */ }
     return { boites: [], positions: {} };
   }
 
+  // Met un plan de travail en accord avec la collection courante.
+  function accorder(o) {
+    const ids = new Set(coll.etres.map((e) => e.id));
+    for (const id of Object.keys(o.positions)) if (!ids.has(id)) delete o.positions[id];
+    // La collection a pu être modifiée depuis : attribut renommé (on suit le nouveau nom) ou supprimé.
+    for (const b of o.boites) {
+      if (b.attr && attrParId.has(b.attr)) {
+        if (normaliser(b.texte || '') !== normaliser(nomAttr(b.attr))) b.texte = nomAttr(b.attr);
+      } else {
+        const a = trouverAttr(b.texte || '');
+        b.attr = a ? a.id : null;
+      }
+    }
+    return o;
+  }
+
   /* ---------- Affichage ---------- */
 
-  function choisirCollection(id) {
-    coll = COLLECTIONS.find((c) => c.id === id) || COLLECTIONS[0];
+  // etatOuvert : plan de travail lu dans un fichier, qui remplace celui gardé dans le navigateur.
+  function choisirCollection(id, etatOuvert) {
+    coll = toutes().find((c) => c.id === id) || FOURNIES[0];
     selColl.value = coll.id;
     attrParId = new Map(coll.attributs.map((a, i) =>
       [a.id, { ...a, couleur: a.couleur || PALETTE[i % PALETTE.length] }]));
-    etat = charger();
+    etat = etatOuvert ? accorder(etatOuvert) : charger();
+    if (etatOuvert) sauver();
     ecrire('boites-a-classer:collection', coll.id);
     fermerBilan();
     rendre();
@@ -206,7 +227,7 @@
     titre.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') titre.blur(); });
 
     const btnMenu = document.createElement('button');
-    btnMenu.className = 'boite-menu';
+    btnMenu.className = 'boite-menu ouvre-menu';
     btnMenu.textContent = '▾';
     btnMenu.title = 'Choisir un attribut';
     btnMenu.addEventListener('click', (ev) => { ev.stopPropagation(); ouvrirMenu(btnMenu, b); });
@@ -468,8 +489,19 @@
     return res;
   }
 
+  // Images (photos) des êtres vivants placés, chargées avant de dessiner la page.
+  function chargerImages() {
+    const avecImage = coll.etres.filter((e) => e.image && etat.positions[e.id]);
+    return Promise.all(avecImage.map((e) => new Promise((ok) => {
+      const img = new Image();
+      img.onload = () => ok([e.id, img]);
+      img.onerror = () => ok(null);
+      img.src = e.image;
+    }))).then((l) => new Map(l.filter(Boolean)));
+  }
+
   // Dessine une page A4 (200 ppp) : titre, date, plan de travail mis à l'échelle, êtres vivants non placés.
-  function dessinerPage() {
+  function dessinerPage(images) {
     const zoneContenu = bornes();
     const portrait = zoneContenu && (zoneContenu.y1 - zoneContenu.y0) > (zoneContenu.x1 - zoneContenu.x0) * 1.15;
     const P = portrait ? { l: 1654, h: 2339 } : { l: 2339, h: 1654 };
@@ -546,7 +578,14 @@
         g.textBaseline = 'middle';
         g.fillStyle = '#1f2430';
         g.font = `30px ${POLICE}`;
-        g.fillText(e.emoji || '❓', p.x + ETRE.l / 2, p.y + 30);
+        const img = images.get(e.id);
+        if (img) {
+          const ech = Math.min(40 / img.naturalWidth, 40 / img.naturalHeight);
+          const l = img.naturalWidth * ech, h = img.naturalHeight * ech;
+          g.drawImage(img, p.x + (ETRE.l - l) / 2, p.y + 30 - h / 2, l, h);
+        } else {
+          g.fillText(e.emoji || '❓', p.x + ETRE.l / 2, p.y + 30);
+        }
         g.font = `500 12px ${POLICE}`;
         g.fillText(ajuster(g, e.nom, ETRE.l - 6), p.x + ETRE.l / 2, p.y + 60);
       }
@@ -596,88 +635,864 @@
     return new Blob(morceaux, { type: 'application/pdf' });
   }
 
-  // Dans l'application de bureau (Neutralino), on passe par la fenêtre « Enregistrer sous » du système.
-  // build.sh ajoute à la page de bureau les scripts qui connectent Neutralino (desktop/neutralino-init.js).
-  const natif = () => (window.Neutralino && window.NL_PRET ? window.Neutralino : null);
-
   async function exporterPdf() {
     fermerMenu();
     info.textContent = 'Préparation du PDF…';
     try {
-      const { toileA4, portrait } = dessinerPage();
+      const { toileA4, portrait } = dessinerPage(await chargerImages());
       const image = await new Promise((ok) => toileA4.toBlob(ok, 'image/jpeg', 0.9));
       const jpeg = new Uint8Array(await image.arrayBuffer());
       const pdf = pdfDepuisJpeg(jpeg, toileA4.width, toileA4.height, portrait);
-      const nom = `Boîtes à classer - ${coll.nom} - ${new Date().toISOString().slice(0, 10)}.pdf`;
-
-      const N = natif();
-      if (N) {
-        let dossier = '';
-        try { dossier = await N.os.getPath('documents'); } catch (e) { /* dossier par défaut */ }
-        const chemin = await N.os.showSaveDialog('Enregistrer en PDF', {
-          defaultPath: dossier ? `${dossier}/${nom}` : nom,
-          filters: [{ name: 'PDF', extensions: ['pdf'] }],
-        });
-        if (!chemin) { info.textContent = infoDefaut; return; }
-        const fichier = /\.pdf$/i.test(chemin) ? chemin : chemin + '.pdf';
-        await N.filesystem.writeBinaryFile(fichier, await pdf.arrayBuffer());
-        info.textContent = 'PDF enregistré : ' + fichier;
-        return;
-      }
-
-      // Téléphone ou tablette : menu de partage (Fichiers, mail, ENT…) quand il est disponible.
-      const fichier = new File([pdf], nom, { type: 'application/pdf' });
-      if (tactile.matches && navigator.canShare && navigator.canShare({ files: [fichier] })) {
-        try {
-          await navigator.share({ files: [fichier], title: nom });
-          info.textContent = 'PDF partagé.';
-          return;
-        } catch (e) {
-          if (e.name === 'AbortError') { info.textContent = infoDefaut; return; }
-          // Partage refusé : on télécharge à la place.
-        }
-      }
-
-      const url = URL.createObjectURL(pdf);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = nom;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      info.textContent = 'PDF téléchargé : ' + nom;
+      const nom = nomDeFichier(`Boîtes à classer - ${coll.nom} - ${new Date().toISOString().slice(0, 10)}`, 'pdf');
+      const r = await enregistrerFichier(pdf, nom, { titre: 'Enregistrer en PDF', nom: 'PDF', extension: 'pdf' });
+      info.textContent = r ? compteRendu(r, 'PDF') : infoDefaut;
     } catch (e) {
       info.textContent = 'Impossible de créer le PDF : ' + (e && e.message ? e.message : e);
     }
   }
 
-  /* ---------- Menu des attributs ---------- */
+  /* ---------- Fichiers : enregistrer, ouvrir ---------- */
 
-  function ouvrirMenu(ancre, b) {
-    const dejaOuvert = menu && menu.dataset.boite === b.id;
+  // Dans l'application de bureau (Neutralino), on passe par les fenêtres « Enregistrer sous » et « Ouvrir » du système.
+  // build.sh ajoute à la page de bureau les scripts qui connectent Neutralino (desktop/neutralino-init.js).
+  const natif = () => (window.Neutralino && window.NL_PRET ? window.Neutralino : null);
+  const FORMAT = 'boites-a-classer';
+  const EXTENSION = 'boites';
+  const LIMITES = { attributs: 40, etres: 80, boites: 300, texte: 60, image: 300000, fichier: 20e6 };
+
+  // Fenêtre ouverte au premier plan (l'éditeur s'ouvre par-dessus la liste des collections) : hors d'elle, tout est inactif.
+  const fenetreActive = () => [...document.querySelectorAll('dialog[open]')].pop() || null;
+
+  const nomDeFichier = (base, extension) => `${base.replace(/[\\/:*?"<>|]+/g, '-').trim()}.${extension}`;
+
+  function compteRendu(r, quoi) {
+    if (r.mode === 'enregistre') return `${quoi} enregistré : ${r.nom}`;
+    if (r.mode === 'partage') return `${quoi} partagé.`;
+    return `${quoi} téléchargé : ${r.nom}`;
+  }
+
+  // Bureau : « Enregistrer sous ». Téléphone : menu de partage s'il accepte ce type de fichier. Sinon : téléchargement.
+  // Renvoie null si l'utilisateur a renoncé.
+  async function enregistrerFichier(blob, nom, filtre) {
+    const N = natif();
+    if (N) {
+      let dossier = '';
+      try { dossier = await N.os.getPath('documents'); } catch (e) { /* dossier par défaut */ }
+      const chemin = await N.os.showSaveDialog(filtre.titre, {
+        defaultPath: dossier ? `${dossier}/${nom}` : nom,
+        filters: [{ name: filtre.nom, extensions: [filtre.extension] }],
+      });
+      if (!chemin) return null;
+      const fichier = chemin.toLowerCase().endsWith('.' + filtre.extension) ? chemin : `${chemin}.${filtre.extension}`;
+      await N.filesystem.writeBinaryFile(fichier, await blob.arrayBuffer());
+      return { mode: 'enregistre', nom: fichier };
+    }
+
+    const fichier = new File([blob], nom, { type: blob.type });
+    if (tactile.matches && navigator.canShare && navigator.canShare({ files: [fichier] })) {
+      try {
+        await navigator.share({ files: [fichier], title: nom });
+        return { mode: 'partage', nom };
+      } catch (e) {
+        if (e.name === 'AbortError') return null;
+        // Partage refusé : on télécharge à la place.
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nom;
+    (fenetreActive() || document.body).appendChild(a); // hors de la fenêtre ouverte, le lien serait inactif
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return { mode: 'telecharge', nom };
+  }
+
+  // Demande un fichier à l'utilisateur. Renvoie { nom, octets } ou null s'il renonce.
+  // À appeler directement depuis un clic : le navigateur n'ouvre la fenêtre de choix qu'à cette condition.
+  function ouvrirFichier({ titre, nom, extensions, accept }) {
+    const N = natif();
+    if (N) {
+      return N.os.showOpenDialog(titre, { filters: [{ name: nom, extensions }, { name: 'Tous les fichiers', extensions: ['*'] }] })
+        .then(async (chemins) => {
+          if (!chemins || !chemins.length) return null;
+          const octets = await N.filesystem.readBinaryFile(chemins[0]);
+          if (octets.byteLength > LIMITES.fichier) throw new Error('fichier trop gros');
+          return { nom: chemins[0].split(/[\\/]/).pop(), octets };
+        });
+    }
+    return new Promise((ok, ko) => {
+      const choix = document.createElement('input');
+      choix.type = 'file';
+      choix.hidden = true;
+      if (accept) choix.accept = accept;
+      choix.addEventListener('change', () => {
+        const f = choix.files[0];
+        choix.remove();
+        if (!f) { ok(null); return; }
+        if (f.size > LIMITES.fichier) { ko(new Error('fichier trop gros')); return; }
+        f.arrayBuffer().then((octets) => ok({ nom: f.name, octets }), ko);
+      });
+      choix.addEventListener('cancel', () => { choix.remove(); ok(null); });
+      (fenetreActive() || document.body).appendChild(choix);
+      choix.click();
+    });
+  }
+
+  /* Format des fichiers .boites (JSON) :
+     { format: 'boites-a-classer', type: 'travail', version: 1, logiciel, date, collection, etat }
+     { format: 'boites-a-classer', type: 'collection', version: 1, logiciel, collection }
+     La collection est toujours incluse : le fichier s'ouvre même chez quelqu'un qui ne l'a pas.
+     Ces fichiers circulent entre élèves et enseignants : tout ce qu'on y lit est vérifié et borné. */
+
+  const idSur = (v) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,60}$/.test(v) && v !== '__proto__' ? v : '');
+  const texteSur = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+  const IMAGE_SURE = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+
+  function nettoyerCollection(c) {
+    if (!c || typeof c !== 'object' || !Array.isArray(c.attributs) || !Array.isArray(c.etres)) {
+      throw new Error('la collection est illisible');
+    }
+    const attributs = [];
+    const idsA = new Set();
+    for (const a of c.attributs.slice(0, LIMITES.attributs)) {
+      const id = idSur(a && a.id), nom = texteSur(a && a.nom, LIMITES.texte);
+      if (!id || !nom || idsA.has(id)) continue;
+      idsA.add(id);
+      const o = { id, nom };
+      if (typeof a.couleur === 'string' && /^#[0-9a-f]{6}$/i.test(a.couleur)) o.couleur = a.couleur;
+      attributs.push(o);
+    }
+    const etres = [];
+    const idsE = new Set();
+    for (const e of c.etres.slice(0, LIMITES.etres)) {
+      const id = idSur(e && e.id), nom = texteSur(e && e.nom, LIMITES.texte);
+      if (!id || !nom || idsE.has(id)) continue;
+      idsE.add(id);
+      const o = { id, nom };
+      const emoji = texteSur(e.emoji, 16);
+      if (emoji) o.emoji = emoji;
+      if (typeof e.image === 'string' && e.image.length <= LIMITES.image && IMAGE_SURE.test(e.image)) o.image = e.image;
+      o.attributs = Array.isArray(e.attributs) ? [...new Set(e.attributs.filter((x) => idsA.has(x)))] : [];
+      etres.push(o);
+    }
+    if (!attributs.length || !etres.length) throw new Error('la collection est vide');
+    return { id: idSur(c.id) || nouvelId('perso-'), nom: texteSur(c.nom, LIMITES.texte) || 'Collection sans nom', attributs, etres };
+  }
+
+  function nettoyerEtat(o, c) {
+    const res = { boites: [], positions: {} };
+    if (!o || typeof o !== 'object') return res;
+    const idsB = new Set();
+    for (const b of Array.isArray(o.boites) ? o.boites.slice(0, LIMITES.boites) : []) {
+      if (!b || typeof b !== 'object') continue;
+      const [x, y, w, h] = [b.x, b.y, b.w, b.h].map(Number);
+      if (![x, y, w, h].every(Number.isFinite)) continue;
+      let id = idSur(b.id);
+      if (!id || idsB.has(id)) id = nouvelId('b');
+      idsB.add(id);
+      res.boites.push({
+        id,
+        ...borner({ x, y }),
+        w: borne(Math.round(w), BOITE_MIN.l, MAX_XY),
+        h: borne(Math.round(h), BOITE_MIN.h, MAX_XY),
+        attr: idSur(b.attr) || null,
+        texte: texteSur(b.texte, LIMITES.texte),
+      });
+    }
+    if (o.positions && typeof o.positions === 'object') {
+      for (const e of c.etres) {
+        const p = Object.prototype.hasOwnProperty.call(o.positions, e.id) ? o.positions[e.id] : null;
+        if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) res.positions[e.id] = borner(p);
+      }
+    }
+    return res;
+  }
+
+  function lireContenu(octets) {
+    let o = null;
+    try { o = JSON.parse(new TextDecoder().decode(octets)); } catch (e) { /* pas du JSON */ }
+    if (!o || o.format !== FORMAT) throw new Error("ce n'est pas un fichier Boîtes à classer");
+    const collection = nettoyerCollection(o.collection);
+    if (o.type === 'collection') return { type: 'collection', collection };
+    if (o.type === 'travail') return { type: 'travail', collection, etat: nettoyerEtat(o.etat, collection) };
+    throw new Error("ce n'est pas un fichier Boîtes à classer");
+  }
+
+  const copieCollection = (c) => JSON.parse(JSON.stringify({ id: c.id, nom: c.nom, attributs: c.attributs, etres: c.etres }));
+  const signature = (c) => JSON.stringify([
+    c.attributs.map((a) => [a.id, a.nom]),
+    c.etres.map((e) => [e.id, e.nom, e.emoji || '', e.image || '', e.attributs]),
+  ]);
+
+  function nomLibre(nom, sauf) {
+    const pris = new Set(toutes().filter((c) => c.id !== sauf).map((c) => normaliser(c.nom)));
+    if (!pris.has(normaliser(nom))) return nom;
+    for (let i = 2; ; i++) if (!pris.has(normaliser(`${nom} (${i})`))) return `${nom} (${i})`;
+  }
+
+  // Retrouve la collection d'un fichier parmi celles qu'on a déjà, ou l'ajoute à « Mes collections ».
+  // Une collection différente de celle qu'on a sous le même identifiant est ajoutée à côté : rien n'est écrasé.
+  function integrerCollection(c) {
+    const fournie = FOURNIES.find((x) => x.id === c.id);
+    if (fournie) return fournie;
+    const sig = signature(c);
+    const deja = mesCollections.find((x) => x.id === c.id && signature(x) === sig)
+      || mesCollections.find((x) => signature(x) === sig);
+    if (deja) return deja;
+    const libre = c.id.startsWith('perso-') && !mesCollections.some((x) => x.id === c.id);
+    const nouvelle = { ...c, id: libre ? c.id : nouvelId('perso-'), nom: nomLibre(c.nom) };
+    sauverMesCollections([...mesCollections, nouvelle]);
+    return nouvelle;
+  }
+
+  async function enregistrerTravail() {
+    const contenu = {
+      format: FORMAT, type: 'travail', version: 1, logiciel: VERSION, date: new Date().toISOString(),
+      collection: copieCollection(coll), etat,
+    };
+    const blob = new Blob([JSON.stringify(contenu)], { type: 'application/json' });
+    const nom = nomDeFichier(`${coll.nom} - ${new Date().toISOString().slice(0, 10)}`, EXTENSION);
+    try {
+      const r = await enregistrerFichier(blob, nom, { titre: 'Enregistrer mon travail', nom: 'Boîtes à classer', extension: EXTENSION });
+      info.textContent = r ? compteRendu(r, 'Travail') : infoDefaut;
+    } catch (e) {
+      info.textContent = "Impossible d'enregistrer : " + (e && e.message ? e.message : e);
+    }
+  }
+
+  async function exporterCollection(c) {
+    const contenu = { format: FORMAT, type: 'collection', version: 1, logiciel: VERSION, collection: copieCollection(c) };
+    const blob = new Blob([JSON.stringify(contenu)], { type: 'application/json' });
+    const r = await enregistrerFichier(blob, nomDeFichier(`Collection - ${c.nom}`, EXTENSION),
+      { titre: 'Exporter la collection', nom: 'Boîtes à classer', extension: EXTENSION });
+    return r && compteRendu(r, 'Fichier');
+  }
+
+  // Ouvre un fichier .boites : un travail (il remplace le plan de travail de sa collection) ou une collection.
+  async function ouvrir() {
+    try {
+      const f = await ouvrirFichier({
+        titre: 'Ouvrir un fichier Boîtes à classer',
+        nom: 'Boîtes à classer',
+        extensions: [EXTENSION, 'json'],
+        accept: tactile.matches ? '' : `.${EXTENSION},.json,application/json`, // iPhone et iPad grisent les extensions qu'ils ne connaissent pas
+      });
+      if (!f) return;
+      const lu = lireContenu(f.octets);
+      const c = integrerCollection(lu.collection);
+      fermerFenetres();
+      if (lu.type === 'travail') {
+        choisirCollection(c.id, lu.etat);
+        toutVoir();
+        info.textContent = `Travail ouvert : ${f.nom}`;
+      } else {
+        choisirCollection(c.id);
+        info.textContent = estPerso(c)
+          ? `Collection « ${c.nom} » ajoutée à Mes collections.`
+          : `Collection « ${c.nom} » ouverte.`;
+      }
+    } catch (e) {
+      signaler("Impossible d'ouvrir ce fichier : " + (e && e.message ? e.message : e));
+    }
+  }
+
+  // Message dans la fenêtre ouverte s'il y en a une (sinon il serait caché derrière), ou dans la barre d'information.
+  function signaler(texte) {
+    const zone = fenetreActive() && fenetreActive().querySelector('.message');
+    if (zone) zone.textContent = texte; else info.textContent = texte;
+  }
+
+  /* ---------- Mes collections ---------- */
+
+  const CLE_MES_COLLECTIONS = 'boites-a-classer:mes-collections';
+
+  function lireMesCollections() {
+    try {
+      const liste = JSON.parse(lire(CLE_MES_COLLECTIONS));
+      if (!Array.isArray(liste)) return [];
+      const res = [];
+      for (const c of liste) {
+        try { res.push(nettoyerCollection(c)); } catch (e) { /* collection abîmée : ignorée */ }
+      }
+      return res;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Lève une erreur si le navigateur refuse (mémoire pleine, navigation privée…).
+  function sauverMesCollections(liste) {
+    try {
+      localStorage.setItem(CLE_MES_COLLECTIONS, JSON.stringify(liste));
+    } catch (e) {
+      throw new Error('la mémoire du navigateur est pleine ou indisponible (essayez avec moins de photos)');
+    }
+    mesCollections = liste;
+    remplirSelect();
+  }
+
+  function remplirSelect() {
+    selColl.replaceChildren();
+    const groupe = (titre, liste) => {
+      const g = document.createElement('optgroup');
+      g.label = titre;
+      for (const c of liste) g.appendChild(new Option(c.nom, c.id));
+      selColl.appendChild(g);
+    };
+    groupe('Collections fournies', FOURNIES);
+    if (mesCollections.length) groupe('Mes collections', mesCollections);
+    if (coll) selColl.value = coll.id;
+  }
+
+  const fenCollections = $('#fen-collections');
+  const listeCollections = $('#liste-collections');
+
+  function fermerFenetres() {
+    fermerMenu();
+    for (const d of document.querySelectorAll('dialog[open]')) d.close();
+  }
+
+  function ouvrirCollections() {
+    fermerMenu();
+    remplirListeCollections();
+    fenCollections.querySelector('.message').textContent = '';
+    fenCollections.showModal();
+  }
+
+  const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
+
+  function remplirListeCollections() {
+    const bouton = (texte, action, classe) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn' + (classe ? ' ' + classe : '');
+      b.textContent = texte;
+      b.addEventListener('click', action);
+      return b;
+    };
+
+    const ligne = (c) => {
+      const perso = estPerso(c);
+      const el = document.createElement('div');
+      el.className = 'coll' + (c === coll ? ' courante' : '');
+      const infos = document.createElement('div');
+      infos.className = 'coll-infos';
+      const titre = document.createElement('strong');
+      titre.textContent = c.nom;
+      const detail = document.createElement('small');
+      detail.textContent = `${pluriel(c.etres.length, 'être vivant', 'êtres vivants')} · ${pluriel(c.attributs.length, 'attribut', 'attributs')}`
+        + (c === coll ? ' · en cours' : '');
+      infos.append(titre, detail);
+
+      const actions = document.createElement('div');
+      actions.className = 'coll-actions';
+      if (c !== coll) {
+        actions.appendChild(bouton('Utiliser', () => { fermerFenetres(); choisirCollection(c.id); }));
+      }
+      if (perso) {
+        actions.appendChild(bouton('✎ Modifier', () => ouvrirEditeur(c, false)));
+      } else {
+        actions.appendChild(bouton('Copier pour modifier', () => {
+          const copie = copieCollection(c);
+          copie.id = nouvelId('perso-');
+          copie.nom = nomLibre(`${c.nom} (copie)`);
+          ouvrirEditeur(copie, true);
+        }));
+      }
+      actions.appendChild(bouton('Exporter', async () => {
+        const zone = fenCollections.querySelector('.message');
+        try {
+          const texte = await exporterCollection(c);
+          if (texte) zone.textContent = texte;
+        } catch (e) {
+          zone.textContent = "Impossible d'exporter : " + (e && e.message ? e.message : e);
+        }
+      }));
+      if (perso) {
+        const suppr = bouton('', () => {
+          if (!suppr.classList.contains('confirmer')) {
+            suppr.classList.add('attention', 'confirmer');
+            setTimeout(() => suppr.classList.remove('attention', 'confirmer'), 3000);
+            return;
+          }
+          supprimerCollection(c);
+        });
+        suppr.innerHTML = '<span class="txt-normal">Supprimer</span><span class="txt-confirmer">Confirmer ?</span>';
+        actions.appendChild(suppr);
+      }
+      el.append(infos, actions);
+      return el;
+    };
+
+    const section = (titre, liste, vide) => {
+      const s = document.createElement('section');
+      s.className = 'coll-groupe';
+      const h = document.createElement('h3');
+      h.textContent = titre;
+      s.appendChild(h);
+      if (liste.length) s.append(...liste.map(ligne));
+      else {
+        const p = document.createElement('p');
+        p.className = 'vide';
+        p.textContent = vide;
+        s.appendChild(p);
+      }
+      return s;
+    };
+
+    listeCollections.replaceChildren(
+      section('Mes collections', mesCollections, 'Aucune pour l\'instant : créez-en une, copiez une collection fournie, ou ouvrez un fichier de collection reçu.'),
+      section('Collections fournies', FOURNIES, ''),
+    );
+  }
+
+  function supprimerCollection(c) {
+    try {
+      sauverMesCollections(mesCollections.filter((x) => x !== c));
+    } catch (e) {
+      signaler('Impossible de supprimer : ' + e.message);
+      return;
+    }
+    try { localStorage.removeItem('boites-a-classer:' + c.id); } catch (e) { /* stockage indisponible */ }
+    if (c === coll) choisirCollection(FOURNIES[0].id);
+    remplirListeCollections();
+    fenCollections.querySelector('.message').textContent = `Collection « ${c.nom} » supprimée.`;
+  }
+
+  /* ---------- Éditeur de collection ---------- */
+
+  const DESSINS = [
+    '🐇', '🦔', '🦇', '🐈', '🐕', '🐁', '🐿️', '🦊', '🐺', '🐻', '🦁', '🐯', '🦓', '🦒', '🐘', '🦏',
+    '🐪', '🦘', '🐄', '🐖', '🐑', '🐐', '🐎', '🦌', '🐒', '🦦', '🐬', '🐋', '🦭',
+    '🐦', '🐔', '🦆', '🦃', '🦅', '🦉', '🕊️', '🦜', '🦩', '🐧', '🦢',
+    '🐢', '🦎', '🐊', '🐍', '🦕', '🦖', '🐸', '🐟', '🐠', '🐡', '🦈',
+    '🐌', '🐛', '🦋', '🐜', '🐝', '🐞', '🦗', '🪲', '🦟', '🪰', '🕷️', '🦂', '🦀', '🦞', '🦐', '🦑', '🐙', '🦪', '🪱', '🐚',
+    '🌱', '🌿', '☘️', '🍀', '🌾', '🌵', '🌲', '🌳', '🌴', '🎋', '🌷', '🌹', '🌻', '🌼', '🌸', '🍄', '🍁', '🍎', '🥕', '🥬', '🦠',
+  ];
+
+  const fenEditeur = $('#fen-editeur');
+  const edNom = $('#ed-nom');
+  const edAttributs = $('#ed-attributs');
+  const edTableau = $('#ed-tableau');
+  const edAlertes = $('#ed-alertes');
+  const edAnnuler = $('#ed-annuler');
+  let brouillon = null; // copie de travail de la collection modifiée
+  let modifie = false;
+  let tentative = false; // les erreurs ne s'affichent qu'après un premier essai d'enregistrement
+  let attenteAnnuler = null;
+
+  const attributVide = () => ({ id: nouvelId('a'), nom: '' });
+  const etreVide = () => ({ id: nouvelId('e'), nom: '', emoji: '', attributs: [] });
+  const etreRempli = (e) => e.nom.trim() || e.emoji || e.image || e.attributs.length;
+  const couleurBrouillon = (a, i) => a.couleur || PALETTE[i % PALETTE.length];
+
+  function ouvrirEditeur(c, nouvelle) {
+    fermerMenu();
+    brouillon = copieCollection(c);
+    for (const e of brouillon.etres) e.emoji = e.emoji || '';
+    if (!brouillon.attributs.length) brouillon.attributs.push(attributVide(), attributVide());
+    if (!brouillon.etres.length) brouillon.etres.push(etreVide(), etreVide());
+    modifie = false;
+    tentative = false;
+    remettreAnnuler();
+    $('#titre-editeur').textContent = estPerso(c) ? 'Modifier la collection' : 'Nouvelle collection';
+    edNom.value = brouillon.nom;
+    rendreAttributs();
+    rendreTableau();
+    verifierBrouillon();
+    fenEditeur.showModal();
+    if (nouvelle && !brouillon.nom) edNom.focus();
+  }
+
+  function changement() {
+    modifie = true;
+    remettreAnnuler();
+    verifierBrouillon();
+  }
+
+  function boutonSuppr(titre, action) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'suppr';
+    b.textContent = '×';
+    b.title = titre;
+    b.setAttribute('aria-label', titre);
+    b.addEventListener('click', action);
+    return b;
+  }
+
+  function rendreAttributs() {
+    edAttributs.replaceChildren(...brouillon.attributs.map((a, i) => {
+      const li = document.createElement('li');
+      const pastille = document.createElement('span');
+      pastille.className = 'pastille';
+      pastille.style.setProperty('--c', couleurBrouillon(a, i));
+      const champ = document.createElement('input');
+      champ.type = 'text';
+      champ.maxLength = LIMITES.texte;
+      champ.value = a.nom;
+      champ.placeholder = 'ex. plumes';
+      champ.setAttribute('aria-label', `Attribut ${i + 1}`);
+      champ.addEventListener('input', () => { a.nom = champ.value; majEntetes(); changement(); });
+      champ.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); ajouterAttribut(); }
+      });
+      li.append(pastille, champ, boutonSuppr('Supprimer cet attribut', () => {
+        brouillon.attributs.splice(brouillon.attributs.indexOf(a), 1);
+        for (const e of brouillon.etres) e.attributs = e.attributs.filter((id) => id !== a.id);
+        rendreAttributs();
+        rendreTableau();
+        changement();
+      }));
+      return li;
+    }));
+  }
+
+  function ajouterAttribut() {
+    // Une couleur fixe, la première libre : supprimer un attribut ne change pas la couleur des autres.
+    const prises = new Set(brouillon.attributs.map(couleurBrouillon));
+    const a = attributVide();
+    a.couleur = PALETTE.find((c) => !prises.has(c)) || PALETTE[brouillon.attributs.length % PALETTE.length];
+    brouillon.attributs.push(a);
+    rendreAttributs();
+    rendreTableau();
+    changement();
+    edAttributs.lastElementChild.querySelector('input').focus();
+  }
+
+  function majEntetes() {
+    const entetes = edTableau.querySelectorAll('th.col-attr span');
+    brouillon.attributs.forEach((a, i) => {
+      if (!entetes[i]) return;
+      entetes[i].textContent = a.nom.trim() || '…';
+      entetes[i].title = a.nom;
+    });
+  }
+
+  function majDessin(btn, e) {
+    btn.replaceChildren();
+    btn.classList.toggle('vide', !e.image && !e.emoji);
+    if (e.image) {
+      const img = document.createElement('img');
+      img.src = e.image;
+      img.alt = '';
+      btn.appendChild(img);
+    } else {
+      btn.textContent = e.emoji || '＋';
+    }
+  }
+
+  function rendreTableau() {
+    const tete = document.createElement('tr');
+    const thEtre = document.createElement('th');
+    thEtre.className = 'col-etre';
+    thEtre.textContent = 'Être vivant';
+    tete.appendChild(thEtre);
+    brouillon.attributs.forEach((a, i) => {
+      const th = document.createElement('th');
+      th.className = 'col-attr';
+      th.style.setProperty('--c', couleurBrouillon(a, i));
+      const span = document.createElement('span');
+      th.appendChild(span);
+      tete.appendChild(th);
+    });
+    tete.appendChild(document.createElement('th'));
+
+    const corps = brouillon.etres.map((e) => {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.className = 'col-etre';
+      const bloc = document.createElement('div');
+      bloc.className = 'etre-ligne';
+      const dessin = document.createElement('button');
+      dessin.type = 'button';
+      dessin.className = 'ed-dessin ouvre-menu';
+      dessin.title = 'Choisir un dessin ou une photo';
+      majDessin(dessin, e);
+      dessin.addEventListener('click', () => ouvrirPalette(dessin, e));
+      const champ = document.createElement('input');
+      champ.type = 'text';
+      champ.maxLength = LIMITES.texte;
+      champ.value = e.nom;
+      champ.placeholder = 'Nom';
+      champ.setAttribute('aria-label', 'Nom de l\'être vivant');
+      champ.addEventListener('input', () => { e.nom = champ.value; changement(); });
+      champ.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); ajouterEtre(); }
+      });
+      bloc.append(dessin, champ);
+      td.appendChild(bloc);
+      tr.appendChild(td);
+
+      brouillon.attributs.forEach((a, i) => {
+        const cellule = document.createElement('td');
+        const etiquette = document.createElement('label');
+        etiquette.className = 'case';
+        etiquette.style.setProperty('--c', couleurBrouillon(a, i));
+        const coche = document.createElement('input');
+        coche.type = 'checkbox';
+        coche.checked = e.attributs.includes(a.id);
+        coche.addEventListener('change', () => {
+          e.attributs = coche.checked ? [...e.attributs, a.id] : e.attributs.filter((id) => id !== a.id);
+          changement();
+        });
+        coche.setAttribute('aria-label', a.nom || `attribut ${i + 1}`);
+        etiquette.appendChild(coche);
+        cellule.appendChild(etiquette);
+        tr.appendChild(cellule);
+      });
+
+      const tdSuppr = document.createElement('td');
+      tdSuppr.appendChild(boutonSuppr('Supprimer cet être vivant', () => {
+        brouillon.etres.splice(brouillon.etres.indexOf(e), 1);
+        rendreTableau();
+        changement();
+      }));
+      tr.appendChild(tdSuppr);
+      return tr;
+    });
+
+    const thead = document.createElement('thead');
+    thead.appendChild(tete);
+    const tbody = document.createElement('tbody');
+    tbody.append(...corps);
+    edTableau.replaceChildren(thead, tbody);
+    majEntetes();
+  }
+
+  function ajouterEtre() {
+    brouillon.etres.push(etreVide());
+    rendreTableau();
+    changement();
+    edTableau.querySelector('tbody tr:last-child input[type="text"]').focus();
+  }
+
+  function ouvrirPalette(ancre, e) {
+    afficherMenu(ancre, 'dessin-' + e.id, (m) => {
+      const grille = document.createElement('div');
+      grille.className = 'palette-grille';
+      for (const d of DESSINS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = d;
+        b.addEventListener('click', () => {
+          fermerMenu();
+          e.emoji = d;
+          delete e.image;
+          majDessin(ancre, e);
+          changement();
+        });
+        grille.appendChild(b);
+      }
+
+      const autre = document.createElement('label');
+      autre.className = 'palette-autre';
+      autre.textContent = 'Autre emoji : ';
+      const champ = document.createElement('input');
+      champ.type = 'text';
+      champ.maxLength = 16;
+      champ.value = e.image ? '' : e.emoji;
+      champ.addEventListener('change', () => {
+        const v = champ.value.trim();
+        if (!v) return;
+        e.emoji = v;
+        delete e.image;
+        majDessin(ancre, e);
+        changement();
+      });
+      champ.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); champ.blur(); fermerMenu(); } });
+      autre.appendChild(champ);
+
+      m.appendChild(entreeMenu('🖼 Choisir une photo ou une image…', () => choisirImage(ancre, e)));
+      if (e.image) {
+        m.appendChild(entreeMenu("Retirer l'image", () => { delete e.image; majDessin(ancre, e); changement(); }));
+      }
+      m.append(document.createElement('hr'), grille, autre);
+    }, 'palette');
+  }
+
+  async function choisirImage(ancre, e) {
+    try {
+      const f = await ouvrirFichier({ titre: 'Choisir une image', nom: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'], accept: 'image/*' });
+      if (!f) return;
+      e.image = await reduireImage(new Blob([f.octets]));
+      majDessin(ancre, e);
+      changement();
+    } catch (err) {
+      tentative = true;
+      verifierBrouillon(["Cette image n'a pas pu être lue (" + (err && err.message ? err.message : err) + ').']);
+    }
+  }
+
+  // Réduit une photo à 160 px de côté au plus (JPEG) : la collection reste légère dans le navigateur et dans les fichiers.
+  async function reduireImage(blob) {
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = await new Promise((ok, ko) => {
+        const i = new Image();
+        i.onload = () => ok(i);
+        i.onerror = () => ko(new Error('format non reconnu'));
+        i.src = url;
+      });
+      const ech = Math.min(1, 160 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * ech));
+      c.height = Math.max(1, Math.round(img.naturalHeight * ech));
+      const g = c.getContext('2d');
+      g.fillStyle = '#ffffff';
+      g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.85);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function problemesBrouillon() {
+    const erreurs = [];
+    const conseils = [];
+    const attrs = brouillon.attributs.filter((a) => a.nom.trim());
+    const etres = brouillon.etres.filter(etreRempli);
+
+    if (!brouillon.nom.trim()) erreurs.push('Donnez un nom à la collection.');
+    else if (toutes().some((c) => c.id !== brouillon.id && normaliser(c.nom) === normaliser(brouillon.nom))) {
+      erreurs.push('Une autre collection porte déjà ce nom.');
+    }
+    if (!attrs.length) erreurs.push('Ajoutez au moins un attribut.');
+    const vus = new Set();
+    for (const a of attrs) {
+      const n = normaliser(a.nom);
+      if (vus.has(n)) erreurs.push(`L'attribut « ${a.nom.trim()} » est écrit deux fois.`);
+      vus.add(n);
+    }
+    if (etres.length < 2) erreurs.push('Ajoutez au moins deux êtres vivants.');
+    if (etres.some((e) => !e.nom.trim())) erreurs.push('Chaque être vivant doit avoir un nom.');
+
+    // Conseils (on peut enregistrer quand même).
+    const ids = new Set(attrs.map((a) => a.id));
+    for (const e of etres) {
+      if (e.nom.trim() && !e.attributs.some((id) => ids.has(id))) {
+        conseils.push(`${e.nom.trim()} n'a aucun attribut coché : il ne pourra aller dans aucune boîte.`);
+      }
+    }
+    // Deux attributs « se croisent » si des êtres vivants ont l'un, l'autre, et les deux : leurs boîtes ne peuvent pas s'emboîter.
+    const porteurs = new Map(attrs.map((a) => [a, new Set(etres.filter((e) => e.attributs.includes(a.id)))]));
+    const croisements = [];
+    for (let i = 0; i < attrs.length; i++) {
+      for (let j = i + 1; j < attrs.length; j++) {
+        const A = porteurs.get(attrs[i]), B = porteurs.get(attrs[j]);
+        const communs = [...A].filter((e) => B.has(e)).length;
+        if (communs > 0 && communs < A.size && communs < B.size) croisements.push([attrs[i].nom.trim(), attrs[j].nom.trim()]);
+      }
+    }
+    for (const [a, b] of croisements.slice(0, 3)) {
+      conseils.push(`Les attributs « ${a} » et « ${b} » se croisent : certains êtres vivants ont les deux, d'autres un seul. Leurs boîtes ne pourront pas s'emboîter.`);
+    }
+    if (croisements.length > 3) conseils.push(`… et ${croisements.length - 3} autres croisements.`);
+    return { erreurs, conseils };
+  }
+
+  function verifierBrouillon(enPlus) {
+    const { erreurs, conseils } = problemesBrouillon();
+    const lignes = [
+      ...(enPlus || []).map((t) => ['erreur', t]),
+      ...(tentative ? erreurs.map((t) => ['erreur', t]) : []),
+      ...conseils.map((t) => ['conseil', t]),
+    ];
+    edAlertes.replaceChildren(...lignes.map(([type, texte]) => {
+      const li = document.createElement('li');
+      li.className = type;
+      li.textContent = texte;
+      return li;
+    }));
+    return erreurs;
+  }
+
+  function enregistrerBrouillon() {
+    tentative = true;
+    const erreurs = verifierBrouillon();
+    if (erreurs.length) {
+      edAlertes.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return;
+    }
+    const attributs = brouillon.attributs.filter((a) => a.nom.trim())
+      .map((a) => ({ id: a.id, nom: a.nom.trim(), couleur: couleurBrouillon(a, brouillon.attributs.indexOf(a)) }));
+    const ids = new Set(attributs.map((a) => a.id));
+    const etres = brouillon.etres.filter(etreRempli).map((e) => {
+      const o = { id: e.id, nom: e.nom.trim() };
+      if (e.image) o.image = e.image; else if (e.emoji) o.emoji = e.emoji;
+      o.attributs = e.attributs.filter((id) => ids.has(id));
+      return o;
+    });
+    const c = { id: brouillon.id, nom: brouillon.nom.trim(), attributs, etres };
+    const existe = mesCollections.some((x) => x.id === c.id);
+    try {
+      sauverMesCollections(existe ? mesCollections.map((x) => (x.id === c.id ? c : x)) : [...mesCollections, c]);
+    } catch (e) {
+      verifierBrouillon(["Impossible d'enregistrer : " + e.message + '.']);
+      return;
+    }
+    modifie = false;
+    fermerFenetres();
+    choisirCollection(c.id);
+    info.textContent = `Collection « ${c.nom} » enregistrée. Elle est dans Mes collections (bouton ✎).`;
+  }
+
+  function remettreAnnuler() {
+    clearTimeout(attenteAnnuler);
+    attenteAnnuler = null;
+    edAnnuler.classList.remove('attention', 'confirmer');
+  }
+
+  // Fermer l'éditeur sans enregistrer : un second appui est demandé s'il y a des modifications.
+  function annulerEditeur() {
+    if (modifie && !attenteAnnuler) {
+      edAnnuler.classList.add('attention', 'confirmer');
+      attenteAnnuler = setTimeout(remettreAnnuler, 4000);
+      return;
+    }
+    remettreAnnuler();
+    fermerMenu();
+    fenEditeur.close();
+  }
+
+  edNom.addEventListener('input', () => { brouillon.nom = edNom.value; changement(); });
+  $('#ed-ajout-attr').addEventListener('click', ajouterAttribut);
+  $('#ed-ajout-etre').addEventListener('click', ajouterEtre);
+  $('#ed-enregistrer').addEventListener('click', enregistrerBrouillon);
+  edAnnuler.addEventListener('click', annulerEditeur);
+  fenEditeur.querySelector('.fermer').addEventListener('click', annulerEditeur);
+  fenEditeur.addEventListener('cancel', (ev) => { // touche Échap
+    ev.preventDefault();
+    if (menu) fermerMenu(); else annulerEditeur();
+  });
+  fenEditeur.addEventListener('close', fermerMenu);
+
+  fenCollections.querySelector('.fermer').addEventListener('click', () => fenCollections.close());
+  fenCollections.addEventListener('close', fermerMenu);
+  fenCollections.addEventListener('cancel', (ev) => { if (menu) { ev.preventDefault(); fermerMenu(); } });
+  $('#coll-ouvrir').addEventListener('click', ouvrir);
+  $('#coll-nouvelle').addEventListener('click', () => {
+    ouvrirEditeur({ id: nouvelId('perso-'), nom: '', attributs: [], etres: [] }, true);
+  });
+
+  /* ---------- Menus ---------- */
+
+  // Ouvre un petit menu sous (ou au-dessus de) l'élément « ancre » ; un second appui sur la même ancre le referme.
+  // Dans une fenêtre (dialog), le menu y est ajouté : hors d'elle, il serait inaccessible.
+  function afficherMenu(ancre, cle, remplir, classe) {
+    const dejaOuvert = menu && menu.dataset.cle === cle;
     fermerMenu();
     if (dejaOuvert) return;
 
     menu = document.createElement('div');
-    menu.className = 'menu-attr';
-    menu.dataset.boite = b.id;
-    for (const a of attrParId.values()) {
-      const btn = document.createElement('button');
-      const pastille = document.createElement('span');
-      pastille.className = 'pastille';
-      pastille.style.setProperty('--c', a.couleur);
-      btn.append(pastille, document.createTextNode(a.nom));
-      btn.addEventListener('click', () => {
-        b.attr = a.id;
-        b.texte = a.nom;
-        sauver();
-        oublierVerification();
-        rendre();
-      });
-      menu.appendChild(btn);
-    }
-    document.body.appendChild(menu);
+    menu.className = 'menu' + (classe ? ' ' + classe : '');
+    menu.dataset.cle = cle;
+    remplir(menu);
+    (ancre.closest('dialog') || document.body).appendChild(menu);
 
     const r = ancre.getBoundingClientRect();
     const larg = menu.offsetWidth;
@@ -687,12 +1502,52 @@
     menu.style.top = (dessous + haut > window.innerHeight - 8 ? Math.max(8, r.top - haut - 4) : dessous) + 'px';
   }
 
+  function entreeMenu(texte, action, couleur) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    if (couleur) {
+      const pastille = document.createElement('span');
+      pastille.className = 'pastille';
+      pastille.style.setProperty('--c', couleur);
+      btn.appendChild(pastille);
+    }
+    btn.appendChild(document.createTextNode(texte));
+    btn.addEventListener('click', () => { fermerMenu(); action(); });
+    return btn;
+  }
+
+  function ouvrirMenu(ancre, b) {
+    afficherMenu(ancre, 'boite-' + b.id, (m) => {
+      for (const a of attrParId.values()) {
+        m.appendChild(entreeMenu(a.nom, () => {
+          b.attr = a.id;
+          b.texte = a.nom;
+          sauver();
+          oublierVerification();
+          rendre();
+        }, a.couleur));
+      }
+    }, 'menu-attr');
+  }
+
+  function ouvrirMenuFichier() {
+    afficherMenu(boutonFichier, 'fichier', (m) => {
+      m.append(
+        entreeMenu('💾 Enregistrer mon travail', enregistrerTravail),
+        entreeMenu('📂 Ouvrir un fichier…', ouvrir),
+        document.createElement('hr'),
+        entreeMenu('📄 Enregistrer en PDF', exporterPdf),
+      );
+      if (!petitEcran.matches) m.appendChild(entreeMenu('🖨 Imprimer', () => window.print()));
+    });
+  }
+
   function fermerMenu() {
     if (menu) { menu.remove(); menu = null; }
   }
 
   document.addEventListener('pointerdown', (ev) => {
-    if (menu && !ev.target.closest('.menu-attr, .boite-menu')) fermerMenu();
+    if (menu && !ev.target.closest('.menu, .ouvre-menu')) fermerMenu();
   });
 
   /* ---------- Vérification ---------- */
@@ -787,7 +1642,7 @@
     const visibleL = espace.clientWidth / zoom;
     const visibleH = espace.clientHeight / zoom;
     const b = {
-      id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      id: nouvelId('b'),
       x: Math.round(espace.scrollLeft / zoom + 16 + (n % 6) * 28),
       y: Math.round(espace.scrollTop / zoom + 16 + (n % 6) * 28),
       w: Math.round(Math.min(320, Math.max(BOITE_MIN.l, visibleL - 40))),
@@ -828,12 +1683,12 @@
   $('#verifier').addEventListener('click', verifier);
   $('#ranger').addEventListener('click', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); });
   boutonEffacer.addEventListener('click', effacer);
-  $('#imprimer').addEventListener('click', () => window.print());
-  $('#pdf').addEventListener('click', exporterPdf);
+  boutonFichier.addEventListener('click', ouvrirMenuFichier);
+  $('#gerer').addEventListener('click', ouvrirCollections);
   $('#fermer-bilan').addEventListener('click', fermerBilan);
   selColl.addEventListener('change', () => choisirCollection(selColl.value));
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') { fermerMenu(); fermerBilan(); }
+    if (ev.key === 'Escape' && !document.querySelector('dialog[open]')) { fermerMenu(); fermerBilan(); }
   });
   window.addEventListener('resize', ajusterToile);
 
@@ -842,7 +1697,8 @@
   const zoomSauve = parseFloat(lire('boites-a-classer:zoom'));
   zoom = Number.isFinite(zoomSauve) ? borne(zoomSauve, ZOOM.min, ZOOM.max) : zoomParDefaut();
 
-  for (const c of COLLECTIONS) selColl.add(new Option(c.nom, c.id));
+  mesCollections = lireMesCollections();
+  remplirSelect();
   choisirCollection(lire('boites-a-classer:collection'));
 
   // Version installable (écran d'accueil du téléphone) et utilisable hors connexion, seulement en ligne.

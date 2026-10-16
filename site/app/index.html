@@ -16,9 +16,10 @@
 <body>
   <header class="barre">
     <h1>📦 Boîtes à classer</h1>
-    <label class="choix"><span class="long">Collection</span>
+    <div class="choix">
       <select id="collection" aria-label="Collection"></select>
-    </label>
+      <button id="gerer" title="Créer, modifier ou partager des collections" aria-label="Gérer les collections">✎<span class="long"> Collections</span></button>
+    </div>
     <div class="actions">
       <button id="nouvelle" class="principal">＋ <span class="long">Nouvelle boîte</span><span class="court">Boîte</span></button>
       <button id="verifier">✔ Vérifier</button>
@@ -26,8 +27,7 @@
       <button id="effacer" title="Supprimer les boîtes et tout ranger" aria-label="Recommencer">
         <span class="txt-normal"><span class="long">Recommencer</span><span class="court">🗑</span></span><span class="txt-confirmer">Confirmer ?</span>
       </button>
-      <button id="pdf" title="Enregistrer le travail en PDF">📄 PDF</button>
-      <button id="imprimer">Imprimer</button>
+      <button id="fichier" class="ouvre-menu" aria-haspopup="menu" title="Enregistrer, ouvrir, PDF, imprimer">📁<span class="long"> Fichier</span> ▾</button>
     </div>
   </header>
 
@@ -53,6 +53,51 @@
 
   <div id="info">Touche ou survole un être vivant pour voir ses caractéristiques.</div>
   <footer id="plateau" aria-label="Êtres vivants à classer"></footer>
+
+  <dialog id="fen-collections" class="fenetre" aria-labelledby="titre-collections">
+    <div class="fenetre-tete">
+      <h2 id="titre-collections">Collections</h2>
+      <button type="button" class="fermer" aria-label="Fermer">×</button>
+    </div>
+    <div class="fenetre-corps">
+      <p class="aide">Les collections fournies ne se modifient pas : copiez-en une pour l'adapter, ou créez la vôtre. Pour ajouter une collection reçue dans un fichier <code>.boites</code>, utilisez « Ouvrir un fichier ».</p>
+      <div id="liste-collections"></div>
+      <p class="message" role="status"></p>
+    </div>
+    <div class="fenetre-pied">
+      <button type="button" class="btn" id="coll-ouvrir">📂 Ouvrir un fichier…</button>
+      <button type="button" class="btn principal" id="coll-nouvelle">＋ Nouvelle collection</button>
+    </div>
+  </dialog>
+
+  <dialog id="fen-editeur" class="fenetre large" aria-labelledby="titre-editeur">
+    <div class="fenetre-tete">
+      <h2 id="titre-editeur">Nouvelle collection</h2>
+      <button type="button" class="fermer" aria-label="Fermer">×</button>
+    </div>
+    <div class="fenetre-corps">
+      <label class="champ">Nom de la collection
+        <input id="ed-nom" type="text" maxlength="60" placeholder="ex. Les oiseaux du parc" autocomplete="off">
+      </label>
+      <section class="ed-bloc">
+        <h3>1. Les attributs</h3>
+        <p class="aide">Les caractères que l'on donne aux boîtes : plumes, 6 pattes, coquille…</p>
+        <ol id="ed-attributs" class="ed-attributs"></ol>
+        <button type="button" class="btn" id="ed-ajout-attr">＋ Ajouter un attribut</button>
+      </section>
+      <section class="ed-bloc">
+        <h3>2. Les êtres vivants</h3>
+        <p class="aide">Choisir un dessin (emoji ou photo), écrire le nom, puis cocher les attributs que possède chaque être vivant.</p>
+        <div class="ed-defile"><table id="ed-tableau" class="ed-tableau"></table></div>
+        <button type="button" class="btn" id="ed-ajout-etre">＋ Ajouter un être vivant</button>
+      </section>
+      <ul id="ed-alertes" class="ed-alertes" aria-live="polite"></ul>
+    </div>
+    <div class="fenetre-pied">
+      <button type="button" class="btn" id="ed-annuler"><span class="txt-normal">Annuler</span><span class="txt-confirmer">Abandonner les modifications ?</span></button>
+      <button type="button" class="btn principal" id="ed-enregistrer">Enregistrer la collection</button>
+    </div>
+  </dialog>
 
   <script src="collections.js"></script>
   <script src="app.js"></script>

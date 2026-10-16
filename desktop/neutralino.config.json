@@ -1,6 +1,6 @@
 {
   "applicationId": "fr.boitesaclasser.app",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "defaultMode": "window",
   "port": 47821,
   "documentRoot": "/resources/",
@@ -39,7 +39,9 @@
     "events.*",
     "os.getPath",
     "os.showSaveDialog",
-    "filesystem.writeBinaryFile"
+    "os.showOpenDialog",
+    "filesystem.writeBinaryFile",
+    "filesystem.readBinaryFile"
   ],
   "injectGlobals": true,
   "injectClientLibrary": false
