@@ -66,13 +66,10 @@
     .bouton.danger { color: var(--faux); }
     .bouton.danger.confirmer { background: var(--faux); border-color: var(--faux); color: #fff; }
     .avis { padding: 16px 20px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
-    .chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 24px; padding: 0; list-style: none; }
-    .chiffres li { padding: 14px 16px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
-    .chiffres strong { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-    .chiffres span { color: var(--doux); font-size: .9rem; }
-    .outils { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    .outils input {
-      flex: 1 1 220px;
+    .avis p { margin: 0 0 12px; }
+    .connexion { display: flex; flex-wrap: wrap; gap: 8px; }
+    .connexion input, .outils input {
+      flex: 1 1 200px;
       padding: .45rem .8rem;
       border: 1px solid var(--ligne);
       border-radius: 999px;
@@ -80,6 +77,22 @@
       color: var(--encre);
       font: inherit;
     }
+    .bouton.principal { background: var(--accent); border-color: var(--accent); color: var(--accent-encre); }
+    .etat-site {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px;
+      margin: 0 0 24px; padding: 16px 20px; border: 2px solid var(--ok); border-radius: 16px; background: var(--carte);
+    }
+    .etat-site span { display: block; color: var(--doux); font-size: .9rem; }
+    .etat-site.arrete { border-color: var(--faux); }
+    .etat-site.arrete strong { color: var(--faux); }
+    .etat-site .bouton { padding: .55rem 1.1rem; font-size: 1rem; font-weight: 600; }
+    .bouton.arreter { background: var(--faux); border-color: var(--faux); color: #fff; }
+    .bouton.rouvrir { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 24px; padding: 0; list-style: none; }
+    .chiffres li { padding: 14px 16px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
+    .chiffres strong { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+    .chiffres span { color: var(--doux); font-size: .9rem; }
+    .outils { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     .defile { overflow-x: auto; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
     table { width: 100%; border-collapse: collapse; font-size: .92rem; }
     th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--ligne); vertical-align: middle; }
@@ -103,14 +116,27 @@
       <h1>🛠 Administration</h1>
       <span class="moi" id="moi"></span>
       <a class="bouton" href="../app/index.html">Ouvrir le logiciel</a>
+      <button type="button" class="bouton" id="deconnecter" hidden>Se déconnecter</button>
     </header>
 
     <div id="hors-session" class="avis" hidden>
       <p id="raison">Cette page est réservée aux comptes administrateurs.</p>
-      <p><a class="bouton" href="../app/index.html#compte">Se connecter dans le logiciel</a> puis revenir ici (bouton 👤 → 🛠 Administration).</p>
+      <form id="form-connexion" class="connexion">
+        <input id="identifiant" type="text" placeholder="Identifiant" autocomplete="username" autocapitalize="off" spellcheck="false" aria-label="Identifiant" required>
+        <input id="mdp" type="password" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe" required>
+        <button type="submit" class="bouton principal">Se connecter</button>
+      </form>
+      <p class="message erreur" id="erreur-connexion" role="alert"></p>
     </div>
 
     <div id="contenu" hidden>
+      <section class="etat-site" id="etat-site">
+        <div>
+          <strong id="etat-texte">État du site…</strong>
+          <span id="etat-detail"></span>
+        </div>
+        <button type="button" class="bouton" id="basculer-site" disabled></button>
+      </section>
       <ul class="chiffres" id="chiffres"></ul>
       <div class="outils">
         <input id="filtre" type="search" placeholder="Chercher un identifiant" aria-label="Chercher un identifiant" autocomplete="off">
@@ -184,9 +210,85 @@
 
       function horsSession(raison) {
         $('#contenu').hidden = true;
+        $('#deconnecter').hidden = !jeton;
         $('#hors-session').hidden = false;
         $('#raison').textContent = raison;
+        $('#identifiant').focus();
       }
+
+      // Connexion directement sur cette page (le logiciel peut être fermé pendant un arrêt du site).
+      // Le jeton est gardé aux mêmes clés que le logiciel : on reste connecté des deux côtés.
+      function garder(cle, valeur) {
+        try { if (valeur === null) localStorage.removeItem(cle); else localStorage.setItem(cle, valeur); } catch (e) { /* stockage indisponible */ }
+      }
+      $('#form-connexion').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var id = $('#identifiant').value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var bouton = ev.target.querySelector('button');
+        var erreur = $('#erreur-connexion');
+        erreur.textContent = '';
+        bouton.disabled = true;
+        secretDe(id, $('#mdp').value).then(function (secret) {
+          return fetch('/api/compte/connexion', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifiant: id, secret: secret }),
+          }).then(function (rep) { return rep.json().catch(function () { return {}; }).then(function (r) { return { statut: rep.status, r: r }; }); });
+        }).then(function (x) {
+          if (x.statut !== 200 || !x.r.jeton) { erreur.textContent = x.statut === 401 ? 'Identifiant ou mot de passe incorrect.' : (x.r.erreur || 'Le serveur a répondu ' + x.statut) + '.'; return; }
+          jeton = x.r.jeton;
+          identifiant = x.r.identifiant;
+          garder('boites-a-classer-compte:jeton', jeton);
+          garder('boites-a-classer-compte:identifiant', identifiant);
+          garder('boites-a-classer-compte:admin', x.r.admin ? '1' : null);
+          $('#mdp').value = '';
+          charger();
+        }).catch(function (e) { erreur.textContent = 'Impossible de joindre le serveur : ' + e.message; })
+          .then(function () { bouton.disabled = false; });
+      });
+
+      $('#deconnecter').addEventListener('click', function () {
+        var ancien = jeton;
+        jeton = identifiant = null;
+        ['jeton', 'identifiant', 'admin'].forEach(function (k) { garder('boites-a-classer-compte:' + k, null); });
+        fetch('/api/compte/deconnexion', { method: 'POST', headers: { Authorization: 'Bearer ' + ancien } }).catch(function () {});
+        $('#moi').textContent = '';
+        horsSession('Déconnecté.');
+      });
+
+      /* Arrêt du site : tant qu'il dure, toutes les pages affichent « Boîtes à classer revient dans peu de temps… »
+         (functions/_middleware.js), sauf cette page. */
+      var siteArrete = null;
+      function afficherEtat(arrete) {
+        siteArrete = arrete;
+        var b = $('#basculer-site');
+        b.disabled = false;
+        b.classList.remove('confirmer');
+        $('#etat-site').classList.toggle('arrete', arrete);
+        $('#etat-texte').textContent = arrete ? '🔒 Le site est arrêté' : '🟢 Le site est ouvert';
+        $('#etat-detail').textContent = arrete
+          ? 'Les visiteurs voient « Boîtes à classer revient dans peu de temps… ». Seule cette page reste accessible.'
+          : 'Tout le monde peut utiliser le logiciel.';
+        b.className = 'bouton ' + (arrete ? 'rouvrir' : 'arreter');
+        b.textContent = arrete ? '🔓 Rouvrir le site' : '🔒 Arrêter le site';
+      }
+      function chargerEtat() {
+        appel('maintenance').then(function (x) { if (x.statut === 200) afficherEtat(x.r.active); });
+      }
+      $('#basculer-site').addEventListener('click', function () {
+        var b = $('#basculer-site');
+        // Arrêter demande un second appui ; rouvrir se fait tout de suite.
+        if (!siteArrete && !b.classList.contains('confirmer')) {
+          b.classList.add('confirmer');
+          b.textContent = 'Vraiment arrêter le site pour tout le monde ?';
+          setTimeout(function () { if (b.classList.contains('confirmer')) afficherEtat(siteArrete); }, 4000);
+          return;
+        }
+        b.disabled = true;
+        appel('maintenance', { active: !siteArrete }).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); afficherEtat(siteArrete); return; }
+          afficherEtat(x.r.active);
+          message(x.r.active ? 'Site arrêté. Il faut quelques secondes pour que tout le monde voie le message.' : 'Site rouvert.');
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEtat(siteArrete); });
+      });
 
       function message(texte, erreur) {
         $('#message').textContent = texte;
@@ -201,11 +303,13 @@
       function charger() {
         if (!jeton) { horsSession('Cette page est réservée aux comptes administrateurs : connecte-toi d\'abord.'); return; }
         appel('comptes').then(function (x) {
-          if (x.statut === 401) { horsSession('Ta session a expiré : reconnecte-toi dans le logiciel.'); return; }
+          if (x.statut === 401) { horsSession('Ta session a expiré : reconnecte-toi.'); return; }
           if (x.statut === 403) { horsSession('Le compte « ' + (identifiant || '?') + ' » n\'est pas administrateur.'); return; }
           if (x.statut !== 200) { horsSession('Le serveur a répondu ' + x.statut + '.'); return; }
           $('#hors-session').hidden = true;
           $('#contenu').hidden = false;
+          $('#deconnecter').hidden = false;
+          chargerEtat();
           $('#moi').textContent = 'Compte : ' + identifiant;
           var s = x.r.stats;
           $('#chiffres').replaceChildren.apply($('#chiffres'), [

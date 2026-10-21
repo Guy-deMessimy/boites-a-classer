@@ -7,10 +7,13 @@
 //   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail → 204
 //   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
 //   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
+//   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
+//   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
 //
 // Un compte admin ne peut pas être modifié ni supprimé par cette API (y compris le sien) : réglages du compte dans le logiciel.
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
+import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
@@ -122,15 +125,27 @@ const actions = {
     await env.DB.prepare('DELETE FROM collections WHERE id = ?').bind(id).run();
     return rien();
   },
+
+  async maintenance(request, env) {
+    if (request.method === 'POST') {
+      const { active } = await lireCorps(request);
+      if (typeof active !== 'boolean') return erreur('« active » doit valoir true ou false', 400);
+      await changerMaintenance(env, active);
+    }
+    return json({ active: await maintenanceActive(env) });
+  },
 };
 
-const METHODES = { comptes: 'GET', travail: 'GET', 'mot-de-passe': 'POST', suppression: 'POST', collection: 'POST', 'collection-suppression': 'POST' };
+const METHODES = {
+  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'],
+  collection: ['POST'], 'collection-suppression': ['POST'], maintenance: ['GET', 'POST'],
+};
 
 export async function onRequest({ request, env, params }) {
   if (request.method === 'OPTIONS') return rien();
   const action = params.action;
   if (!Object.hasOwn(actions, action)) return erreur('action inconnue', 404);
-  if (request.method !== METHODES[action]) return erreur('méthode non permise', 405);
+  if (!METHODES[action].includes(request.method)) return erreur('méthode non permise', 405);
   const s = await sessionValide(request, env);
   if (!s) return erreur('session expirée', 401);
   const moi = await env.DB.prepare('SELECT admin FROM comptes WHERE id = ?').bind(s.compte).first();
