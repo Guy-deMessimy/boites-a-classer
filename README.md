@@ -107,7 +107,7 @@ Les fiches ne concernent que les collections fournies. Après avoir modifié `ap
 
 ## Espace enseignant
 
-Le bouton « Je suis enseignant » de la page d'accueil demande un code d'accès puis propose les fiches élève et les corrigés. Les PDF sont publiés **chiffrés** dans `site/enseignant/` (AES-GCM, clé dérivée du code par PBKDF2) : le code n'est écrit nulle part, ni dans le site ni dans le dépôt, et sans lui les fichiers sont illisibles. Le dossier `fiche à imprimer/` (PDF en clair) n'est pas envoyé sur GitHub.
+Depuis le 21/10/2026, la page d'accueil n'a plus de bouton « Je suis enseignant » (remplacé par « Se connecter ou créer un compte ») : les fichiers chiffrés restent publiés dans `site/enseignant/` mais plus aucune page ne les ouvre (la fenêtre de déchiffrement est dans l'historique Git, commit 3fdd934 et avant, `site/index.html`). Avant, ce bouton demandait un code d'accès puis proposait les fiches élève et les corrigés. Les PDF sont publiés **chiffrés** dans `site/enseignant/` (AES-GCM, clé dérivée du code par PBKDF2) : le code n'est écrit nulle part, ni dans le site ni dans le dépôt, et sans lui les fichiers sont illisibles. Le dossier `fiche à imprimer/` (PDF en clair) n'est pas envoyé sur GitHub.
 
 Après avoir régénéré les fiches, ou pour changer de code : `npm run chiffrer` (le code est demandé), puis `./publier.sh`. Les fichiers d'avant le 15/10/2026 restent dans l'historique Git du dépôt public.
 

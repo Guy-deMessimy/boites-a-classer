@@ -110,7 +110,6 @@
       box-shadow: var(--ombre);
     }
     .en-ligne p { margin: 0; }
-    .en-ligne .liens { display: flex; flex-wrap: wrap; gap: 8px; }
     .bouton {
       display: inline-block;
       padding: .65rem 1.1rem;
@@ -161,37 +160,8 @@
       clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
     }
 
-    header .enseignant { margin-left: auto; font: inherit; font-weight: 600; cursor: pointer; }
+    header .connexion { margin-left: auto; }
 
-    dialog {
-      width: min(560px, calc(100vw - 32px));
-      max-height: calc(100vh - 32px);
-      padding: 24px;
-      border: 1px solid var(--ligne);
-      border-radius: 22px;
-      background: var(--carte);
-      color: var(--encre);
-    }
-    dialog::backdrop { background: rgb(0 0 0 / .45); }
-    dialog h2 { margin: 0 0 12px; }
-    dialog p { margin: 0 0 16px; color: var(--doux); }
-    dialog form { display: flex; flex-wrap: wrap; gap: 8px; }
-    dialog input {
-      flex: 1 1 200px;
-      padding: .6rem .8rem;
-      border: 1px solid var(--ligne);
-      border-radius: 999px;
-      background: var(--fond);
-      color: var(--encre);
-      font: inherit;
-    }
-    dialog button { font: inherit; cursor: pointer; border: 0; }
-    dialog .erreur { min-height: 1.5em; margin: 8px 0 0; color: #c0392b; font-weight: 600; }
-    dialog .fermer { position: absolute; top: 12px; right: 12px; padding: 4px 10px; background: none; color: var(--doux); font-size: 1.4rem; line-height: 1; }
-    .fiches { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-    .fiches li { padding: 12px 14px; border: 1px solid var(--ligne); border-radius: 16px; }
-    .fiches strong { display: block; margin-bottom: 8px; }
-    .fiches .liens { display: flex; flex-wrap: wrap; gap: 8px; }
 
     footer { margin-top: 48px; padding: 14px 20px; color: var(--doux); font-size: .9rem; }
     footer a { color: var(--accent); }
@@ -206,15 +176,12 @@
         <p class="sous-titre">Un logiciel gratuit pour apprendre à classer les êtres vivants dans des boîtes emboîtées, selon les attributs qu'ils partagent.</p>
         <p class="auteur">Ce site a été réalisé par Gabriel Des Rioux de Messimy.</p>
       </div>
-      <button type="button" class="bouton secondaire enseignant" id="ouvrir-enseignant">Je suis enseignant</button>
+      <a class="bouton secondaire connexion" href="app/index.html#compte">Se connecter ou créer un compte</a>
     </header>
 
     <section class="en-ligne">
       <p><strong>Sans rien installer :</strong> le logiciel fonctionne directement dans le navigateur, sur ordinateur ou tablette.</p>
-      <div class="liens">
-        <a class="bouton" href="app/index.html">Utiliser en ligne</a>
-        <a class="bouton secondaire" href="app/index.html#compte">Se connecter ou créer un compte</a>
-      </div>
+      <a class="bouton" href="app/index.html">Utiliser en ligne</a>
     </section>
 
     <h2>Télécharger</h2>
@@ -287,128 +254,7 @@
     </footer>
   </main>
 
-  <dialog id="espace-enseignant" aria-labelledby="titre-enseignant">
-    <button type="button" class="fermer" aria-label="Fermer">×</button>
-    <h2 id="titre-enseignant">Espace enseignant</h2>
-    <div id="etape-code">
-      <p>Entrez le code d'accès pour obtenir les fiches à imprimer et leurs corrigés.</p>
-      <form id="form-code">
-        <input id="code" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Code d'accès" required>
-        <button type="submit" class="bouton">Valider</button>
-      </form>
-      <p class="erreur" id="erreur-code" role="alert"></p>
-    </div>
-    <div id="etape-fiches" hidden>
-      <p>Fiches au format A4 paysage : tableau à double entrée, tableau à double tri et boîtes emboîtées.</p>
-      <ul class="fiches" id="liste-fiches"></ul>
-    </div>
-  </dialog>
-
   <script>
-    // Espace enseignant : les fiches sont chiffrées (outils/chiffrer-fiches.js) et le code d'accès sert de clé.
-    // Un mauvais code ne permet pas de les déchiffrer ; le code n'est écrit nulle part dans le site.
-    (function () {
-      var ITERATIONS = 600000;
-      var fenetre = document.getElementById('espace-enseignant');
-      var form = document.getElementById('form-code');
-      var champ = document.getElementById('code');
-      var erreur = document.getElementById('erreur-code');
-      var bouton = form.querySelector('button');
-      var cle = null;
-
-      document.getElementById('ouvrir-enseignant').addEventListener('click', function () {
-        fenetre.showModal();
-        if (!cle) champ.focus();
-      });
-      fenetre.querySelector('.fermer').addEventListener('click', function () { fenetre.close(); });
-
-      function telecharger(nom) {
-        return fetch('enseignant/' + nom, { cache: 'no-cache' }).then(function (r) {
-          if (!r.ok) throw new Error('Fichier introuvable : ' + nom);
-          return r.arrayBuffer();
-        });
-      }
-      function dechiffrer(cleAes, octets) {
-        return crypto.subtle.decrypt({ name: 'AES-GCM', iv: octets.slice(0, 12) }, cleAes, octets.slice(12));
-      }
-
-      form.addEventListener('submit', function (ev) {
-        ev.preventDefault();
-        if (!window.crypto || !crypto.subtle) { erreur.textContent = 'Ce navigateur ne permet pas d\'ouvrir l\'espace enseignant.'; return; }
-        erreur.textContent = '';
-        bouton.disabled = true;
-        bouton.textContent = 'Vérification…';
-        var code = champ.value.trim();
-        var cleAes;
-        telecharger('index.bin').then(function (tampon) {
-          var octets = new Uint8Array(tampon);
-          return crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey'])
-            .then(function (base) {
-              return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: octets.slice(0, 16), iterations: ITERATIONS, hash: 'SHA-256' },
-                base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
-            })
-            .then(function (k) { cleAes = k; return dechiffrer(k, octets.slice(16)); })
-            .then(null, function () { throw new Error('Code incorrect.'); });
-        }).then(function (clair) {
-          cle = cleAes;
-          afficherFiches(JSON.parse(new TextDecoder().decode(clair)));
-        }).catch(function (e) {
-          erreur.textContent = e.message;
-          champ.select();
-        }).then(function () {
-          bouton.disabled = false;
-          bouton.textContent = 'Valider';
-        });
-      });
-
-      function lien(doc, libelle, classe) {
-        var a = document.createElement('a');
-        a.className = 'bouton' + (classe ? ' ' + classe : '');
-        a.href = '#';
-        a.textContent = libelle;
-        a.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          if (a.dataset.occupe) return;
-          a.dataset.occupe = '1';
-          var texte = a.textContent;
-          a.textContent = 'Préparation…';
-          telecharger(doc.fichier).then(function (t) { return dechiffrer(cle, new Uint8Array(t)); }).then(function (pdf) {
-            var url = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
-            var dl = document.createElement('a');
-            dl.href = url;
-            dl.download = doc.nom;
-            fenetre.appendChild(dl); // hors de la fenêtre modale, le lien serait inactif
-            dl.click();
-            dl.remove();
-            setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-          }).catch(function (e) { alert(e.message); }).then(function () {
-            a.textContent = texte;
-            delete a.dataset.occupe;
-          });
-        });
-        return a;
-      }
-
-      function afficherFiches(liste) {
-        var ul = document.getElementById('liste-fiches');
-        ul.textContent = '';
-        liste.forEach(function (c) {
-          var li = document.createElement('li');
-          var titre = document.createElement('strong');
-          titre.textContent = c.titre;
-          var liens = document.createElement('div');
-          liens.className = 'liens';
-          if (c.eleve) liens.appendChild(lien(c.eleve, 'Fiche élève'));
-          if (c.corrige) liens.appendChild(lien(c.corrige, 'Corrigé', 'secondaire'));
-          li.appendChild(titre);
-          li.appendChild(liens);
-          ul.appendChild(li);
-        });
-        document.getElementById('etape-code').hidden = true;
-        document.getElementById('etape-fiches').hidden = false;
-      }
-    })();
-
     // Met en avant la version adaptée au système du visiteur.
     (function () {
       var ua = navigator.userAgent;
