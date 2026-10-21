@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.3.0';
+  const VERSION = '2.4.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -36,6 +36,7 @@
   let menu = null;
   let zoom = 1;
   let mesCollections = []; // collections créées ou importées, gardées dans le navigateur
+  let collectionsSite = []; // collections publiées par un admin, proposées à tout le monde (functions/api/collections.js)
 
   /* ---------- Outils ---------- */
 
@@ -55,8 +56,11 @@
   const centre = (p) => ({ x: p.x + ETRE.l / 2, y: p.y + ETRE.h / 2 });
   const borner = (p) => ({ x: borne(Math.round(p.x), 0, MAX_XY), y: borne(Math.round(p.y), 0, MAX_XY) });
   const nouvelId = (prefixe) => prefixe + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const toutes = () => [...FOURNIES, ...mesCollections];
+  const toutes = () => [...FOURNIES, ...collectionsSite, ...mesCollections];
   const estPerso = (c) => mesCollections.includes(c);
+  const estSite = (c) => collectionsSite.includes(c);
+  // Seul un admin crée et modifie des collections (le serveur le vérifie aussi pour celles du site).
+  const estAdmin = () => !!jetonCompte() && lire(CLE_ADMIN) === '1';
 
   const nomAttr = (id) => (attrParId.get(id) || { nom: id }).nom;
   const couleurBoite = (b) => (b.attr && attrParId.has(b.attr) ? attrParId.get(b.attr).couleur : GRIS);
@@ -846,7 +850,7 @@
   // Retrouve la collection d'un fichier parmi celles qu'on a déjà, ou l'ajoute à « Mes collections ».
   // Une collection différente de celle qu'on a sous le même identifiant est ajoutée à côté : rien n'est écrasé.
   function integrerCollection(c) {
-    const fournie = FOURNIES.find((x) => x.id === c.id);
+    const fournie = FOURNIES.find((x) => x.id === c.id) || collectionsSite.find((x) => x.id === c.id);
     if (fournie) return fournie;
     const sig = signature(c);
     const deja = mesCollections.find((x) => x.id === c.id && signature(x) === sig)
@@ -901,6 +905,8 @@
           : 'Rien de nouveau dans cette sauvegarde : tout était déjà là.';
         return;
       }
+      // Un fichier de travail apporte sa collection ; un fichier de collection seule est réservé à l'admin.
+      if (lu.type === 'collection' && !estAdmin()) throw new Error('seul un administrateur peut ajouter une collection');
       const c = integrerCollection(lu.collection);
       fermerFenetres();
       if (lu.type === 'travail') {
@@ -1039,6 +1045,7 @@
       selColl.appendChild(g);
     };
     groupe('Collections fournies', FOURNIES);
+    if (collectionsSite.length) groupe('Collections du site', collectionsSite);
     if (mesCollections.length) groupe('Mes collections', mesCollections);
     if (coll) selColl.value = coll.id;
   }
@@ -1070,8 +1077,10 @@
       return b;
     };
 
+    const admin = estAdmin();
     const ligne = (c) => {
       const perso = estPerso(c);
+      const site = estSite(c);
       const el = document.createElement('div');
       el.className = 'coll' + (c === coll ? ' courante' : '');
       const infos = document.createElement('div');
@@ -1088,14 +1097,25 @@
       if (c !== coll) {
         actions.appendChild(bouton('Utiliser', () => { fermerFenetres(); choisirCollection(c.id); }));
       }
-      if (perso) {
+      if (admin && (perso || site)) {
         actions.appendChild(bouton('✎ Modifier', () => ouvrirEditeur(c, false)));
-      } else {
+      } else if (admin) {
         actions.appendChild(bouton('Copier pour modifier', () => {
           const copie = copieCollection(c);
-          copie.id = nouvelId('perso-');
+          copie.id = nouvelId('site-');
           copie.nom = nomLibre(`${c.nom} (copie)`);
           ouvrirEditeur(copie, true);
+        }));
+      }
+      if (admin && perso) {
+        actions.appendChild(bouton('☁️ Publier sur le site', async () => {
+          const zone = fenCollections.querySelector('.message');
+          try {
+            await publierCollection({ ...copieCollection(c), id: nouvelId('site-'), nom: nomLibre(c.nom) });
+            zone.textContent = `Collection « ${c.nom} » publiée : elle est proposée à tout le monde.`;
+          } catch (e) {
+            zone.textContent = 'Impossible de publier : ' + (e && e.message ? e.message : e);
+          }
         }));
       }
       actions.appendChild(bouton('Exporter', async () => {
@@ -1119,6 +1139,24 @@
         suppr.innerHTML = '<span class="txt-normal">Supprimer</span><span class="txt-confirmer">Confirmer ?</span>';
         actions.appendChild(suppr);
       }
+      if (admin && site) {
+        const retirer = bouton('', async () => {
+          if (!retirer.classList.contains('confirmer')) {
+            retirer.classList.add('attention', 'confirmer');
+            setTimeout(() => retirer.classList.remove('attention', 'confirmer'), 3000);
+            return;
+          }
+          const zone = fenCollections.querySelector('.message');
+          try {
+            await retirerCollection(c);
+            zone.textContent = `Collection « ${c.nom} » retirée du site.`;
+          } catch (e) {
+            zone.textContent = 'Impossible de la retirer : ' + (e && e.message ? e.message : e);
+          }
+        });
+        retirer.innerHTML = '<span class="txt-normal">Retirer du site</span><span class="txt-confirmer">Retirer pour tout le monde ?</span>';
+        actions.appendChild(retirer);
+      }
       el.append(infos, actions);
       return el;
     };
@@ -1139,10 +1177,17 @@
       return s;
     };
 
-    listeCollections.replaceChildren(
-      section('Mes collections', mesCollections, 'Aucune pour l\'instant : créez-en une, copiez une collection fournie, ou ouvrez un fichier de collection reçu.'),
-      section('Collections fournies', FOURNIES, ''),
-    );
+    $('#coll-aide').textContent = admin
+      ? 'Administrateur : les collections que vous créez ou modifiez ici sont publiées sur le site et proposées à tout le monde. Les collections fournies ne se modifient pas : copiez-en une pour l\'adapter.'
+      : 'Choisissez la collection à classer. Seul un administrateur peut créer ou modifier des collections.';
+    $('#coll-nouvelle').hidden = !admin;
+    const sections = [];
+    if (admin || collectionsSite.length) {
+      sections.push(section('Collections du site', collectionsSite, 'Aucune pour l\'instant : créez-en une, ou copiez une collection fournie.'));
+    }
+    if (mesCollections.length) sections.push(section('Mes collections (dans ce navigateur)', mesCollections, ''));
+    sections.push(section('Collections fournies', FOURNIES, ''));
+    listeCollections.replaceChildren(...sections);
   }
 
   function supprimerCollection(c) {
@@ -1195,7 +1240,8 @@
     modifie = false;
     tentative = false;
     remettreAnnuler();
-    $('#titre-editeur').textContent = estPerso(c) ? 'Modifier la collection' : 'Nouvelle collection';
+    $('#titre-editeur').textContent = estPerso(c) || estSite(c) ? 'Modifier la collection'
+      : c.id.startsWith('site-') ? 'Nouvelle collection du site' : 'Nouvelle collection';
     edNom.value = brouillon.nom;
     rendreAttributs();
     rendreTableau();
@@ -1508,7 +1554,7 @@
     return erreurs;
   }
 
-  function enregistrerBrouillon() {
+  async function enregistrerBrouillon() {
     tentative = true;
     const erreurs = verifierBrouillon();
     if (erreurs.length) {
@@ -1525,6 +1571,23 @@
       return o;
     });
     const c = { id: brouillon.id, nom: brouillon.nom.trim(), attributs, etres };
+    if (c.id.startsWith('site-')) {
+      const bouton = $('#ed-enregistrer');
+      bouton.disabled = true;
+      try {
+        await publierCollection(c);
+      } catch (e) {
+        verifierBrouillon(["Impossible de publier : " + (e && e.message ? e.message : e) + '.']);
+        return;
+      } finally {
+        bouton.disabled = false;
+      }
+      modifie = false;
+      fermerFenetres();
+      choisirCollection(c.id);
+      info.textContent = `Collection « ${c.nom} » publiée sur le site : elle est proposée à tout le monde.`;
+      return;
+    }
     const existe = mesCollections.some((x) => x.id === c.id);
     try {
       sauverMesCollections(existe ? mesCollections.map((x) => (x.id === c.id ? c : x)) : [...mesCollections, c]);
@@ -1573,7 +1636,7 @@
   fenCollections.addEventListener('cancel', (ev) => { if (menu) { ev.preventDefault(); fermerMenu(); } });
   $('#coll-ouvrir').addEventListener('click', ouvrir);
   $('#coll-nouvelle').addEventListener('click', () => {
-    ouvrirEditeur({ id: nouvelId('perso-'), nom: '', attributs: [], etres: [] }, true);
+    ouvrirEditeur({ id: nouvelId('site-'), nom: '', attributs: [], etres: [] }, true);
   });
 
   /* ---------- Menus ---------- */
@@ -2043,6 +2106,68 @@
     return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
   };
 
+  /* Collections du site */
+
+  // Publiées par un admin, elles sont lues au démarrage (GET /api/collections) et gardées ici pour le hors-ligne.
+  const CLE_COLLECTIONS_SITE = 'boites-a-classer-site:collections'; // hors du préfixe sauvegardé : propre à l'appareil
+
+  function lireCollectionsSite(texte) {
+    let liste = [];
+    try { liste = JSON.parse(texte); } catch (e) { /* rien de gardé */ }
+    const res = [];
+    for (const c of Array.isArray(liste) ? liste : []) {
+      try {
+        const propre = nettoyerCollection(c);
+        if (propre.id.startsWith('site-') && !res.some((x) => x.id === propre.id)) res.push(propre);
+      } catch (e) { /* collection abîmée : ignorée */ }
+    }
+    return res;
+  }
+
+  function appliquerCollectionsSite(liste) {
+    const avant = JSON.stringify(collectionsSite);
+    collectionsSite = liste;
+    ecrire(CLE_COLLECTIONS_SITE, JSON.stringify(liste));
+    if (JSON.stringify(liste) === avant) return;
+    remplirSelect();
+    // La collection en cours a changé ou a été retirée : on la recharge (ou on revient à la première fournie).
+    if (coll && coll.id.startsWith('site-')) choisirCollection(coll.id);
+    if (fenCollections.open) remplirListeCollections();
+  }
+
+  async function chargerCollectionsSite() {
+    try {
+      const rep = await fetch(RACINE_API + '/collections');
+      if (rep.ok) appliquerCollectionsSite(lireCollectionsSite(await rep.text()));
+    } catch (e) { /* hors connexion : on garde la copie de l'appareil */ }
+  }
+
+  async function appelAdmin(action, corps) {
+    const rep = await fetch(RACINE_API + '/admin/' + action, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + jetonCompte(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(corps),
+    });
+    if (rep.status === 401) { sessionExpiree(); throw new Error('session expirée, reconnecte-toi'); }
+    if (rep.status !== 204) {
+      let r = {};
+      try { r = await rep.json(); } catch (e) { /* réponse vide */ }
+      throw new Error(r.erreur || 'serveur ' + rep.status);
+    }
+  }
+
+  async function publierCollection(c) {
+    const propre = nettoyerCollection(c);
+    await appelAdmin('collection', { collection: propre });
+    const existe = collectionsSite.some((x) => x.id === propre.id);
+    appliquerCollectionsSite(existe ? collectionsSite.map((x) => (x.id === propre.id ? propre : x)) : [...collectionsSite, propre]);
+  }
+
+  async function retirerCollection(c) {
+    await appelAdmin('collection-suppression', { id: c.id });
+    appliquerCollectionsSite(collectionsSite.filter((x) => x.id !== c.id));
+  }
+
   /* Fenêtre « Compte et sauvegarde en ligne » */
 
   const fenSauvegarde = $('#fen-sauvegarde');
@@ -2456,6 +2581,8 @@
 
   function demarrer(recus) {
     mesCollections = lireMesCollections();
+    collectionsSite = lireCollectionsSite(lire(CLE_COLLECTIONS_SITE));
+    chargerCollectionsSite();
     remplirSelect();
     choisirCollection(lire('boites-a-classer:collection'));
     majBoutonCompte();

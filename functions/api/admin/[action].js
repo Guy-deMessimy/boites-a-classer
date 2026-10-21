@@ -5,6 +5,8 @@
 //   GET  /api/admin/travail?identifiant=…     dernière version du travail d'un compte (gzip, en-têtes X-Version et X-Date) ; 404 s'il n'y en a pas
 //   POST /api/admin/mot-de-passe { identifiant, secret }  nouveau mot de passe (secret dérivé par la page) ; ferme ses sessions → 204
 //   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail → 204
+//   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
+//   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
 //
 // Un compte admin ne peut pas être modifié ni supprimé par cette API (y compris le sien) : réglages du compte dans le logiciel.
 
@@ -12,6 +14,8 @@ import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.j
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
+const FORME_ID_COLLECTION = /^site-[A-Za-z0-9_-]{1,55}$/;
+const TAILLE_MAX_COLLECTION = 1900000; // une valeur D1 ne peut pas dépasser 2 Mo
 
 const ENTETES = {
   'Access-Control-Allow-Origin': '*',
@@ -98,9 +102,29 @@ const actions = {
     ]);
     return rien();
   },
+
+  // Le logiciel envoie une collection déjà vérifiée (nettoyerCollection dans app/app.js) et la revérifie à la lecture :
+  // ici, on contrôle seulement sa forme générale et sa taille.
+  async collection(request, env) {
+    const { collection: c } = await lireCorps(request);
+    if (!c || typeof c !== 'object' || !FORME_ID_COLLECTION.test(c.id || '') || typeof c.nom !== 'string'
+      || !Array.isArray(c.attributs) || !Array.isArray(c.etres)) return erreur('collection illisible', 400);
+    const donnees = JSON.stringify({ id: c.id, nom: c.nom, attributs: c.attributs, etres: c.etres });
+    if (donnees.length > TAILLE_MAX_COLLECTION) return erreur('collection trop grosse (trop de photos)', 413);
+    await env.DB.prepare('INSERT INTO collections (id, donnees, date) VALUES (?1, ?2, ?3) '
+      + 'ON CONFLICT (id) DO UPDATE SET donnees = ?2, date = ?3').bind(c.id, donnees, new Date().toISOString()).run();
+    return rien();
+  },
+
+  async 'collection-suppression'(request, env) {
+    const { id } = await lireCorps(request);
+    if (!FORME_ID_COLLECTION.test(id || '')) return erreur('identifiant de collection invalide', 400);
+    await env.DB.prepare('DELETE FROM collections WHERE id = ?').bind(id).run();
+    return rien();
+  },
 };
 
-const METHODES = { comptes: 'GET', travail: 'GET', 'mot-de-passe': 'POST', suppression: 'POST' };
+const METHODES = { comptes: 'GET', travail: 'GET', 'mot-de-passe': 'POST', suppression: 'POST', collection: 'POST', 'collection-suppression': 'POST' };
 
 export async function onRequest({ request, env, params }) {
   if (request.method === 'OPTIONS') return rien();

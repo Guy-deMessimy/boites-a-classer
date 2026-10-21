@@ -91,6 +91,14 @@ Tester en local : `npx wrangler d1 migrations apply boites-a-classer --local`, c
 
 Limites : n'importe qui connaissant un code peut lire et modifier le travail correspondant ; il n'y a pas de limite du nombre d'envois (offre gratuite Cloudflare : 100 000 requêtes par jour, 5 Go de base). Navigateurs trop anciens (sans `CompressionStream`, par exemple iOS 15) : la sauvegarde en ligne n'est pas proposée.
 
+## Collections du site et réservées à l'admin (depuis la 2.4.0)
+
+Seul un compte admin crée et modifie des collections. Ce qu'il enregistre dans l'éditeur est **publié sur le site** (table `collections`, `migrations/0004_collections.sql`) et proposé à tout le monde dans le groupe « Collections du site », en lecture seule comme les collections fournies. Identifiants `site-…`. Le logiciel les lit au démarrage (`GET /api/collections`, `functions/api/collections.js`) et en garde une copie sous `boites-a-classer-site:collections` pour le hors-ligne (hors de ce qui est sauvegardé en ligne). Publier, modifier, retirer : `POST /api/admin/collection` et `/api/admin/collection-suppression` (droit d'admin vérifié par le serveur ; taille au plus 1,9 Mo).
+
+Dans la fenêtre « ✎ Collections », l'admin a « ＋ Nouvelle collection », « Copier pour modifier » (collections fournies), « ✎ Modifier » et « Retirer du site » (collections du site), et « ☁️ Publier sur le site » pour une collection de « Mes collections ». Les autres n'ont plus ni création, ni copie, ni modification : leurs collections personnelles d'avant la 2.4.0 restent utilisables, exportables et supprimables. Ouvrir un fichier de **collection** seule est réservé à l'admin ; un fichier de **travail** s'ouvre toujours, avec la collection qu'il contient. Retirer une collection du site la fait disparaître chez tout le monde (le travail fait dessus reste gardé, mais n'est plus affiché).
+
+L'éditeur et les règles ci-dessous (« Mes collections ») restent valables pour l'admin.
+
 ## Mes collections
 
 Le bouton « ✎ Collections » ouvre la liste des collections : utiliser, copier une collection fournie pour la modifier, créer, modifier, exporter en `.boites` ou supprimer. L'éditeur présente les attributs puis un tableau à double entrée (êtres vivants × attributs) à cocher ; chaque être vivant a un emoji (palette ou saisie libre) ou une photo, réduite à 160 px (JPEG) pour rester légère. Il signale ce qui empêcherait une classification emboîtée : un être vivant sans attribut, ou deux attributs qui « se croisent ».

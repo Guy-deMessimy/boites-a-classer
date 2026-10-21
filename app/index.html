@@ -18,7 +18,7 @@
     <h1>📦 Boîtes à classer</h1>
     <div class="choix">
       <select id="collection" aria-label="Collection"></select>
-      <button id="gerer" title="Créer, modifier ou partager des collections" aria-label="Gérer les collections">✎<span class="long"> Collections</span></button>
+      <button id="gerer" title="Choisir une collection (les administrateurs peuvent en créer)" aria-label="Gérer les collections">✎<span class="long"> Collections</span></button>
     </div>
     <div class="actions">
       <button id="nouvelle" class="principal">＋ <span class="long">Nouvelle boîte</span><span class="court">Boîte</span></button>
@@ -66,7 +66,7 @@
       <button type="button" class="fermer" aria-label="Fermer">×</button>
     </div>
     <div class="fenetre-corps">
-      <p class="aide">Les collections fournies ne se modifient pas : copiez-en une pour l'adapter, ou créez la vôtre. Pour ajouter une collection reçue dans un fichier <code>.boites</code>, utilisez « Ouvrir un fichier ».</p>
+      <p class="aide" id="coll-aide"></p>
       <div id="liste-collections"></div>
       <p class="message" role="status"></p>
     </div>
