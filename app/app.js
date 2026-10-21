@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.2.0';
+  const VERSION = '2.3.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -78,11 +78,16 @@
 
   const cle = () => 'boites-a-classer:' + coll.id;
 
+  // Mémoire du navigateur, sauf en consultation (un admin regarde le travail d'un élève) : une mémoire temporaire
+  // qui disparaît en quittant la page (voir ouvrirConsultation).
+  let stockage = null;
+  try { stockage = window.localStorage; } catch (e) { /* stockage indisponible */ }
+
   function lire(k) {
-    try { return localStorage.getItem(k); } catch (e) { return null; }
+    try { return stockage.getItem(k); } catch (e) { return null; }
   }
   function ecrire(k, v) {
-    try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ }
+    try { stockage.setItem(k, v); } catch (e) { /* stockage indisponible */ }
     signalerChangement(k);
   }
 
@@ -1016,7 +1021,7 @@
   // Lève une erreur si le navigateur refuse (mémoire pleine, navigation privée…).
   function sauverMesCollections(liste) {
     try {
-      localStorage.setItem(CLE_MES_COLLECTIONS, JSON.stringify(liste));
+      stockage.setItem(CLE_MES_COLLECTIONS, JSON.stringify(liste));
     } catch (e) {
       throw new Error('la mémoire du navigateur est pleine ou indisponible (essayez avec moins de photos)');
     }
@@ -1147,7 +1152,7 @@
       signaler('Impossible de supprimer : ' + e.message);
       return;
     }
-    try { localStorage.removeItem('boites-a-classer:' + c.id); } catch (e) { /* stockage indisponible */ }
+    try { stockage.removeItem('boites-a-classer:' + c.id); } catch (e) { /* stockage indisponible */ }
     signalerChangement('boites-a-classer:' + c.id);
     if (c === coll) choisirCollection(FOURNIES[0].id);
     remplirListeCollections();
@@ -1627,7 +1632,12 @@
       m.append(
         entreeMenu('💾 Enregistrer mon travail', enregistrerTravail),
         entreeMenu('📂 Ouvrir un fichier…', ouvrir),
-        entreeMenu(jetonCompte() ? `☁️ Compte : ${lire(CLE_IDENTIFIANT)}` : codeSauvegarde() ? '☁️ Sauvegarde en ligne (activée)' : '☁️ Compte et sauvegarde en ligne…', ouvrirSauvegarde),
+      );
+      // En consultation (admin), la mémoire est temporaire : pas de compte ni de sauvegarde en ligne.
+      if (!document.body.classList.contains('consultation')) {
+        m.appendChild(entreeMenu(jetonCompte() ? `☁️ Compte : ${lire(CLE_IDENTIFIANT)}` : codeSauvegarde() ? '☁️ Sauvegarde en ligne (activée)' : '☁️ Compte et sauvegarde en ligne…', ouvrirSauvegarde));
+      }
+      m.append(
         document.createElement('hr'),
         entreeMenu('📄 Enregistrer en PDF', exporterPdf),
       );
@@ -1806,6 +1816,7 @@
   const CLE_ATTENTE = 'boites-a-classer-sauvegarde:attente';
   const CLE_JETON = 'boites-a-classer-compte:jeton'; // session ouverte (functions/api/compte/[action].js)
   const CLE_IDENTIFIANT = 'boites-a-classer-compte:identifiant';
+  const CLE_ADMIN = 'boites-a-classer-compte:admin'; // « 1 » : lien vers la page d'administration (le serveur vérifie)
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
   const FORME_CODE = /^[a-z]{2,12}(-[a-z]{2,12}){3}$/;
   const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
@@ -1848,7 +1859,7 @@
   const entetesIdentite = (id) => (id.startsWith('compte ')
     ? { Authorization: 'Bearer ' + id.slice(7) }
     : { 'X-Code-Sauvegarde': id.slice(5) });
-  const oublier = (k) => { try { localStorage.removeItem(k); } catch (e) { /* stockage indisponible */ } };
+  const oublier = (k) => { try { stockage.removeItem(k); } catch (e) { /* stockage indisponible */ } };
   const sansAccents = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const normaliserCode = (t) => sansAccents(t).replace(/[^a-z]+/g, '-').replace(/^-+|-+$/g, '');
   const dateLisible = (iso) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -1861,9 +1872,9 @@
   function donneesLocales() {
     const d = {};
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('boites-a-classer:') && !HORS_SAUVEGARDE.has(k)) d[k] = localStorage.getItem(k);
+      for (let i = 0; i < stockage.length; i++) {
+        const k = stockage.key(i);
+        if (k && k.startsWith('boites-a-classer:') && !HORS_SAUVEGARDE.has(k)) d[k] = stockage.getItem(k);
       }
     } catch (e) { /* stockage indisponible */ }
     return d;
@@ -1886,6 +1897,7 @@
   // Ce qui attendait d'être envoyé reste marqué « en attente » et partira à la prochaine connexion.
   function sessionExpiree() {
     oublier(CLE_JETON);
+    oublier(CLE_ADMIN);
     oublier(CLE_VERSION);
     oublier(CLE_DATE);
     majBoutonCompte();
@@ -2015,11 +2027,12 @@
   }
 
   // Commence à sauvegarder sur ce compte (après une connexion ou une création de compte).
-  function ouvrirSession(identifiant, jeton) {
+  function ouvrirSession(identifiant, jeton, admin) {
     clearTimeout(minuterieEnvoi);
     for (const k of [CLE_CODE, CLE_VERSION, CLE_DATE]) oublier(k); // un code éventuel reste valable sur le serveur
     ecrire(CLE_JETON, jeton);
     ecrire(CLE_IDENTIFIANT, identifiant);
+    if (admin) ecrire(CLE_ADMIN, '1'); else oublier(CLE_ADMIN);
     etatEnLigne = { texte: '', erreur: false };
     majBoutonCompte();
   }
@@ -2080,6 +2093,7 @@
     if (!$('#sv-identifiant').value) $('#sv-identifiant').value = lire(CLE_IDENTIFIANT) || '';
     for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
     if (compte) $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
+    $('#sv-admin').hidden = !compte || !lire(CLE_ADMIN);
     if (code) $('#sv-code-affiche').textContent = code;
     if (compte || code) {
       majEtatEnLigne();
@@ -2193,12 +2207,12 @@
       const v = await lireVersion('compte ' + r.jeton);
       const local = donneesLocales();
       if (v && Object.keys(local).length && !memesDonnees(local, v.donnees)) {
-        enAttenteDeChoix = { identifiant, jeton: r.jeton, v };
+        enAttenteDeChoix = { identifiant, jeton: r.jeton, admin: r.admin, v };
         rendreSauvegarde();
         svMessage.textContent = '';
         return;
       }
-      ouvrirSession(identifiant, r.jeton);
+      ouvrirSession(identifiant, r.jeton, r.admin);
       if (v) {
         appliquerVersion(v.donnees, v.version, v.date);
         fermerFenetres();
@@ -2217,18 +2231,18 @@
   });
 
   $('#sv-prendre').addEventListener('click', () => {
-    const { identifiant, jeton, v } = enAttenteDeChoix;
+    const { identifiant, jeton, admin, v } = enAttenteDeChoix;
     enAttenteDeChoix = null;
-    ouvrirSession(identifiant, jeton);
+    ouvrirSession(identifiant, jeton, admin);
     appliquerVersion(v.donnees, v.version, v.date);
     fermerFenetres();
     info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
   });
 
   $('#sv-garder').addEventListener('click', () => {
-    const { identifiant, jeton } = enAttenteDeChoix;
+    const { identifiant, jeton, admin } = enAttenteDeChoix;
     enAttenteDeChoix = null;
-    ouvrirSession(identifiant, jeton);
+    ouvrirSession(identifiant, jeton, admin);
     ecrire(CLE_ATTENTE, '1'); // devient la version la plus récente du compte
     envoyer();
     rendreSauvegarde();
@@ -2262,7 +2276,7 @@
     remettreConfirmation(bouton);
     const jeton = jetonCompte();
     clearTimeout(minuterieEnvoi);
-    for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+    for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
     appelCompte('deconnexion', {}, jeton).catch(() => { /* la session expirera d'elle-même */ });
     if (effacer) appliquerVersion({});
     etatEnLigne = { texte: '', erreur: false };
@@ -2312,7 +2326,7 @@
       if (statut === 403) { svMessage.textContent = 'Mot de passe incorrect : le compte n\'a pas été supprimé.'; return; }
       if (statut !== 204) { svMessage.textContent = messageErreur(statut, r); return; }
       clearTimeout(minuterieEnvoi);
-      for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+      for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
       $('#sv-mdp-suppression').value = $('#sv-identifiant').value = '';
       ev.target.closest('details').open = false;
       majBoutonCompte();
@@ -2394,13 +2408,54 @@
     if (document.visibilityState === 'hidden') { if (lire(CLE_ATTENTE)) envoyer(); } else synchroniser();
   });
 
+  /* ---------- Consultation (admin) ---------- */
+
+  // « #consulter=<identifiant> » (lien de la page site/admin/) : un admin ouvre le travail d'un élève. Il est chargé dans
+  // une mémoire temporaire : on peut tout regarder et manipuler, rien n'est gardé ni envoyé, le travail de l'admin
+  // dans ce navigateur n'est pas touché.
+  async function ouvrirConsultation() {
+    const identifiant = decodeURIComponent(location.hash.slice('#consulter='.length));
+    history.replaceState(null, '', location.pathname + location.search);
+    const jeton = jetonCompte();
+    let donnees;
+    try {
+      if (!jeton) throw new Error('connecte-toi d\'abord avec un compte admin');
+      const rep = await fetch(RACINE_API + '/admin/travail?identifiant=' + encodeURIComponent(identifiant), {
+        headers: { Authorization: 'Bearer ' + jeton },
+      });
+      if (!rep.ok) {
+        let r = {};
+        try { r = await rep.json(); } catch (e) { /* réponse vide */ }
+        throw new Error(r.erreur || 'serveur ' + rep.status);
+      }
+      donnees = JSON.parse(await decompresser(new Uint8Array(await rep.arrayBuffer())));
+      if (!donnees || typeof donnees !== 'object') throw new Error('travail illisible');
+    } catch (e) {
+      info.textContent = `Impossible d'ouvrir le travail de ${identifiant} : ${e && e.message ? e.message : e}.`;
+      return;
+    }
+    const memoire = new Map();
+    stockage = {
+      get length() { return memoire.size; },
+      key: (i) => [...memoire.keys()][i] ?? null,
+      getItem: (k) => (memoire.has(k) ? memoire.get(k) : null),
+      setItem: (k, v) => { memoire.set(k, String(v)); },
+      removeItem: (k) => { memoire.delete(k); },
+    };
+    for (const [k, v] of Object.entries(donnees)) if (typeof v === 'string') memoire.set(k, v);
+    document.body.classList.add('consultation');
+    const bandeau = $('#consultation');
+    bandeau.querySelector('strong').textContent = identifiant;
+    bandeau.hidden = false;
+  }
+
   /* ---------- Démarrage ---------- */
 
   const zoomSauve = parseFloat(lire('boites-a-classer:zoom'));
   zoom = Number.isFinite(zoomSauve) ? borne(zoomSauve, ZOOM.min, ZOOM.max) : zoomParDefaut();
 
-  mesCollections = lireMesCollections();
   function demarrer(recus) {
+    mesCollections = lireMesCollections();
     remplirSelect();
     choisirCollection(lire('boites-a-classer:collection'));
     majBoutonCompte();
@@ -2411,7 +2466,9 @@
     if (recus) info.textContent = `Le site a changé d'adresse : ton travail a suivi (${pluriel(recus, 'élément récupéré', 'éléments récupérés')}).`;
     synchroniser();
   }
-  if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer); else demarrer(0);
+  if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer);
+  else if (location.hash.startsWith('#consulter=')) ouvrirConsultation().then(() => demarrer(0));
+  else demarrer(0);
 
   // Version installable (écran d'accueil du téléphone) et utilisable hors connexion, seulement en ligne.
   if ('serviceWorker' in navigator && location.protocol === 'https:') {

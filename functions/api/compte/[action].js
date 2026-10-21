@@ -5,8 +5,8 @@
 // mot de passe demande de refaire les 600 000 tours pour chaque essai.
 //
 //   POST /api/compte/inscription   { identifiant, secret }   → { identifiant, jeton }   409 si l'identifiant est déjà pris
-//   POST /api/compte/connexion     { identifiant, secret }   → { identifiant, jeton }   401 si incorrect, 429 si trop d'essais
-//   GET  /api/compte/session       (jeton)                   → { identifiant }          401 si la session n'est plus valable
+//   POST /api/compte/connexion     { identifiant, secret }   → { identifiant, jeton, admin }   401 si incorrect, 429 si trop d'essais
+//   GET  /api/compte/session       (jeton)                   → { identifiant, admin }          401 si la session n'est plus valable
 //   POST /api/compte/deconnexion   (jeton)                   → 204
 //   POST /api/compte/mot-de-passe  (jeton) { secret, nouveau } → { jeton }  les autres sessions du compte sont fermées
 //   POST /api/compte/suppression   (jeton) { secret }        → 204          efface le compte, ses sessions et son travail
@@ -123,7 +123,7 @@ async function connexion(request, env) {
   if (await limiteAtteinte(env, 'echecCompte', identifiant) || await limiteAtteinte(env, 'echecAdresse', ip)) {
     return erreur('trop d\'essais, réessaie dans un quart d\'heure', 429);
   }
-  const ligne = await env.DB.prepare('SELECT id, sel, empreinte FROM comptes WHERE identifiant = ?').bind(identifiant).first();
+  const ligne = await env.DB.prepare('SELECT id, sel, empreinte, admin FROM comptes WHERE identifiant = ?').bind(identifiant).first();
   if (!ligne || !(await secretCorrect(ligne, secret))) {
     await env.DB.batch([await compter(env, 'echecCompte', identifiant), await compter(env, 'echecAdresse', ip)]);
     return erreur('identifiant ou mot de passe incorrect', 401);
@@ -133,14 +133,14 @@ async function connexion(request, env) {
     ...requetes,
     env.DB.prepare('UPDATE comptes SET derniere = ? WHERE id = ?').bind(new Date().toISOString(), ligne.id),
   ]);
-  return json({ identifiant, jeton });
+  return json({ identifiant, jeton, admin: !!ligne.admin });
 }
 
 // Actions qui demandent une session ouverte.
 const avecSession = {
   async session(request, env, s) {
-    const c = await env.DB.prepare('SELECT identifiant FROM comptes WHERE id = ?').bind(s.compte).first();
-    return c ? json({ identifiant: c.identifiant }) : erreur('session expirée', 401);
+    const c = await env.DB.prepare('SELECT identifiant, admin FROM comptes WHERE id = ?').bind(s.compte).first();
+    return c ? json({ identifiant: c.identifiant, admin: !!c.admin }) : erreur('session expirée', 401);
   },
 
   async deconnexion(request, env, s) {

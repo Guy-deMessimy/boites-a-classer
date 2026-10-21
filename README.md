@@ -12,7 +12,7 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 | `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
 | `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
 | `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
-| `functions/`, `serveur/`, `migrations/`, `wrangler.toml` | Sauvegarde en ligne et comptes : API Cloudflare Pages Functions et base D1 (voir Sauvegarde en ligne). |
+| `functions/`, `serveur/`, `migrations/`, `wrangler.toml` | Sauvegarde en ligne, comptes et administration (page `site/admin/`) : API Cloudflare Pages Functions et base D1 (voir Sauvegarde en ligne). |
 | `redirection/` | Archive : pages qui redirigeaient l'ancienne adresse (GitHub Pages, supprimée) vers la nouvelle. |
 | `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. Non publié (voir Espace enseignant). |
 | `outils/` | Générateur des fiches (`fiches.html` + `generer-fiches.js`). |
@@ -65,6 +65,17 @@ Sécurité : le mot de passe ne quitte jamais l'appareil. Le logiciel en dérive
 Côté serveur : `functions/api/compte/[action].js` (inscription, connexion, session, deconnexion, mot-de-passe, suppression ; détail en tête du fichier), `serveur/comptes.js` (sessions, ménage ; hors de `functions/` pour ne pas devenir une adresse), tables `comptes`, `sessions`, `limites` dans `migrations/0002_comptes.sql`. Le travail d'un compte est rangé dans `sauvegardes` sous la clé `compte:<id>` ; `functions/api/sauvegarde.js` accepte le jeton à la place du code et répond 401 si la session n'est plus valable (le logiciel oublie alors le jeton et demande de se reconnecter, le travail en attente part à la reconnexion).
 
 Le mot de passe minimal (8 caractères) n'est vérifié que par le logiciel : le serveur ne voit que le secret dérivé.
+
+### Administration (depuis la 2.3.0)
+
+Page `site/admin/` (https://boites-a-classer.pages.dev/admin/, non indexée), réservée aux comptes dont la colonne `admin` vaut 1 (`migrations/0003_admin.sql`). On s'y rend en se connectant dans le logiciel avec un compte admin : bouton 👤 → « 🛠 Administration » (la page reprend le jeton gardé par le logiciel, même adresse). Le serveur vérifie le droit d'admin à chaque appel (`functions/api/admin/[action].js`).
+
+- **Chiffres** : comptes, sauvegardes avec un code, versions gardées, place utilisée, sessions ouvertes ; **liste des comptes** (création, dernière utilisation, dernière sauvegarde, taille) avec recherche.
+- **Nouveau mot de passe** (élève qui a oublié le sien) : la page tire un mot de passe facile à dicter (3 mots + 2 chiffres), en dérive le secret comme le logiciel et l'envoie ; les sessions de l'élève sont fermées. Le mot de passe s'affiche une seule fois, sous la ligne.
+- **Voir le travail** : ouvre `app/index.html#consulter=<identifiant>`. Le logiciel charge le dernier travail du compte dans une mémoire temporaire (variable `stockage` dans `app.js`) : tout se regarde et se manipule, rien n'est gardé ni envoyé, le travail de l'admin dans ce navigateur n'est pas touché. « Quitter » recharge le logiciel normal.
+- **Supprimer** (double appui) : le compte, ses sessions et son travail.
+
+Un compte admin ne peut être ni modifié ni supprimé depuis cette page (même le sien : réglages du compte dans le logiciel). Donner ou retirer le droit d'admin : `npx wrangler d1 execute boites-a-classer --remote --command "UPDATE comptes SET admin = 1 WHERE identifiant = '…'"` (0 pour retirer). Le compte doit d'abord être créé normalement dans le logiciel ; se reconnecter ensuite pour voir le lien. Ou d'un coup : `node outils/creer-admin.mjs [identifiant]` crée le compte sur le site avec un mot de passe tiré au hasard, le passe admin et affiche le mot de passe (écrit nulle part).
 
 ### Sans compte, avec un code
 
