@@ -93,9 +93,28 @@ Tester en local : `npx wrangler d1 migrations apply boites-a-classer --local`, c
 
 Limites : n'importe qui connaissant un code peut lire et modifier le travail correspondant ; il n'y a pas de limite du nombre d'envois (offre gratuite Cloudflare : 100 000 requêtes par jour, 5 Go de base). Navigateurs trop anciens (sans `CompressionStream`, par exemple iOS 15) : la sauvegarde en ligne n'est pas proposée.
 
+## Abonnement à 3 €/mois et classes (depuis la 2.5.0)
+
+Page `site/abonnement/` (lien « S'abonner » de l'accueil et de la fenêtre 👤). Paiement par **PayPal** (abonnements PayPal) :
+
+1. Sans compte : on choisit identifiant et mot de passe (disponibilité vérifiée, `GET /api/compte/disponible`), puis on paie ; connecté : le compte du logiciel devient abonné.
+2. Le bouton PayPal (SDK `www.paypal.com/sdk/js`, `intent=subscription`) renvoie l'identifiant d'abonnement `I-…` ; la page l'envoie à `POST /api/abonnement/activer`, qui **relit l'abonnement chez PayPal** (plan, statut, dates) avant de créer le compte abonné ou de passer le compte connecté abonné. Un abonnement ne sert qu'à un compte. S'il y a un souci après le paiement (identifiant pris, réseau), l'identifiant d'abonnement est gardé dans le navigateur (`boites-a-classer-abonnement:attente`) pour réessayer.
+3. Droits jusqu'à `comptes.abonne_jusqua` : prochain prélèvement + 3 jours si l'abonnement est actif ; fin du mois payé s'il est annulé, suspendu ou expiré. Passé cette date, l'abonnement est relu chez PayPal (au plus une fois par heure). Le webhook `POST /api/paypal/webhook` (renouvellements, annulations) ne fait que déclencher cette relecture : un faux appel ne change rien. Résiliation par l'abonné dans son compte PayPal.
+
+Un **abonné** (`serveur/abonnements.js`, `estAbonne`) :
+- crée et publie des collections pour tout le monde, et ne modifie ou retire que les siennes (`collections.auteur`), au plus 30 ; un admin les gère toutes. Les collections passent par `GET/POST/DELETE /api/collections` (avec une session, le GET marque `modifiable` celles que l'on peut modifier) ;
+- a une **classe** : un code de 6 caractères (`comptes.code_classe`) que les élèves saisissent dans 👤 → Ma classe (`POST /api/classe/rejoindre`) ; en le faisant, l'élève accepte que l'enseignant voie son travail. Page `site/classe/` : code (et « Changer de code »), date de fin d'abonnement, lien PayPal pour résilier, liste des élèves avec « Voir le travail » (consultation dans le logiciel, par `/api/classe/travail`), « Nouveau mot de passe » et « Retirer de la classe ». Un élève a une classe au plus et peut la quitter. Sans abonnement valable, la page et les collections sont refusées ; les collections déjà publiées restent.
+
+Mise en route de PayPal (une fois) :
+1. Compte PayPal **Business** (titulaire majeur ; encaisser demande un statut, par exemple auto-entrepreneur, et des factures/TVA à votre charge), puis sur developer.paypal.com → Apps & Credentials, une application (identifiant + secret), d'abord en « Sandbox » pour essayer.
+2. `PAYPAL_API=https://api-m.sandbox.paypal.com PAYPAL_CLIENT_ID=… PAYPAL_SECRET=… node outils/paypal-plan.mjs` : crée le produit, le plan à 3 €/mois et le webhook, et affiche les réglages.
+3. Cloudflare Pages → boites-a-classer → Settings → Variables and Secrets : `PAYPAL_API`, `PAYPAL_CLIENT_ID`, `PAYPAL_PLAN_ID` (texte) et `PAYPAL_SECRET` (secret), puis republier. Tant qu'ils manquent, la page affiche « Bientôt disponible ». Recommencer avec `https://api-m.paypal.com` et l'application « Live » pour les vrais paiements.
+
+Essais en local : `.dev.vars` (non suivi par Git) donne ces réglages à `wrangler pages dev` ; on peut y mettre un faux PayPal (`PAYPAL_API=http://localhost:…`).
+
 ## Collections du site et réservées à l'admin (depuis la 2.4.0)
 
-Seul un compte admin crée et modifie des collections. Ce qu'il enregistre dans l'éditeur est **publié sur le site** (table `collections`, `migrations/0004_collections.sql`) et proposé à tout le monde dans le groupe « Collections du site », en lecture seule comme les collections fournies. Identifiants `site-…`. Le logiciel les lit au démarrage (`GET /api/collections`, `functions/api/collections.js`) et en garde une copie sous `boites-a-classer-site:collections` pour le hors-ligne (hors de ce qui est sauvegardé en ligne). Publier, modifier, retirer : `POST /api/admin/collection` et `/api/admin/collection-suppression` (droit d'admin vérifié par le serveur ; taille au plus 1,9 Mo).
+Seul un compte admin (et, depuis la 2.5.0, un abonné pour ses propres collections) crée et modifie des collections. Ce qu'il enregistre dans l'éditeur est **publié sur le site** (table `collections`, `migrations/0004_collections.sql`) et proposé à tout le monde dans le groupe « Collections du site », en lecture seule comme les collections fournies. Identifiants `site-…`. Le logiciel les lit au démarrage (`GET /api/collections`, `functions/api/collections.js`) et en garde une copie sous `boites-a-classer-site:collections` pour le hors-ligne (hors de ce qui est sauvegardé en ligne). Publier, modifier, retirer : `POST` et `DELETE /api/collections` (droits vérifiés par le serveur ; taille au plus 1,9 Mo).
 
 Dans la fenêtre « ✎ Collections », l'admin a « ＋ Nouvelle collection », « Copier pour modifier » (collections fournies), « ✎ Modifier » et « Retirer du site » (collections du site), et « ☁️ Publier sur le site » pour une collection de « Mes collections ». Les autres n'ont plus ni création, ni copie, ni modification : leurs collections personnelles d'avant la 2.4.0 restent utilisables, exportables et supprimables. Ouvrir un fichier de **collection** seule est réservé à l'admin ; un fichier de **travail** s'ouvre toujours, avec la collection qu'il contient. Retirer une collection du site la fait disparaître chez tout le monde (le travail fait dessus reste gardé, mais n'est plus affiché).
 

@@ -9,3 +9,5 @@ node_modules/
 fiche à imprimer/
 # Données locales de wrangler (base D1 de test)
 .wrangler/
+# Réglages locaux de wrangler pages dev (PayPal de test)
+.dev.vars

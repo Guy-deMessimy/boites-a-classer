@@ -6,6 +6,7 @@ import { maintenanceActive, PAGE_MAINTENANCE } from '../serveur/maintenance.js';
 const TOUJOURS_OUVERT = [
   /^\/admin(\/|$)/, // page d'administration (connexion et bouton de réouverture)
   /^\/api\/(admin|compte)\//,
+  /^\/api\/paypal\//, // webhooks de PayPal : les renouvellements et annulations comptent même site arrêté
   /^\/polices\//, /^\/fond-sciences\.svg$/, /^\/icone\.png$/, // utilisés par la page de maintenance
 ];
 

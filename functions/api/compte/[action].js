@@ -5,19 +5,19 @@
 // mot de passe demande de refaire les 600 000 tours pour chaque essai.
 //
 //   POST /api/compte/inscription   { identifiant, secret }   → { identifiant, jeton }   409 si l'identifiant est déjà pris
-//   POST /api/compte/connexion     { identifiant, secret }   → { identifiant, jeton, admin }   401 si incorrect, 429 si trop d'essais
-//   GET  /api/compte/session       (jeton)                   → { identifiant, admin }          401 si la session n'est plus valable
+//   POST /api/compte/connexion     { identifiant, secret }   → { identifiant, admin, abonne, enseignant, jeton }   401 si incorrect, 429 si trop d'essais
+//   GET  /api/compte/session       (jeton)                   → { identifiant, admin, abonne, enseignant }   401 si la session n'est plus valable
+//   GET  /api/compte/disponible?identifiant=…               → { disponible }   (page d'abonnement, avant de payer)
 //   POST /api/compte/deconnexion   (jeton)                   → 204
 //   POST /api/compte/mot-de-passe  (jeton) { secret, nouveau } → { jeton }  les autres sessions du compte sont fermées
 //   POST /api/compte/suppression   (jeton) { secret }        → 204          efface le compte, ses sessions et son travail
 //
 // Le jeton voyage dans l'en-tête « Authorization: Bearer … » (voir serveur/comptes.js).
 
-import { sessionValide, texte, hex, sha256, base64url, hasard } from '../../../serveur/comptes.js';
+import {
+  sessionValide, texte, hex, sha256, hasard, FORME_IDENTIFIANT, FORME_SECRET, empreinteSecret, secretCorrect, nouvelleSession, etatCompte,
+} from '../../../serveur/comptes.js';
 
-const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
-const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
-const SESSIONS_GARDEES = 20; // par compte : les plus anciennes sont fermées au-delà
 const QUART_HEURE = 15 * 60 * 1000;
 // Une classe entière partage souvent la même adresse IP : les limites par adresse sont larges.
 const LIMITES = {
@@ -47,15 +47,6 @@ async function lireCorps(request) {
   }
 }
 
-const empreinteSecret = (sel, secret) => sha256(new Uint8Array(sel), texte(secret));
-
-async function secretCorrect(ligne, secret) {
-  if (!FORME_SECRET.test(secret || '')) return false;
-  const calcule = await empreinteSecret(ligne.sel, secret);
-  const garde = new Uint8Array(ligne.empreinte);
-  return calcule.length === garde.length && crypto.subtle.timingSafeEqual(calcule, garde);
-}
-
 /* Compteurs anti-abus (table limites) */
 
 const cleLimite = async (nom, valeur) => hex(await sha256(texte(nom + ':' + valeur)));
@@ -73,20 +64,6 @@ async function compter(env, nom, valeur) {
   return env.DB.prepare('INSERT INTO limites (cle, nombre, fin) VALUES (?1, 1, ?2) ON CONFLICT (cle) DO UPDATE SET '
     + 'nombre = CASE WHEN fin > ?3 THEN nombre + 1 ELSE 1 END, fin = CASE WHEN fin > ?3 THEN fin ELSE ?2 END')
     .bind(await cleLimite(nom, valeur), fin, maintenant.toISOString());
-}
-
-/* Sessions */
-
-// Ouvre une session pour le compte : renvoie le jeton (à remettre au logiciel) et les requêtes à exécuter.
-async function nouvelleSession(env, compte) {
-  const jeton = base64url(hasard(32));
-  const requetes = [
-    env.DB.prepare('INSERT INTO sessions (jeton, compte, derniere) VALUES (?, ?, ?)')
-      .bind(hex(await sha256(texte(jeton))), compte, new Date().toISOString()),
-    env.DB.prepare('DELETE FROM sessions WHERE compte = ?1 AND jeton NOT IN '
-      + '(SELECT jeton FROM sessions WHERE compte = ?1 ORDER BY derniere DESC LIMIT ?2)').bind(compte, SESSIONS_GARDEES),
-  ];
-  return { jeton, requetes };
 }
 
 /* Actions */
@@ -133,14 +110,14 @@ async function connexion(request, env) {
     ...requetes,
     env.DB.prepare('UPDATE comptes SET derniere = ? WHERE id = ?').bind(new Date().toISOString(), ligne.id),
   ]);
-  return json({ identifiant, jeton, admin: !!ligne.admin });
+  return json({ ...(await etatCompte(env, ligne.id)), jeton });
 }
 
 // Actions qui demandent une session ouverte.
 const avecSession = {
   async session(request, env, s) {
-    const c = await env.DB.prepare('SELECT identifiant, admin FROM comptes WHERE id = ?').bind(s.compte).first();
-    return c ? json({ identifiant: c.identifiant, admin: !!c.admin }) : erreur('session expirée', 401);
+    const etat = await etatCompte(env, s.compte);
+    return etat ? json(etat) : erreur('session expirée', 401);
   },
 
   async deconnexion(request, env, s) {
@@ -173,6 +150,7 @@ const avecSession = {
     await env.DB.batch([
       env.DB.prepare('DELETE FROM sauvegardes WHERE cle = ?').bind('compte:' + s.compte),
       env.DB.prepare('DELETE FROM sessions WHERE compte = ?').bind(s.compte),
+      env.DB.prepare('UPDATE comptes SET enseignant = NULL WHERE enseignant = ?').bind(s.compte),
       env.DB.prepare('DELETE FROM comptes WHERE id = ?').bind(s.compte),
     ]);
     return rien();
@@ -182,10 +160,15 @@ const avecSession = {
 export async function onRequest({ request, env, params }) {
   if (request.method === 'OPTIONS') return rien();
   const action = params.action;
-  if (action !== 'inscription' && action !== 'connexion' && !Object.hasOwn(avecSession, action)) return erreur('action inconnue', 404);
-  if (request.method !== (action === 'session' ? 'GET' : 'POST')) return erreur('méthode non permise', 405);
+  if (!['inscription', 'connexion', 'disponible'].includes(action) && !Object.hasOwn(avecSession, action)) return erreur('action inconnue', 404);
+  if (request.method !== (action === 'session' || action === 'disponible' ? 'GET' : 'POST')) return erreur('méthode non permise', 405);
   if (action === 'inscription') return inscription(request, env);
   if (action === 'connexion') return connexion(request, env);
+  if (action === 'disponible') {
+    const id = new URL(request.url).searchParams.get('identifiant') || '';
+    if (!FORME_IDENTIFIANT.test(id)) return erreur('identifiant invalide', 400);
+    return json({ disponible: !(await env.DB.prepare('SELECT 1 FROM comptes WHERE identifiant = ?').bind(id).first()) });
+  }
   const s = await sessionValide(request, env);
   if (!s) return erreur('session expirée', 401);
   return avecSession[action](request, env, s);

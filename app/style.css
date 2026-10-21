@@ -448,6 +448,9 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 .sv-case { display: flex; align-items: flex-start; gap: .4rem; margin: .8rem 0 .5rem; font-size: .9rem; }
 .sv-case input { margin-top: .2rem; }
 .sv-details { margin-top: .8rem; }
+#sv-classe { margin-bottom: 1.2rem; padding-bottom: .4rem; border-bottom: 1px solid #eee8db; }
+#sv-abonne .btn { color: inherit; }
+#sv-abonne .btn { display: inline-block; text-decoration: none; }
 .sv-details summary { cursor: pointer; font-weight: 600; }
 .sv-details form { margin-top: .6rem; }
 #sv-connexion:not([hidden]) ~ #sv-inactive { margin-top: 1.4rem; border-top: 1px solid #eee8db; }

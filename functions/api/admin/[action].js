@@ -5,8 +5,6 @@
 //   GET  /api/admin/travail?identifiant=…     dernière version du travail d'un compte (gzip, en-têtes X-Version et X-Date) ; 404 s'il n'y en a pas
 //   POST /api/admin/mot-de-passe { identifiant, secret }  nouveau mot de passe (secret dérivé par la page) ; ferme ses sessions → 204
 //   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail → 204
-//   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
-//   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
 //   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
 //   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
 //
@@ -17,8 +15,6 @@ import { maintenanceActive, changerMaintenance } from '../../../serveur/maintena
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
-const FORME_ID_COLLECTION = /^site-[A-Za-z0-9_-]{1,55}$/;
-const TAILLE_MAX_COLLECTION = 1900000; // une valeur D1 ne peut pas dépasser 2 Mo
 
 const ENTETES = {
   'Access-Control-Allow-Origin': '*',
@@ -59,8 +55,9 @@ const actions = {
         + '(SELECT count(DISTINCT cle) FROM sauvegardes WHERE cle NOT LIKE \'compte:%\') AS codes, '
         + '(SELECT count(*) FROM sauvegardes) AS versions, '
         + '(SELECT COALESCE(sum(length(donnees)), 0) FROM sauvegardes) AS taille, '
-        + '(SELECT count(*) FROM sessions) AS sessions'),
-      env.DB.prepare('SELECT c.identifiant, c.admin, c.cree, c.derniere, '
+        + '(SELECT count(*) FROM sessions) AS sessions, '
+        + '(SELECT count(*) FROM comptes WHERE abonne_jusqua > strftime(\'%Y-%m-%dT%H:%M:%fZ\', \'now\')) AS abonnes'),
+      env.DB.prepare('SELECT c.identifiant, c.admin, c.cree, c.derniere, c.abonne_jusqua, '
         + 'count(s.version) AS versions, max(s.date) AS date, '
         + '(SELECT length(donnees) FROM sauvegardes WHERE cle = \'compte:\' || c.id ORDER BY version DESC LIMIT 1) AS taille '
         + 'FROM comptes c LEFT JOIN sauvegardes s ON s.cle = \'compte:\' || c.id '
@@ -101,28 +98,9 @@ const actions = {
     await env.DB.batch([
       env.DB.prepare('DELETE FROM sauvegardes WHERE cle = ?').bind('compte:' + c.id),
       env.DB.prepare('DELETE FROM sessions WHERE compte = ?').bind(c.id),
+      env.DB.prepare('UPDATE comptes SET enseignant = NULL WHERE enseignant = ?').bind(c.id),
       env.DB.prepare('DELETE FROM comptes WHERE id = ?').bind(c.id),
     ]);
-    return rien();
-  },
-
-  // Le logiciel envoie une collection déjà vérifiée (nettoyerCollection dans app/app.js) et la revérifie à la lecture :
-  // ici, on contrôle seulement sa forme générale et sa taille.
-  async collection(request, env) {
-    const { collection: c } = await lireCorps(request);
-    if (!c || typeof c !== 'object' || !FORME_ID_COLLECTION.test(c.id || '') || typeof c.nom !== 'string'
-      || !Array.isArray(c.attributs) || !Array.isArray(c.etres)) return erreur('collection illisible', 400);
-    const donnees = JSON.stringify({ id: c.id, nom: c.nom, attributs: c.attributs, etres: c.etres });
-    if (donnees.length > TAILLE_MAX_COLLECTION) return erreur('collection trop grosse (trop de photos)', 413);
-    await env.DB.prepare('INSERT INTO collections (id, donnees, date) VALUES (?1, ?2, ?3) '
-      + 'ON CONFLICT (id) DO UPDATE SET donnees = ?2, date = ?3').bind(c.id, donnees, new Date().toISOString()).run();
-    return rien();
-  },
-
-  async 'collection-suppression'(request, env) {
-    const { id } = await lireCorps(request);
-    if (!FORME_ID_COLLECTION.test(id || '')) return erreur('identifiant de collection invalide', 400);
-    await env.DB.prepare('DELETE FROM collections WHERE id = ?').bind(id).run();
     return rien();
   },
 
@@ -138,7 +116,7 @@ const actions = {
 
 const METHODES = {
   comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'],
-  collection: ['POST'], 'collection-suppression': ['POST'], maintenance: ['GET', 'POST'],
+  maintenance: ['GET', 'POST'],
 };
 
 export async function onRequest({ request, env, params }) {
