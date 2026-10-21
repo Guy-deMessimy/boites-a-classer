@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.1.0';
+  const VERSION = '2.2.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1627,7 +1627,7 @@
       m.append(
         entreeMenu('💾 Enregistrer mon travail', enregistrerTravail),
         entreeMenu('📂 Ouvrir un fichier…', ouvrir),
-        entreeMenu(codeSauvegarde() ? '☁️ Sauvegarde en ligne (activée)' : '☁️ Sauvegarde en ligne…', ouvrirSauvegarde),
+        entreeMenu(jetonCompte() ? `☁️ Compte : ${lire(CLE_IDENTIFIANT)}` : codeSauvegarde() ? '☁️ Sauvegarde en ligne (activée)' : '☁️ Compte et sauvegarde en ligne…', ouvrirSauvegarde),
         document.createElement('hr'),
         entreeMenu('📄 Enregistrer en PDF', exporterPdf),
       );
@@ -1787,24 +1787,30 @@
 
   /* ---------- Sauvegarde en ligne ---------- */
 
-  // Avec un code de quatre mots, ce que le logiciel garde dans le navigateur (plans de travail, Mes collections) est aussi
-  // envoyé, compressé, au serveur du site (functions/api/sauvegarde.js) quelques secondes après chaque changement.
-  // Sur un autre appareil, on tape le code pour retrouver son travail. Le serveur garde les 10 dernières versions.
+  // Avec un compte (identifiant + mot de passe) ou un code de quatre mots, ce que le logiciel garde dans le navigateur
+  // (plans de travail, Mes collections) est aussi envoyé, compressé, au serveur du site (functions/api/sauvegarde.js)
+  // quelques secondes après chaque changement. Sur un autre appareil, on se connecte (ou on tape le code) pour retrouver
+  // son travail. Le serveur garde les 10 dernières versions.
   // Au démarrage (et au retour sur l'onglet), si le serveur a une version plus récente et que cet appareil n'a rien en attente,
   // on la prend ; sinon c'est cet appareil qui envoie la sienne (la précédente reste dans les versions du serveur).
 
   // Sur le site (https) ou avec « wrangler pages dev » (port 8788), l'API est à la même adresse ;
   // l'application de bureau (http://localhost:47821) et un fichier ouvert en local passent par le site.
-  const API = location.protocol === 'https:' || location.port === '8788'
-    ? '/api/sauvegarde'
-    : 'https://boites-a-classer.pages.dev/api/sauvegarde';
+  const RACINE_API = location.protocol === 'https:' || location.port === '8788' ? '/api' : 'https://boites-a-classer.pages.dev/api';
+  const API = RACINE_API + '/sauvegarde';
+  const API_COMPTE = RACINE_API + '/compte/';
   // Ces clés n'ont pas le préfixe « boites-a-classer: » : elles ne font pas partie de ce qu'on sauvegarde.
   const CLE_CODE = 'boites-a-classer-sauvegarde:code';
   const CLE_VERSION = 'boites-a-classer-sauvegarde:version';
   const CLE_DATE = 'boites-a-classer-sauvegarde:date';
   const CLE_ATTENTE = 'boites-a-classer-sauvegarde:attente';
+  const CLE_JETON = 'boites-a-classer-compte:jeton'; // session ouverte (functions/api/compte/[action].js)
+  const CLE_IDENTIFIANT = 'boites-a-classer-compte:identifiant';
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
   const FORME_CODE = /^[a-z]{2,12}(-[a-z]{2,12}){3}$/;
+  const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
+  const MDP_MIN = 8;
+  const TOURS_PBKDF2 = 600000;
   const TAILLE_MAX_EN_LIGNE = 1900000;
   const MOTS = (
     'abeille agneau aigle ane baleine bison castor chat chameau cheval chevre chien cigale cigogne crabe ' +
@@ -1826,7 +1832,8 @@
     'panier seau pelle rateau arrosoir brouette echelle corde bouton pain gateau tarte crepe biscuit miel ' +
     'confiture fromage beurre yaourt chocolat bonbon caramel'
   ).split(' '); // 256 mots : un octet de hasard par mot
-  const enLignePossible = 'CompressionStream' in window && 'DecompressionStream' in window && 'fetch' in window;
+  const enLignePossible = 'CompressionStream' in window && 'DecompressionStream' in window && 'fetch' in window
+    && !!(window.crypto && crypto.subtle);
   let minuterieEnvoi = null;
   let envoiEnCours = false;
   let changements = 0; // compte les changements, pour savoir s'il en est arrivé pendant un envoi
@@ -1835,9 +1842,15 @@
   let derniereSynchro = 0;
 
   const codeSauvegarde = () => lire(CLE_CODE);
+  const jetonCompte = () => lire(CLE_JETON);
+  // Ce qui désigne le travail en ligne de cet appareil : « compte <jeton> », « code <code> », ou null.
+  const identite = () => (jetonCompte() ? 'compte ' + jetonCompte() : codeSauvegarde() ? 'code ' + codeSauvegarde() : null);
+  const entetesIdentite = (id) => (id.startsWith('compte ')
+    ? { Authorization: 'Bearer ' + id.slice(7) }
+    : { 'X-Code-Sauvegarde': id.slice(5) });
   const oublier = (k) => { try { localStorage.removeItem(k); } catch (e) { /* stockage indisponible */ } };
-  const normaliserCode = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    .replace(/[^a-z]+/g, '-').replace(/^-+|-+$/g, '');
+  const sansAccents = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const normaliserCode = (t) => sansAccents(t).replace(/[^a-z]+/g, '-').replace(/^-+|-+$/g, '');
   const dateLisible = (iso) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   function nouveauCode() {
@@ -1862,18 +1875,29 @@
 
   // Appelé à chaque écriture dans la mémoire du navigateur (ecrire, sauverMesCollections, supprimerCollection).
   function signalerChangement(k) {
-    if (enApplication || !k.startsWith('boites-a-classer:') || HORS_SAUVEGARDE.has(k) || !codeSauvegarde()) return;
+    if (enApplication || !k.startsWith('boites-a-classer:') || HORS_SAUVEGARDE.has(k) || !identite()) return;
     changements++;
     ecrire(CLE_ATTENTE, '1');
     clearTimeout(minuterieEnvoi);
     minuterieEnvoi = setTimeout(envoyer, 2500);
   }
 
+  // Le serveur ne reconnaît plus la session (expirée, mot de passe changé ailleurs, compte supprimé) : on l'oublie.
+  // Ce qui attendait d'être envoyé reste marqué « en attente » et partira à la prochaine connexion.
+  function sessionExpiree() {
+    oublier(CLE_JETON);
+    oublier(CLE_VERSION);
+    oublier(CLE_DATE);
+    majBoutonCompte();
+    if (fenSauvegarde.open) rendreSauvegarde();
+    info.textContent = 'Ta session a expiré : reconnecte-toi (bouton 👤) pour continuer à sauvegarder en ligne.';
+  }
+
   async function envoyer() {
     clearTimeout(minuterieEnvoi);
-    const code = codeSauvegarde();
+    const id = identite();
     // Rien en attente, ou envoi déjà en cours (s'il arrive un changement entre-temps, l'envoi en cours relancera).
-    if (!code || !enLignePossible || !lire(CLE_ATTENTE) || envoiEnCours) return;
+    if (!id || !enLignePossible || !lire(CLE_ATTENTE) || envoiEnCours) return;
     envoiEnCours = true;
     const vus = changements;
     let relancer = false;
@@ -1886,17 +1910,18 @@
       }
       const rep = await fetch(API, {
         method: 'PUT',
-        headers: { 'X-Code-Sauvegarde': code, 'Content-Type': 'application/octet-stream' },
+        headers: { ...entetesIdentite(id), 'Content-Type': 'application/octet-stream' },
         body: corps,
       });
+      if (rep.status === 401 && identite() === id) { sessionExpiree(); return; }
       if (!rep.ok) throw new Error('serveur ' + rep.status);
       const r = await rep.json();
-      if (codeSauvegarde() !== code) return; // sauvegarde arrêtée ou code changé pendant l'envoi
+      if (identite() !== id) return; // sauvegarde arrêtée, déconnexion ou changement de compte pendant l'envoi
       ecrire(CLE_VERSION, String(r.version));
       ecrire(CLE_DATE, r.date);
       if (changements === vus) oublier(CLE_ATTENTE); else relancer = true;
       majEtatEnLigne('');
-      if (fenSauvegarde.open && !$('#sv-active').hidden) chargerVersions();
+      if (fenSauvegarde.open && !$('#sv-suivi').hidden) chargerVersions();
     } catch (e) {
       majEtatEnLigne('Pas de connexion au serveur : ton travail sera envoyé dès que possible.', true);
       minuterieEnvoi = setTimeout(envoyer, 60000);
@@ -1914,15 +1939,18 @@
     } finally {
       enApplication = false;
     }
-    ecrire(CLE_VERSION, String(version));
-    ecrire(CLE_DATE, date);
+    if (version) {
+      ecrire(CLE_VERSION, String(version));
+      ecrire(CLE_DATE, date);
+    }
     oublier(CLE_ATTENTE);
     choisirCollection(lire('boites-a-classer:collection') || coll.id);
   }
 
-  async function lireVersion(code, version) {
-    const rep = await fetch(API + (version ? '?version=' + version : ''), { headers: { 'X-Code-Sauvegarde': code } });
+  async function lireVersion(id, version) {
+    const rep = await fetch(API + (version ? '?version=' + version : ''), { headers: entetesIdentite(id) });
     if (rep.status === 404) return null;
+    if (rep.status === 401) throw new Error('session expirée');
     if (!rep.ok) throw new Error('serveur ' + rep.status);
     const donnees = JSON.parse(await decompresser(new Uint8Array(await rep.arrayBuffer())));
     if (!donnees || typeof donnees !== 'object') throw new Error('sauvegarde illisible');
@@ -1931,16 +1959,17 @@
 
   // Au démarrage et au retour sur l'onglet : prend la version du serveur si elle est plus récente.
   async function synchroniser() {
-    const code = codeSauvegarde();
-    if (!code || !enLignePossible || Date.now() - derniereSynchro < 20000) return;
+    const id = identite();
+    if (!id || !enLignePossible || Date.now() - derniereSynchro < 20000) return;
     derniereSynchro = Date.now();
     if (lire(CLE_ATTENTE)) { envoyer(); return; } // cet appareil a du nouveau : il passe en premier
     try {
-      const rep = await fetch(API, { headers: { 'X-Code-Sauvegarde': code, 'X-Version-Connue': lire(CLE_VERSION) || '' } });
+      const rep = await fetch(API, { headers: { ...entetesIdentite(id), 'X-Version-Connue': lire(CLE_VERSION) || '' } });
       if (rep.status === 204) return;
+      if (rep.status === 401 && identite() === id) { sessionExpiree(); return; }
       if (rep.status === 404) { ecrire(CLE_ATTENTE, '1'); envoyer(); return; }
       if (!rep.ok) throw new Error('serveur ' + rep.status);
-      if (lire(CLE_ATTENTE) || codeSauvegarde() !== code) return; // changement pendant la requête
+      if (lire(CLE_ATTENTE) || identite() !== id) return; // changement pendant la requête
       const donnees = JSON.parse(await decompresser(new Uint8Array(await rep.arrayBuffer())));
       appliquerVersion(donnees, rep.headers.get('X-Version'), rep.headers.get('X-Date'));
       info.textContent = 'Travail mis à jour depuis la sauvegarde en ligne.';
@@ -1949,11 +1978,66 @@
     }
   }
 
-  /* Fenêtre « Sauvegarde en ligne » */
+  /* Comptes */
+
+  // Le mot de passe ne quitte pas l'appareil : on envoie un secret qui en est dérivé (PBKDF2-SHA256, sel tiré de
+  // l'identifiant). Le serveur n'en garde qu'une empreinte (voir functions/api/compte/[action].js).
+  async function secretDe(identifiant, mdp) {
+    const cle = await crypto.subtle.importKey('raw', new TextEncoder().encode(mdp), 'PBKDF2', false, ['deriveBits']);
+    const bits = new Uint8Array(await crypto.subtle.deriveBits({
+      name: 'PBKDF2', hash: 'SHA-256', iterations: TOURS_PBKDF2,
+      salt: new TextEncoder().encode('boites-a-classer:compte:' + identifiant),
+    }, cle, 256));
+    return btoa(String.fromCharCode(...bits)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  // Appelle l'API des comptes : { statut, r } (r = réponse JSON, ou {}).
+  async function appelCompte(action, corps, jeton) {
+    const entetes = jeton ? { Authorization: 'Bearer ' + jeton } : {};
+    const rep = await fetch(API_COMPTE + action, corps === undefined ? { headers: entetes } : {
+      method: 'POST', headers: { ...entetes, 'Content-Type': 'application/json' }, body: JSON.stringify(corps),
+    });
+    let r = {};
+    try { r = await rep.json(); } catch (e) { /* réponse vide */ }
+    return { statut: rep.status, r };
+  }
+
+  const majuscule = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const messageErreur = (statut, r) => (r && r.erreur ? majuscule(r.erreur) + '.' : 'Le serveur a répondu ' + statut + '.');
+
+  // Bouton 👤 de la barre : nom du compte connecté, ou « Se connecter ».
+  const boutonCompte = $('#compte');
+  function majBoutonCompte() {
+    const nom = jetonCompte() && lire(CLE_IDENTIFIANT);
+    $('#compte-nom').textContent = ' ' + (nom || 'Se connecter');
+    boutonCompte.title = nom ? `Compte ${nom} : sauvegarde en ligne` : 'Se connecter pour sauvegarder son travail en ligne';
+    boutonCompte.classList.toggle('connecte', !!nom);
+  }
+
+  // Commence à sauvegarder sur ce compte (après une connexion ou une création de compte).
+  function ouvrirSession(identifiant, jeton) {
+    clearTimeout(minuterieEnvoi);
+    for (const k of [CLE_CODE, CLE_VERSION, CLE_DATE]) oublier(k); // un code éventuel reste valable sur le serveur
+    ecrire(CLE_JETON, jeton);
+    ecrire(CLE_IDENTIFIANT, identifiant);
+    etatEnLigne = { texte: '', erreur: false };
+    majBoutonCompte();
+  }
+
+  // Deux contenus identiques, quel que soit l'ordre des clés ?
+  const memesDonnees = (a, b) => {
+    const ka = Object.keys(a).sort();
+    return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
+  };
+
+  /* Fenêtre « Compte et sauvegarde en ligne » */
 
   const fenSauvegarde = $('#fen-sauvegarde');
   const svMessage = fenSauvegarde.querySelector('.message');
   const boutonRecuperer = $('#sv-recuperer');
+  let creation = false; // formulaire de compte en mode « Créer un compte »
+  let voirConnexion = false; // avec un code : formulaire de compte affiché (« Utiliser un compte à la place »)
+  let enAttenteDeChoix = null; // connexion réussie, mais le compte et ce navigateur ont un travail différent
 
   function majEtatEnLigne(texte, erreur) {
     if (texte !== undefined) etatEnLigne = { texte, erreur: !!erreur };
@@ -1967,20 +2051,37 @@
   function ouvrirSauvegarde() {
     fermerMenu();
     svMessage.textContent = '';
+    voirConnexion = false;
+    enAttenteDeChoix = null;
     rendreSauvegarde();
     fenSauvegarde.showModal();
+    if (!jetonCompte() && !codeSauvegarde() && enLignePossible) $('#sv-identifiant').focus();
   }
 
   function rendreSauvegarde() {
-    const code = codeSauvegarde();
-    $('#sv-inactive').hidden = !!code;
+    const compte = !!jetonCompte();
+    const code = !compte && codeSauvegarde();
+    $('#sv-connexion').hidden = compte || (code && !voirConnexion);
+    $('#sv-compte').hidden = !compte;
+    $('#sv-inactive').hidden = compte || !!code || !!enAttenteDeChoix;
     $('#sv-active').hidden = !code;
+    $('#sv-suivi').hidden = !compte && !code;
+    $('#sv-arreter').hidden = !code;
+    $('#sv-reglages').hidden = !compte;
     $('#sv-impossible').hidden = enLignePossible;
-    $('#sv-activer').disabled = boutonRecuperer.disabled = !enLignePossible;
-    remettreConfirmation(boutonRecuperer);
-    remettreConfirmation($('#sv-arreter'));
-    if (code) {
-      $('#sv-code-affiche').textContent = code;
+    $('#sv-activer').disabled = boutonRecuperer.disabled = $('#sv-entrer').disabled = $('#sv-bascule').disabled = !enLignePossible;
+    $('#sv-form-compte').hidden = !!enAttenteDeChoix;
+    $('#sv-choix').hidden = !enAttenteDeChoix;
+    $('#sv-titre-connexion').textContent = creation ? 'Créer un compte' : 'Se connecter';
+    $('#sv-champ-mdp2').hidden = !creation;
+    $('#sv-mdp').autocomplete = creation ? 'new-password' : 'current-password';
+    $('#sv-entrer').textContent = creation ? 'Créer mon compte' : 'Se connecter';
+    $('#sv-bascule').textContent = creation ? 'J\'ai déjà un compte' : 'Créer un compte';
+    if (!$('#sv-identifiant').value) $('#sv-identifiant').value = lire(CLE_IDENTIFIANT) || '';
+    for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
+    if (compte) $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
+    if (code) $('#sv-code-affiche').textContent = code;
+    if (compte || code) {
       majEtatEnLigne();
       chargerVersions();
     }
@@ -1996,7 +2097,8 @@
   }
   function remettreConfirmation(bouton) {
     clearTimeout(bouton.minuterie);
-    bouton.classList.remove('attention', 'confirmer');
+    bouton.classList.remove('confirmer');
+    if (bouton.id !== 'sv-supprimer') bouton.classList.remove('attention');
   }
 
   async function chargerVersions() {
@@ -2004,7 +2106,8 @@
     const ligne = (texte) => { const li = document.createElement('li'); li.textContent = texte; return li; };
     ul.replaceChildren(ligne('Chargement…'));
     try {
-      const rep = await fetch(API + '?liste=1', { headers: { 'X-Code-Sauvegarde': codeSauvegarde() } });
+      const rep = await fetch(API + '?liste=1', { headers: entetesIdentite(identite()) });
+      if (rep.status === 401 && jetonCompte()) { sessionExpiree(); return; }
       if (!rep.ok) throw new Error();
       const liste = await rep.json();
       if (!liste.length) { ul.replaceChildren(ligne('Aucune pour l\'instant.')); return; }
@@ -2029,7 +2132,7 @@
 
   async function revenirA(version, date) {
     try {
-      const v = await lireVersion(codeSauvegarde(), version);
+      const v = await lireVersion(identite(), version);
       if (!v) throw new Error('version introuvable');
       appliquerVersion(v.donnees, v.version, v.date);
       ecrire(CLE_ATTENTE, '1'); // elle devient la plus récente : les autres versions restent sur le serveur
@@ -2040,6 +2143,187 @@
       svMessage.textContent = 'Impossible de revenir à cette version : ' + (e && e.message ? e.message : e);
     }
   }
+
+  /* Connexion et création de compte */
+
+  $('#sv-bascule').addEventListener('click', () => {
+    creation = !creation;
+    svMessage.textContent = '';
+    rendreSauvegarde();
+    $('#sv-identifiant').focus();
+  });
+
+  $('#sv-form-compte').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const champId = $('#sv-identifiant');
+    const identifiant = sansAccents(champId.value.trim());
+    const mdp = $('#sv-mdp').value;
+    if (!FORME_IDENTIFIANT.test(identifiant)) {
+      svMessage.textContent = 'L\'identifiant : de 3 à 30 lettres sans accent, chiffres, points, tirets ou _, sans espace (ex. lea.cm2).';
+      champId.focus();
+      return;
+    }
+    if (creation && mdp.length < MDP_MIN) { svMessage.textContent = `Choisis un mot de passe d'au moins ${MDP_MIN} caractères.`; return; }
+    if (creation && mdp !== $('#sv-mdp2').value) { svMessage.textContent = 'Les deux mots de passe ne sont pas les mêmes.'; return; }
+    if (!mdp) { svMessage.textContent = 'Écris ton mot de passe.'; return; }
+
+    const bouton = $('#sv-entrer');
+    bouton.disabled = true;
+    svMessage.textContent = creation ? 'Création du compte…' : 'Connexion…';
+    try {
+      const secret = await secretDe(identifiant, mdp);
+      const { statut, r } = await appelCompte(creation ? 'inscription' : 'connexion', { identifiant, secret });
+      if (statut === 409) { svMessage.textContent = 'Cet identifiant est déjà pris : choisis-en un autre.'; return; }
+      if (statut === 401) { svMessage.textContent = 'Identifiant ou mot de passe incorrect.'; return; }
+      if (statut !== 200 || !r.jeton) { svMessage.textContent = messageErreur(statut, r); return; }
+      $('#sv-mdp').value = $('#sv-mdp2').value = '';
+
+      if (creation) {
+        // Nouveau compte : le travail de ce navigateur devient sa première version.
+        ouvrirSession(identifiant, r.jeton);
+        ecrire(CLE_ATTENTE, '1');
+        envoyer();
+        creation = false;
+        rendreSauvegarde();
+        svMessage.textContent = 'Compte créé ! Ton travail est maintenant sauvegardé sur ce compte.';
+        return;
+      }
+
+      // Connexion : on regarde ce que le compte a déjà avant de toucher au travail de ce navigateur.
+      const v = await lireVersion('compte ' + r.jeton);
+      const local = donneesLocales();
+      if (v && Object.keys(local).length && !memesDonnees(local, v.donnees)) {
+        enAttenteDeChoix = { identifiant, jeton: r.jeton, v };
+        rendreSauvegarde();
+        svMessage.textContent = '';
+        return;
+      }
+      ouvrirSession(identifiant, r.jeton);
+      if (v) {
+        appliquerVersion(v.donnees, v.version, v.date);
+        fermerFenetres();
+        info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
+      } else {
+        ecrire(CLE_ATTENTE, '1');
+        envoyer();
+        rendreSauvegarde();
+        svMessage.textContent = 'Connecté au compte. Ton travail est maintenant sauvegardé dessus.';
+      }
+    } catch (e) {
+      svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
+    } finally {
+      bouton.disabled = false;
+    }
+  });
+
+  $('#sv-prendre').addEventListener('click', () => {
+    const { identifiant, jeton, v } = enAttenteDeChoix;
+    enAttenteDeChoix = null;
+    ouvrirSession(identifiant, jeton);
+    appliquerVersion(v.donnees, v.version, v.date);
+    fermerFenetres();
+    info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
+  });
+
+  $('#sv-garder').addEventListener('click', () => {
+    const { identifiant, jeton } = enAttenteDeChoix;
+    enAttenteDeChoix = null;
+    ouvrirSession(identifiant, jeton);
+    ecrire(CLE_ATTENTE, '1'); // devient la version la plus récente du compte
+    envoyer();
+    rendreSauvegarde();
+    svMessage.textContent = 'Connecté au compte. Le travail de ce navigateur y est envoyé.';
+  });
+
+  $('#sv-vers-compte').addEventListener('click', () => {
+    voirConnexion = true;
+    svMessage.textContent = '';
+    rendreSauvegarde();
+    $('#sv-connexion').scrollIntoView({ block: 'nearest' });
+    $('#sv-identifiant').focus();
+  });
+
+  /* Compte connecté */
+
+  $('#sv-deconnecter').addEventListener('click', async (ev) => {
+    const bouton = ev.currentTarget;
+    const effacer = $('#sv-effacer').checked;
+    // Ce qui n'est pas encore parti est envoyé avant de fermer la session.
+    if (lire(CLE_ATTENTE) && !bouton.classList.contains('confirmer')) {
+      await envoyer();
+      if (lire(CLE_ATTENTE)) {
+        confirme(bouton);
+        svMessage.textContent = effacer
+          ? 'Tes derniers changements n\'ont pas pu être envoyés : en te déconnectant, ils seront perdus. Appuie encore pour confirmer.'
+          : 'Tes derniers changements n\'ont pas pu être envoyés : ils restent dans ce navigateur. Appuie encore pour te déconnecter.';
+        return;
+      }
+    }
+    remettreConfirmation(bouton);
+    const jeton = jetonCompte();
+    clearTimeout(minuterieEnvoi);
+    for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+    appelCompte('deconnexion', {}, jeton).catch(() => { /* la session expirera d'elle-même */ });
+    if (effacer) appliquerVersion({});
+    etatEnLigne = { texte: '', erreur: false };
+    $('#sv-identifiant').value = '';
+    $('#sv-effacer').checked = false;
+    majBoutonCompte();
+    rendreSauvegarde();
+    svMessage.textContent = effacer
+      ? 'Déconnecté. Le travail a été effacé de ce navigateur ; il reste sur ton compte.'
+      : 'Déconnecté. Ton travail reste dans ce navigateur, et sur ton compte.';
+  });
+
+  $('#sv-form-mdp').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const actuel = $('#sv-mdp-actuel').value;
+    const nouveau = $('#sv-mdp-nouveau').value;
+    if (nouveau.length < MDP_MIN) { svMessage.textContent = `Le nouveau mot de passe doit avoir au moins ${MDP_MIN} caractères.`; return; }
+    if (nouveau !== $('#sv-mdp-nouveau2').value) { svMessage.textContent = 'Les deux nouveaux mots de passe ne sont pas les mêmes.'; return; }
+    const identifiant = lire(CLE_IDENTIFIANT);
+    svMessage.textContent = 'Changement du mot de passe…';
+    try {
+      const [secret, secretNouveau] = await Promise.all([secretDe(identifiant, actuel), secretDe(identifiant, nouveau)]);
+      const { statut, r } = await appelCompte('mot-de-passe', { secret, nouveau: secretNouveau }, jetonCompte());
+      if (statut === 401) { sessionExpiree(); return; }
+      if (statut === 403) { svMessage.textContent = 'Le mot de passe actuel est incorrect.'; return; }
+      if (statut !== 200 || !r.jeton) { svMessage.textContent = messageErreur(statut, r); return; }
+      ecrire(CLE_JETON, r.jeton);
+      for (const id of ['#sv-mdp-actuel', '#sv-mdp-nouveau', '#sv-mdp-nouveau2']) $(id).value = '';
+      ev.target.closest('details').open = false;
+      svMessage.textContent = 'Mot de passe changé. Sur tes autres appareils, il faudra te reconnecter.';
+    } catch (e) {
+      svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
+    }
+  });
+
+  $('#sv-form-suppression').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const bouton = $('#sv-supprimer');
+    const mdp = $('#sv-mdp-suppression').value;
+    if (!mdp) { svMessage.textContent = 'Écris ton mot de passe pour supprimer le compte.'; return; }
+    if (!confirme(bouton)) return;
+    svMessage.textContent = 'Suppression…';
+    try {
+      const secret = await secretDe(lire(CLE_IDENTIFIANT), mdp);
+      const { statut, r } = await appelCompte('suppression', { secret }, jetonCompte());
+      if (statut === 401) { sessionExpiree(); return; }
+      if (statut === 403) { svMessage.textContent = 'Mot de passe incorrect : le compte n\'a pas été supprimé.'; return; }
+      if (statut !== 204) { svMessage.textContent = messageErreur(statut, r); return; }
+      clearTimeout(minuterieEnvoi);
+      for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+      $('#sv-mdp-suppression').value = $('#sv-identifiant').value = '';
+      ev.target.closest('details').open = false;
+      majBoutonCompte();
+      rendreSauvegarde();
+      svMessage.textContent = 'Compte supprimé, avec tout son travail sur le serveur. Ton travail reste dans ce navigateur.';
+    } catch (e) {
+      svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
+    }
+  });
+
+  /* Sans compte, avec un code */
 
   $('#sv-activer').addEventListener('click', () => {
     ecrire(CLE_CODE, nouveauCode());
@@ -2067,7 +2351,7 @@
     boutonRecuperer.disabled = true;
     svMessage.textContent = 'Recherche…';
     try {
-      const v = await lireVersion(code);
+      const v = await lireVersion('code ' + code);
       if (!v) { svMessage.textContent = 'Aucune sauvegarde avec ce code : vérifie les quatre mots.'; return; }
       ecrire(CLE_CODE, code);
       appliquerVersion(v.donnees, v.version, v.date);
@@ -2104,6 +2388,7 @@
   });
 
   fenSauvegarde.querySelector('.fermer').addEventListener('click', () => fenSauvegarde.close());
+  boutonCompte.addEventListener('click', ouvrirSauvegarde);
   window.addEventListener('online', () => { if (lire(CLE_ATTENTE)) envoyer(); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') { if (lire(CLE_ATTENTE)) envoyer(); } else synchroniser();
@@ -2118,6 +2403,11 @@
   function demarrer(recus) {
     remplirSelect();
     choisirCollection(lire('boites-a-classer:collection'));
+    majBoutonCompte();
+    if (location.hash === '#compte') { // lien « Se connecter » de la page d'accueil
+      history.replaceState(null, '', location.pathname + location.search);
+      ouvrirSauvegarde();
+    }
     if (recus) info.textContent = `Le site a changé d'adresse : ton travail a suivi (${pluriel(recus, 'élément récupéré', 'éléments récupérés')}).`;
     synchroniser();
   }

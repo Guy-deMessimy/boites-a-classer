@@ -12,7 +12,7 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 | `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
 | `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
 | `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
-| `functions/`, `migrations/`, `wrangler.toml` | Sauvegarde en ligne : API Cloudflare Pages Functions et base D1 (voir Sauvegarde en ligne). |
+| `functions/`, `serveur/`, `migrations/`, `wrangler.toml` | Sauvegarde en ligne et comptes : API Cloudflare Pages Functions et base D1 (voir Sauvegarde en ligne). |
 | `redirection/` | Archive : pages qui redirigeaient l'ancienne adresse (GitHub Pages, supprimée) vers la nouvelle. |
 | `fiche à imprimer/` | Fiches PDF (élève et corrigé) de chaque collection : tableau à double entrée, tableau à double tri, boîtes emboîtées. Non publié (voir Espace enseignant). |
 | `outils/` | Générateur des fiches (`fiches.html` + `generer-fiches.js`). |
@@ -49,7 +49,26 @@ Ces fichiers circulent entre élèves : tout ce qui est lu est vérifié et born
 
 ## Sauvegarde en ligne
 
-Menu « Fichier → Sauvegarde en ligne ». En l'activant, l'élève reçoit un code de quatre mots tirés au hasard parmi 256 (`MOTS` dans `app.js`, environ 4 milliards de codes), par exemple `lapin-tomate-nuage-velo`. Tout ce que le logiciel garde dans le navigateur (plans de travail et Mes collections, mais pas le zoom ni la collection choisie) est alors envoyé, compressé en gzip, 2,5 secondes après chaque changement. Sur un autre appareil, « J'ai déjà un code » remplace le travail du navigateur par celui du code (un second appui est demandé s'il y avait déjà du travail), et la sauvegarde continue avec ce code.
+Bouton « 👤 Se connecter » de la barre (ou menu « Fichier → Compte et sauvegarde en ligne », ou lien « Se connecter ou créer un compte » de la page d'accueil, qui ouvre `app/index.html#compte`). Deux façons de sauvegarder en ligne : avec un **compte**, ou sans compte avec un **code**.
+
+### Avec un compte (depuis la 2.2.0)
+
+Un compte = un identifiant (3 à 30 caractères : lettres sans accent, chiffres, `.`, `_`, `-` ; majuscules et accents ramenés en minuscules sans accent) et un mot de passe (8 caractères au moins). Aucune adresse e-mail n'est demandée : un mot de passe oublié ne peut pas être récupéré (il faut recréer un compte).
+
+- Créer un compte envoie le travail du navigateur comme première version. Se connecter sur un autre appareil récupère le travail du compte ; si le navigateur a déjà un travail différent, l'élève choisit lequel garder (« Celui de ce navigateur » l'envoie sur le compte, dont l'ancien travail reste dans les versions gardées).
+- Ensuite tout fonctionne comme avec un code (envoi 2,5 s après chaque changement, 10 versions, « Revenir à celle-ci »).
+- « Se déconnecter » envoie d'abord ce qui attend ; la case « Effacer aussi mon travail de ce navigateur » est pour les ordinateurs partagés. « Changer de mot de passe » ferme les sessions des autres appareils. « Supprimer mon compte » (mot de passe redemandé) efface le compte et son travail sur le serveur, pas dans le navigateur.
+- Se connecter alors qu'un code est actif arrête le code sur cet appareil (il reste valable sur le serveur).
+
+Sécurité : le mot de passe ne quitte jamais l'appareil. Le logiciel en dérive un secret (PBKDF2-SHA256, 600 000 tours, sel = `boites-a-classer:compte:<identifiant>`, ~0,1 s sur un ordinateur) et n'envoie que lui ; le serveur garde SHA-256(sel aléatoire + secret) et compare en temps constant. Ce découpage évite de faire tourner PBKDF2 sur Cloudflare (10 ms de calcul par requête dans l'offre gratuite). La connexion remet un jeton de session (32 octets au hasard, gardé dans le navigateur sous `boites-a-classer-compte:jeton`, hors de ce qui est sauvegardé) ; il voyage dans `Authorization: Bearer …` et le serveur n'en garde que l'empreinte. Au plus 20 sessions par compte ; une session ou un compte inutilisé pendant un an est effacé. Limites : 10 mots de passe faux par identifiant et 100 par adresse IP en 15 minutes, 100 créations de compte par adresse IP et par heure (une classe partage souvent la même adresse). Le service worker ne met jamais `/api/` en cache.
+
+Côté serveur : `functions/api/compte/[action].js` (inscription, connexion, session, deconnexion, mot-de-passe, suppression ; détail en tête du fichier), `serveur/comptes.js` (sessions, ménage ; hors de `functions/` pour ne pas devenir une adresse), tables `comptes`, `sessions`, `limites` dans `migrations/0002_comptes.sql`. Le travail d'un compte est rangé dans `sauvegardes` sous la clé `compte:<id>` ; `functions/api/sauvegarde.js` accepte le jeton à la place du code et répond 401 si la session n'est plus valable (le logiciel oublie alors le jeton et demande de se reconnecter, le travail en attente part à la reconnexion).
+
+Le mot de passe minimal (8 caractères) n'est vérifié que par le logiciel : le serveur ne voit que le secret dérivé.
+
+### Sans compte, avec un code
+
+En activant la sauvegarde avec un code, l'élève reçoit un code de quatre mots tirés au hasard parmi 256 (`MOTS` dans `app.js`, environ 4 milliards de codes), par exemple `lapin-tomate-nuage-velo`. Tout ce que le logiciel garde dans le navigateur (plans de travail et Mes collections, mais pas le zoom ni la collection choisie) est alors envoyé, compressé en gzip, 2,5 secondes après chaque changement. Sur un autre appareil, « J'ai déjà un code » remplace le travail du navigateur par celui du code (un second appui est demandé s'il y avait déjà du travail), et la sauvegarde continue avec ce code.
 
 - Au démarrage et au retour sur l'onglet, si le serveur a une version plus récente et que l'appareil n'a rien en attente, elle est prise ; sinon l'appareil envoie la sienne. Hors connexion, l'envoi attend le retour du réseau.
 - Le serveur garde les 10 dernières versions de chaque code ; « Revenir à celle-ci » rétablit une version, qui devient la plus récente.
@@ -57,7 +76,7 @@ Menu « Fichier → Sauvegarde en ligne ». En l'activant, l'élève reçoit un 
 
 Côté serveur (Cloudflare) : `functions/api/sauvegarde.js` (Pages Functions) et la base D1 `boites-a-classer` (`wrangler.toml`, créée avec `--jurisdiction eu` : données gardées dans l'Union européenne ; table dans `migrations/`). Le serveur ne lit pas le contenu, le range sous l'empreinte SHA-256 du code (le code n'est pas stocké), refuse plus de 1,9 Mo (limite d'une valeur D1) et efface ce qui n'a pas été modifié depuis un an. Le code passe dans l'en-tête `X-Code-Sauvegarde`, jamais dans l'adresse. L'API accepte les appels d'autres origines (CORS) pour l'application de bureau, qui l'appelle à l'adresse du site.
 
-Tester en local : `npx wrangler d1 migrations apply boites-a-classer --local`, puis `npx wrangler pages dev` (http://localhost:8788, base locale). Modifier la table : nouveau fichier dans `migrations/`, puis `npx wrangler d1 migrations apply boites-a-classer --remote`.
+Tester en local : `npx wrangler d1 migrations apply boites-a-classer --local`, copier `app/` dans `site/app/` (fait par `./build.sh`), puis `npx wrangler pages dev` (http://localhost:8788, base locale). Modifier la table : nouveau fichier dans `migrations/`, puis `npx wrangler d1 migrations apply boites-a-classer --remote`.
 
 Limites : n'importe qui connaissant un code peut lire et modifier le travail correspondant ; il n'y a pas de limite du nombre d'envois (offre gratuite Cloudflare : 100 000 requêtes par jour, 5 Go de base). Navigateurs trop anciens (sans `CompressionStream`, par exemple iOS 15) : la sauvegarde en ligne n'est pas proposée.
 

@@ -27,6 +27,7 @@
       <button id="effacer" title="Supprimer les boîtes et tout ranger" aria-label="Recommencer">
         <span class="txt-normal"><span class="long">Recommencer</span><span class="court">🗑</span></span><span class="txt-confirmer">Confirmer ?</span>
       </button>
+      <button id="compte" title="Se connecter pour sauvegarder son travail en ligne" aria-label="Compte">👤<span class="long" id="compte-nom"> Se connecter</span></button>
       <button id="fichier" class="ouvre-menu" aria-haspopup="menu" title="Enregistrer, ouvrir, PDF, imprimer">📁<span class="long"> Fichier</span> ▾</button>
     </div>
   </header>
@@ -101,30 +102,88 @@
 
   <dialog id="fen-sauvegarde" class="fenetre" aria-labelledby="titre-sauvegarde">
     <div class="fenetre-tete">
-      <h2 id="titre-sauvegarde">☁️ Sauvegarde en ligne</h2>
+      <h2 id="titre-sauvegarde">☁️ Compte et sauvegarde en ligne</h2>
       <button type="button" class="fermer" aria-label="Fermer">×</button>
     </div>
     <div class="fenetre-corps">
       <p class="aide" id="sv-impossible" hidden>Ce navigateur est trop ancien pour la sauvegarde en ligne : enregistre ton travail dans un fichier (Fichier → Enregistrer mon travail).</p>
-      <div id="sv-inactive">
-        <p class="aide">Ton travail est gardé dans ce navigateur seulement. Avec la sauvegarde en ligne, il est aussi copié sur le serveur du site sous un <strong>code secret de quatre mots</strong> : avec ce code, tu le retrouves sur n'importe quel appareil. Les photos de tes collections sont envoyées aussi : n'y mets pas de photo de personne.</p>
-        <button type="button" class="btn principal" id="sv-activer">☁️ Activer la sauvegarde en ligne</button>
+      <section id="sv-connexion">
+        <h3 id="sv-titre-connexion">Se connecter</h3>
+        <p class="aide">Avec un compte, ton travail est sauvegardé sur le serveur du site : tu le retrouves en te connectant sur n'importe quel appareil. Aucune adresse e-mail n'est demandée : choisis un identifiant qui ne donne pas ton nom de famille, et retiens bien ton mot de passe, il ne peut pas être récupéré.</p>
+        <form id="sv-form-compte" class="sv-compte">
+          <label class="champ">Identifiant
+            <input id="sv-identifiant" type="text" maxlength="30" placeholder="ex. lea.cm2" autocomplete="username" autocapitalize="off" spellcheck="false">
+          </label>
+          <label class="champ">Mot de passe
+            <input id="sv-mdp" type="password" autocomplete="current-password">
+          </label>
+          <label class="champ" id="sv-champ-mdp2" hidden>Mot de passe, encore une fois
+            <input id="sv-mdp2" type="password" autocomplete="new-password">
+          </label>
+          <div class="sv-boutons">
+            <button type="submit" class="btn principal" id="sv-entrer">Se connecter</button>
+            <button type="button" class="btn" id="sv-bascule">Créer un compte</button>
+          </div>
+        </form>
+        <div id="sv-choix" class="sv-choix" hidden>
+          <p>Ce compte a déjà du travail, différent de celui de ce navigateur. Lequel garder ?</p>
+          <div class="sv-boutons">
+            <button type="button" class="btn principal" id="sv-prendre">Celui du compte</button>
+            <button type="button" class="btn" id="sv-garder">Celui de ce navigateur</button>
+          </div>
+          <p class="aide">Avec « Celui de ce navigateur », le travail du compte reste dans ses versions gardées.</p>
+        </div>
+      </section>
+      <section id="sv-compte" hidden>
+        <p>Compte : <strong id="sv-identifiant-affiche"></strong></p>
+        <p class="aide">Ton travail est sauvegardé sur ce compte quelques secondes après chaque changement.</p>
+      </section>
+      <section id="sv-inactive">
+        <h3>Sans compte, avec un code</h3>
+        <p class="aide">Ton travail est aussi copié sur le serveur sous un <strong>code secret de quatre mots</strong> : avec ce code, tu le retrouves sur n'importe quel appareil. Les photos de tes collections sont envoyées aussi : n'y mets pas de photo de personne.</p>
+        <button type="button" class="btn" id="sv-activer">☁️ Activer la sauvegarde avec un code</button>
         <h3>J'ai déjà un code</h3>
         <form id="sv-form" class="sv-form">
           <input id="sv-code" type="text" placeholder="ex. lapin-tomate-nuage-velo" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Code de sauvegarde">
           <button type="submit" class="btn" id="sv-recuperer"><span class="txt-normal">Récupérer mon travail</span><span class="txt-confirmer">Remplacer ?</span></button>
         </form>
-      </div>
-      <div id="sv-active" hidden>
+      </section>
+      <section id="sv-active" hidden>
         <p>Ton code de sauvegarde :</p>
         <p class="sv-code" id="sv-code-affiche"></p>
         <p class="aide">Note-le bien : c'est le seul moyen de retrouver ton travail sur un autre appareil. Toute personne qui connaît ce code peut voir et modifier ce travail.</p>
-        <button type="button" class="btn" id="sv-copier">Copier le code</button>
+        <div class="sv-boutons">
+          <button type="button" class="btn" id="sv-copier">Copier le code</button>
+          <button type="button" class="btn" id="sv-vers-compte">Utiliser un compte à la place</button>
+        </div>
+      </section>
+      <section id="sv-suivi" hidden>
         <p class="sv-etat" id="sv-etat" role="status"></p>
         <h3>Versions gardées sur le serveur</h3>
         <ul id="sv-versions" class="sv-versions"></ul>
         <button type="button" class="btn" id="sv-arreter"><span class="txt-normal">Arrêter sur cet appareil</span><span class="txt-confirmer">Confirmer ?</span></button>
-      </div>
+      </section>
+      <section id="sv-reglages" hidden>
+        <label class="sv-case"><input type="checkbox" id="sv-effacer"> Effacer aussi mon travail de ce navigateur (ordinateur partagé)</label>
+        <button type="button" class="btn principal" id="sv-deconnecter"><span class="txt-normal">Se déconnecter</span><span class="txt-confirmer">Se déconnecter quand même ?</span></button>
+        <details class="sv-details">
+          <summary>Changer de mot de passe</summary>
+          <form id="sv-form-mdp" class="sv-compte">
+            <label class="champ">Mot de passe actuel <input id="sv-mdp-actuel" type="password" autocomplete="current-password"></label>
+            <label class="champ">Nouveau mot de passe <input id="sv-mdp-nouveau" type="password" autocomplete="new-password"></label>
+            <label class="champ">Nouveau mot de passe, encore une fois <input id="sv-mdp-nouveau2" type="password" autocomplete="new-password"></label>
+            <div class="sv-boutons"><button type="submit" class="btn">Changer le mot de passe</button></div>
+          </form>
+        </details>
+        <details class="sv-details">
+          <summary>Supprimer mon compte</summary>
+          <form id="sv-form-suppression" class="sv-compte">
+            <p class="aide">Le compte et tout le travail gardé sur le serveur seront effacés. Le travail reste dans ce navigateur.</p>
+            <label class="champ">Mot de passe <input id="sv-mdp-suppression" type="password" autocomplete="current-password"></label>
+            <div class="sv-boutons"><button type="submit" class="btn attention" id="sv-supprimer"><span class="txt-normal">Supprimer mon compte</span><span class="txt-confirmer">Vraiment tout supprimer ?</span></button></div>
+          </form>
+        </details>
+      </section>
       <p class="message" role="status"></p>
     </div>
   </dialog>

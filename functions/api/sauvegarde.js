@@ -9,6 +9,10 @@
 //   PUT /api/sauvegarde              enregistre une nouvelle version (corps : gzip, 1,9 Mo au plus) → { version, date }
 //
 // Le code voyage dans l'en-tête X-Code-Sauvegarde, jamais dans l'adresse (qui peut finir dans des journaux).
+// Avec un compte (functions/api/compte/[action].js), c'est le jeton de session qui voyage, dans « Authorization: Bearer … » :
+// le travail est alors rangé sous la clé « compte:<id> », et une session expirée répond 401.
+
+import { sessionValide, menageComptes, texte, hex, sha256 } from '../../serveur/comptes.js';
 
 const VERSIONS_GARDEES = 10;
 const TAILLE_MAX = 1900000; // une valeur D1 ne peut pas dépasser 2 Mo
@@ -18,7 +22,7 @@ const FORME_CODE = /^[a-z]{2,12}(-[a-z]{2,12}){3}$/;
 const ENTETES = {
   'Access-Control-Allow-Origin': '*', // l'application de bureau (http://localhost:47821) appelle aussi cette API
   'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Code-Sauvegarde, X-Version-Connue',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Code-Sauvegarde, X-Version-Connue, Authorization',
   'Access-Control-Expose-Headers': 'X-Version, X-Date',
   'Access-Control-Max-Age': '86400',
   'Cache-Control': 'no-store',
@@ -27,18 +31,22 @@ const ENTETES = {
 const reponse = (corps, statut, plus) => new Response(corps, { status: statut, headers: { ...ENTETES, ...plus } });
 const json = (o, statut = 200) => reponse(JSON.stringify(o), statut, { 'Content-Type': 'application/json' });
 
-async function cle(request) {
+// Clé sous laquelle ranger le travail, ou réponse d'erreur.
+async function cle(request, env) {
+  if (request.headers.has('Authorization')) {
+    const s = await sessionValide(request, env);
+    return s ? 'compte:' + s.compte : json({ erreur: 'session expirée' }, 401);
+  }
   const code = (request.headers.get('X-Code-Sauvegarde') || '').trim().toLowerCase();
-  if (!FORME_CODE.test(code)) return null;
-  const empreinte = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
-  return [...new Uint8Array(empreinte)].map((o) => o.toString(16).padStart(2, '0')).join('');
+  if (!FORME_CODE.test(code)) return json({ erreur: 'code invalide' }, 400);
+  return hex(await sha256(texte(code)));
 }
 
 export const onRequestOptions = () => reponse(null, 204);
 
 export async function onRequestGet({ request, env }) {
-  const c = await cle(request);
-  if (!c) return json({ erreur: 'code invalide' }, 400);
+  const c = await cle(request, env);
+  if (c instanceof Response) return c;
   const params = new URL(request.url).searchParams;
 
   if (params.has('liste')) {
@@ -62,8 +70,8 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPut({ request, env }) {
-  const c = await cle(request);
-  if (!c) return json({ erreur: 'code invalide' }, 400);
+  const c = await cle(request, env);
+  if (c instanceof Response) return c;
   const donnees = new Uint8Array(await request.arrayBuffer());
   if (donnees.length > TAILLE_MAX) return json({ erreur: 'sauvegarde trop grosse' }, 413);
   if (donnees.length < 18 || donnees[0] !== 0x1f || donnees[1] !== 0x8b) return json({ erreur: 'sauvegarde illisible' }, 400);
@@ -75,9 +83,10 @@ export async function onRequestPut({ request, env }) {
       + 'SELECT ?1, COALESCE(MAX(version), 0) + 1, ?2, ?3 FROM sauvegardes WHERE cle = ?1 RETURNING version')
     .bind(c, date, donnees.buffer).first();
   const menage = [env.DB.prepare('DELETE FROM sauvegardes WHERE cle = ? AND version <= ?').bind(c, version - VERSIONS_GARDEES)];
-  // De temps en temps, on efface ce qui n'a pas bougé depuis un an.
+  // De temps en temps, on efface ce qui n'a pas bougé depuis un an (sauvegardes, comptes, sessions).
   if (Math.random() < 0.01) {
-    menage.push(env.DB.prepare('DELETE FROM sauvegardes WHERE date < ?').bind(new Date(Date.now() - DUREE_MAX).toISOString()));
+    menage.push(env.DB.prepare('DELETE FROM sauvegardes WHERE date < ?').bind(new Date(Date.now() - DUREE_MAX).toISOString()),
+      ...menageComptes(env));
   }
   await env.DB.batch(menage);
   return json({ version, date });
