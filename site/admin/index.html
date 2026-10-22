@@ -182,6 +182,16 @@
           </div>
         </div>
       </section>
+      <section class="support" id="collections-site">
+        <h2>📚 Collections du site <span class="badge" id="collections-nombre"></span></h2>
+        <p class="vide">Publiées par l'admin ou par les enseignants, proposées à tout le monde. « Retirer » la fait disparaître chez tous.</p>
+        <div class="defile">
+          <table>
+            <thead><tr><th>Collection</th><th>Auteur</th><th>Modifiée le</th><th>Éléments</th><th>Actions</th></tr></thead>
+            <tbody id="lignes-collections"></tbody>
+          </table>
+        </div>
+      </section>
       <div class="outils">
         <input id="filtre" type="search" placeholder="Chercher un identifiant" aria-label="Chercher un identifiant" autocomplete="off">
         <button type="button" class="bouton" id="actualiser">↻ Actualiser</button>
@@ -372,6 +382,7 @@
           comptes = x.r.comptes;
           afficher();
           chargerSupport();
+          chargerCollectionsSite();
         }).catch(function (e) { horsSession('Impossible de joindre le serveur : ' + e.message); });
       }
 
@@ -626,6 +637,56 @@
           chargerSupport();
         });
       });
+
+      /* Collections du site (publiées par l'admin ou par les enseignants) */
+
+      function chargerCollectionsSite() {
+        appel('collections').then(function (x) {
+          if (x.statut !== 200) return;
+          var liste = x.r.collections;
+          $('#collections-nombre').textContent = liste.length;
+          var lignes = liste.map(function (c) {
+            var tr = document.createElement('tr');
+            [c.nom, c.auteur || '— (compte effacé)', date(c.date), String(c.elements)].forEach(function (t) {
+              var td = document.createElement('td');
+              td.textContent = t;
+              tr.appendChild(td);
+            });
+            var actions = document.createElement('td');
+            var voir = document.createElement('a');
+            voir.className = 'bouton';
+            voir.textContent = '👁 Ouvrir';
+            voir.href = '../app/index.html#collection=' + encodeURIComponent(c.id);
+            var retirer = bouton('Retirer', function (ev) {
+              var b = ev.currentTarget;
+              if (!b.classList.contains('confirmer')) {
+                b.classList.add('confirmer');
+                b.textContent = 'Retirer pour tout le monde ?';
+                setTimeout(function () { b.classList.remove('confirmer'); b.textContent = 'Retirer'; }, 4000);
+                return;
+              }
+              appel('collection-suppression', { id: c.id }).then(function (y) {
+                if (y.statut !== 204) { message('Échec : ' + (y.r.erreur || 'serveur ' + y.statut) + '.', true); return; }
+                message('Collection « ' + c.nom + ' » retirée du site.');
+                chargerCollectionsSite();
+              });
+            }, 'danger');
+            actions.append(voir, ' ', retirer);
+            tr.appendChild(actions);
+            return tr;
+          });
+          if (!lignes.length) {
+            var tr = document.createElement('tr');
+            var td = document.createElement('td');
+            td.colSpan = 5;
+            td.className = 'vide';
+            td.textContent = 'Aucune collection publiée pour l\'instant.';
+            tr.appendChild(td);
+            lignes.push(tr);
+          }
+          $('#lignes-collections').replaceChildren.apply($('#lignes-collections'), lignes);
+        }).catch(function () {});
+      }
 
       // Les nouveaux messages arrivent sans recharger la page.
       setInterval(function () { if (document.visibilityState === 'visible' && !$('#contenu').hidden) chargerSupport(); }, 30000);

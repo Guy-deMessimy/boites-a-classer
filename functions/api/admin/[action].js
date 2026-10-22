@@ -8,6 +8,7 @@
 //   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail (enseignant : aussi
 //                                                         ses classes et ses élèves) → 204
 //   POST /api/admin/enseignant   { identifiant, actif }   donne (true) ou retire (false) le rôle enseignant → 204
+//   GET  /api/admin/collections               → { collections: [{ id, nom, auteur, date, elements }] }  collections du site et leur auteur
 //   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
 //   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
 //   GET  /api/admin/support                    → { fils: [{ id, qui, detail, anonyme, resolu, maj, non_lus, dernier }] }  service client
@@ -143,6 +144,18 @@ const actions = {
     return rien();
   },
 
+  async collections(request, env) {
+    const { results } = await env.DB.prepare('SELECT c.id, c.date, c.donnees, a.identifiant AS auteur FROM collections c '
+      + 'LEFT JOIN comptes a ON a.id = c.auteur ORDER BY c.date DESC LIMIT 500').all();
+    return json({
+      collections: results.map((c) => {
+        let d = {};
+        try { d = JSON.parse(c.donnees); } catch (e) { /* illisible */ }
+        return { id: c.id, nom: d.nom || c.id, auteur: c.auteur || null, date: c.date, elements: Array.isArray(d.etres) ? d.etres.length : 0 };
+      }),
+    });
+  },
+
   async 'collection-suppression'(request, env) {
     const { id } = await lireCorps(request);
     if (!FORME_ID_COLLECTION.test(id || '')) return erreur('identifiant de collection invalide', 400);
@@ -227,7 +240,7 @@ const actions = {
 const METHODES = {
   comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
-  collection: ['POST'], 'collection-suppression': ['POST'], maintenance: ['GET', 'POST'],
+  collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'],
 };
 
 export async function onRequest({ request, env, params }) {
