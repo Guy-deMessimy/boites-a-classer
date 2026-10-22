@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.27.0';
+  const VERSION = '3.27.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2858,10 +2858,16 @@
     if (etat && Array.isArray(etat.badges) && etat.badges.length) ecrire(CLE_BADGES, JSON.stringify(etat.badges)); else oublier(CLE_BADGES);
   }
 
-  // Badges du compte, à côté de son nom : « vérifié par le site » ✔ et « Halloween » 🎃 (gagnés contre le boss).
-  const BADGES = { verifie: ['✔', 'Vérifié par le site', 'badge-verifie'], halloween: ['🎃', 'Badge Halloween', 'badge'] };
+  // Badges du compte, à côté de son nom : « vérifié par le site » ✔ et « Halloween » 🎃 (gagnés contre le boss),
+  // participation à l'événement d'Halloween 🧛.
+  const BADGES = {
+    verifie: ['✔', 'Vérifié par le site', 'badge-verifie'],
+    halloween: ['🎃', 'Badge Halloween', 'badge'],
+    'participation-halloween': ['🧛', 'Participation Halloween', 'badge'],
+  };
   function badgesCompte() {
-    try { return (JSON.parse(lire(CLE_BADGES)) || []).filter((b) => BADGES[b]); } catch (e) { return []; }
+    // Toujours dans le même ordre : ✔, 🎃, 🧛.
+    try { const l = JSON.parse(lire(CLE_BADGES)) || []; return Object.keys(BADGES).filter((b) => l.includes(b)); } catch (e) { return []; }
   }
   function ajouterBadges(cible) {
     for (const b of badgesCompte()) {

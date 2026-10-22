@@ -503,7 +503,7 @@
           nom.textContent = c.classe ? c.nom + ' ' : c.identifiant;
           var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
           // Badges gagnés pendant les événements (boss d'Halloween).
-          try { JSON.parse(c.badges || '[]').forEach(function (b) { badges.push(b === 'verifie' ? '✔ vérifié' : b === 'halloween' ? '🎃 Halloween' : b); }); } catch (e) { /* illisible */ }
+          try { JSON.parse(c.badges || '[]').forEach(function (b) { badges.push(b === 'verifie' ? '✔ vérifié' : b === 'halloween' ? '🎃 Halloween' : b === 'participation-halloween' ? '🧛 participation Halloween' : b); }); } catch (e) { /* illisible */ }
           badges.forEach(function (t) {
             var badge = document.createElement('span');
             badge.className = 'badge';

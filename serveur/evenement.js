@@ -4,7 +4,8 @@
 // (functions/api/evenement/[action].js, table scores_evenement) ; à l'arrêt, le classement est montré à tous.
 // Quand tous les comptes ensemble ont attrapé SEUIL_BOSS fantômes, le boss apparaît chez tout le monde (table
 // boss_evenement) : chaque coup lui retire DEGATS PV ; celui qui a porté le plus de coups (coups_boss) gagne les
-// badges BADGES_BOSS (colonne comptes.badges).
+// badges BADGES_BOSS (colonne comptes.badges). Tout compte qui participe (un fantôme attrapé ou un coup au boss)
+// gagne le badge de participation (« participation-halloween », un vampire 🧛).
 // Rangé dans la table reglages (migrations/0005_reglages.sql), clé « evenement » : { nom, depuis } pendant l'événement,
 // { nom, depuis, fin } une fois arrêté (son classement reste consultable), ou vide.
 
@@ -13,6 +14,19 @@ export const SEUIL_BOSS = 30;
 export const PV_BOSS = 100000;
 export const DEGATS = 1000;
 export const BADGES_BOSS = ['verifie', 'halloween'];
+export const badgeParticipation = (nom) => 'participation-' + nom;
+
+// Ajoute un badge aux comptes choisis par « ou » (condition SQL sur comptes.id, avec ses paramètres à partir de ?2),
+// sans doublon. Renvoie le nombre de comptes qui l'ont reçu.
+export async function donnerBadge(env, badge, ou, ...params) {
+  const r = await env.DB.prepare('UPDATE comptes SET badges = json_insert(coalesce(badges, \'[]\'), \'$[#]\', ?1) '
+    + `WHERE instr(coalesce(badges, ''), '"' || ?1 || '"') = 0 AND ${ou}`).bind(badge, ...params).run();
+  return (r.meta && r.meta.changes) || 0;
+}
+
+// Tous ceux qui ont participé à un événement (points ou coups au boss).
+export const participants = (env, e) => donnerBadge(env, badgeParticipation(e.nom),
+  'id IN (SELECT compte FROM scores_evenement WHERE evenement = ?2 AND points > 0 UNION SELECT compte FROM coups_boss WHERE evenement = ?2)', e.depuis);
 
 // Chaque instance du serveur garde l'état 2,5 s : les pages en attente sur /api/etat (functions/api/etat.js), qui
 // relisent toutes les 3 s, partagent une seule lecture de la base par instance.
@@ -76,6 +90,8 @@ export async function changerEvenement(env, nom) {
     .bind('evenement', valeur ? JSON.stringify(valeur) : ''));
   await env.DB.batch(requetes);
   oublierCache();
+  // À l'arrêt : le badge de participation à tous ceux qui ont joué (ils l'ont d'habitude déjà, dès leur premier point).
+  if (!nom && avant && !avant.fin) await participants(env, avant).catch(() => 0);
   return valeur;
 }
 

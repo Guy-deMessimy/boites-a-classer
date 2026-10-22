@@ -259,6 +259,7 @@
       .then(function (r) {
         if (!r || typeof r.points !== 'number') return;
         majPoints(r.points);
+        if (r.badge) badgeGagne(r.badge);
         if (typeof r.total === 'number' && r.total > total) { total = r.total; majCollectif(); }
         if (!r.compte && file < 3) file++; // arrivé trop tôt (un autre onglet vient de compter) : il repart dans 3 s
       })
@@ -283,17 +284,25 @@
     setTimeout(function () { t.remove(); if (toast === t) toast = null; }, 6000);
   }
 
-  // Nom et badges (« vérifié par le site » ✔, « Halloween » 🎃). Les noms viennent des comptes : toujours en textContent.
+  // Nom et badges (« vérifié par le site » ✔, « Halloween » 🎃, participation 🧛). Les noms viennent des comptes :
+  // toujours en textContent.
+  var BADGES = { verifie: ['✔', 'Vérifié par le site', 'hanter-verifie'], halloween: ['🎃', 'Badge Halloween', 'hanter-badge'],
+    'participation-halloween': ['🧛', 'Participation Halloween', 'hanter-badge'] };
   function nomBadges(cible, nom, badges) {
     cible.textContent = nom;
-    (badges || []).forEach(function (b) {
-      var s = b === 'verifie' ? el('span', 'hanter-verifie') : b === 'halloween' ? el('span', 'hanter-badge') : null;
-      if (!s) return;
-      s.textContent = b === 'verifie' ? '✔' : '🎃';
-      s.title = b === 'verifie' ? 'Vérifié par le site' : 'Badge Halloween';
+    Object.keys(BADGES).forEach(function (b) { // toujours dans le même ordre : ✔, 🎃, 🧛
+      if ((badges || []).indexOf(b) < 0) return;
+      var s = el('span', BADGES[b][2]);
+      s.textContent = BADGES[b][0];
+      s.title = BADGES[b][1];
       cible.appendChild(s);
     });
     return cible;
+  }
+  function badgeGagne(b) {
+    if (!BADGES[b]) return;
+    dire(BADGES[b][0] + ' Badge « ' + BADGES[b][1] + ' » gagné ! Il est maintenant à côté de ton nom.');
+    window.dispatchEvent(new CustomEvent('hanter:badges')); // le logiciel relit le compte
   }
 
   /* Classement, à la fin de l'événement. */
@@ -411,6 +420,7 @@
       .then(function (r) {
         if (!r || !r.boss || !en) return;
         if (!r.compte) degat.classList.add('rate');
+        if (r.badge) badgeGagne(r.badge);
         if (r.gagnant) r.boss.gagnant = r.gagnant;
         majBoss(r.boss);
       })

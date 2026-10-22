@@ -2,19 +2,20 @@
 // compte connecté. Quand tous les comptes ensemble en ont attrapé SEUIL_BOSS, le boss apparaît : chaque coup lui retire
 // DEGATS PV, et celui qui a porté le plus de coups gagne les badges BADGES_BOSS. Le classement n'est montré qu'à la fin.
 //
-//   POST /api/evenement/attrape     (Authorization: Bearer …) → { points, compte, total }   un point de plus, au plus un
-//                                    toutes les 2,5 s (« compte » : false s'il est arrivé trop tôt) ; 409 sans événement
+//   POST /api/evenement/attrape     (Authorization: Bearer …) → { points, compte, total, badge? }   un point de plus, au plus
+//                                    un toutes les 2,5 s (« compte » : false s'il est arrivé trop tôt) ; 409 sans événement.
+//                                    « badge » : le badge de participation vient d'être gagné (premier point ou premier coup)
 //   GET  /api/evenement/classement  (Authorization facultative) → { evenement: { nom, depuis, fin } | null, participants,
 //                                    top: [{ nom, eleve, points, badges }] (10 premiers, seulement une fois l'événement
 //                                    arrêté), moi: { points, rang } (compte connecté ; rang seulement à la fin),
 //                                    boss: { pv, max, vaincu, chasseurs, gagnant: { nom, badges } } | null }
-//   POST /api/evenement/boss        (Authorization: Bearer …) → { boss, compte, coups }   un coup au boss, au plus un
+//   POST /api/evenement/boss        (Authorization: Bearer …) → { boss, compte, coups, badge? }   un coup au boss, au plus un
 //                                    toutes les 0,5 s ; 409 sans boss à combattre
 //   GET  /api/evenement/boss        (Authorization facultative) → { boss, top: [{ nom, coups, badges }] (5 premiers),
 //                                    moi: { coups, gagnant } }
 
 import { sessionValide } from '../../../serveur/comptes.js';
-import { lireEvenement, lireEtat, oublierCache, classement, chasseursBoss, recompenser, SEUIL_BOSS, PV_BOSS, DEGATS } from '../../../serveur/evenement.js';
+import { lireEvenement, lireEtat, oublierCache, classement, chasseursBoss, recompenser, donnerBadge, badgeParticipation, SEUIL_BOSS, PV_BOSS, DEGATS } from '../../../serveur/evenement.js';
 
 const RYTHME = 2500; // ms entre deux points comptés : un fantôme apparaît au plus toutes les 5 s sur une page
 const RYTHME_BOSS = 500; // ms entre deux coups comptés au boss, par compte
@@ -28,6 +29,12 @@ const json = (o, statut = 200) => new Response(JSON.stringify(o), { status: stat
 const erreur = (message, statut) => json({ erreur: message }, statut);
 
 const etatBoss = (b) => b && { pv: b.pv, max: b.max, vaincu: b.vaincu || null };
+
+// Première participation à l'événement : le badge de participation, s'il ne l'a pas déjà.
+async function participer(env, e, compte, res) {
+  if (await donnerBadge(env, badgeParticipation(e.nom), 'id = ?2', compte)) res.badge = badgeParticipation(e.nom);
+  return res;
+}
 
 const actions = {
   async attrape(request, env) {
@@ -46,7 +53,7 @@ const actions = {
         .bind(e.depuis, PV_BOSS, PV_BOSS, new Date().toISOString()).run();
       if (nouveau.meta && nouveau.meta.changes) oublierCache();
     }
-    if (r) return json({ points: r.points, compte: true, total });
+    if (r) return json(r.points === 1 ? await participer(env, e, s.compte, { points: 1, compte: true, total }) : { points: r.points, compte: true, total });
     const deja = await env.DB.prepare('SELECT points FROM scores_evenement WHERE evenement = ? AND compte = ?').bind(e.depuis, s.compte).first();
     return json({ points: deja ? deja.points : 0, compte: false, total });
   },
@@ -100,6 +107,7 @@ const actions = {
       return json({ boss: etatBoss(fin), compte: false, coups: coup.coups - 1 });
     }
     const res = { boss: etatBoss(b), compte: true, coups: coup.coups };
+    if (coup.coups === 1) await participer(env, e, s.compte, res);
     if (b.vaincu === vaincu) res.gagnant = await recompenser(env, e.depuis); // ce coup l'a achevé
     return json(res);
   },
