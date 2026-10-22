@@ -41,6 +41,7 @@ export async function sessionValide(request, env) {
 // Requêtes de ménage, lancées de temps en temps : sessions et comptes inutilisés depuis un an, compteurs expirés.
 // Le travail d'un compte effacé l'est aussi par la règle « un an sans modification » de la sauvegarde.
 // Les classes d'un enseignant effacé disparaissent, puis les élèves de ces classes et les sessions sans compte.
+// Service client : les conversations sans message depuis un an, et celles d'un compte effacé.
 export function menageComptes(env) {
   const avant = new Date(Date.now() - DUREE_INACTIVITE).toISOString();
   return [
@@ -49,6 +50,8 @@ export function menageComptes(env) {
     env.DB.prepare('DELETE FROM classes WHERE enseignant NOT IN (SELECT id FROM comptes)'),
     env.DB.prepare('DELETE FROM comptes WHERE classe IS NOT NULL AND classe NOT IN (SELECT id FROM classes)'),
     env.DB.prepare('DELETE FROM sessions WHERE compte NOT IN (SELECT id FROM comptes)'),
+    env.DB.prepare('DELETE FROM support_fils WHERE maj < ? OR (compte IS NOT NULL AND compte NOT IN (SELECT id FROM comptes))').bind(avant),
+    env.DB.prepare('DELETE FROM support_messages WHERE fil NOT IN (SELECT id FROM support_fils)'),
     env.DB.prepare('DELETE FROM limites WHERE fin < ?').bind(new Date().toISOString()),
   ];
 }

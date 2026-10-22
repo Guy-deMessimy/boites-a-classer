@@ -108,6 +108,31 @@
     .message { min-height: 1.5em; margin: 12px 0 0; font-weight: 600; }
     .message.erreur { color: var(--faux); }
     .vide { padding: 16px; color: var(--doux); }
+    /* Service client */
+    .support { margin: 0 0 24px; padding: 16px 20px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
+    .support h2 { margin: 0 0 12px; font-size: 1.15rem; }
+    .support-grille { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 16px; }
+    @media (max-width: 760px) { .support-grille { grid-template-columns: minmax(0, 1fr); } }
+    .support-liste { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+    .support-liste button {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--ligne); border-radius: 12px; background: var(--fond);
+      color: var(--encre); font: inherit; font-size: .9rem; text-align: left; cursor: pointer;
+    }
+    .support-liste button[aria-current="true"] { border-color: var(--accent); }
+    .support-liste .resolue { opacity: .6; }
+    .support-liste small { display: block; color: var(--doux); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .support-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 8px; }
+    .support-tete span { color: var(--doux); font-size: .9rem; margin-right: auto; }
+    .bulles { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding: 10px; border: 1px solid var(--ligne); border-radius: 12px; }
+    .bulle { max-width: 85%; padding: 6px 10px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92rem; }
+    .bulle.client { align-self: flex-start; background: var(--fond); }
+    .bulle.admin { align-self: flex-end; background: var(--accent); color: var(--accent-encre); }
+    .bulle small { display: block; opacity: .7; font-size: .72rem; }
+    .support form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .support textarea {
+      flex: 1 1 260px; min-height: 4em; padding: .45rem .8rem; border: 1px solid var(--ligne); border-radius: 12px;
+      background: var(--carte); color: var(--encre); font: inherit; resize: vertical;
+    }
   </style>
 </head>
 <body>
@@ -138,6 +163,25 @@
         <button type="button" class="bouton" id="basculer-site" disabled></button>
       </section>
       <ul class="chiffres" id="chiffres"></ul>
+      <section class="support" id="support">
+        <h2>💬 Service client <span class="badge" id="support-badge" hidden></span></h2>
+        <div class="support-grille">
+          <ul class="support-liste" id="support-liste"></ul>
+          <div id="support-fil" hidden>
+            <div class="support-tete">
+              <strong id="support-qui"></strong>
+              <span id="support-detail"></span>
+              <button type="button" class="bouton" id="support-resolu"></button>
+              <button type="button" class="bouton danger" id="support-supprimer">Supprimer</button>
+            </div>
+            <div class="bulles" id="support-bulles"></div>
+            <form id="support-form">
+              <textarea id="support-texte" maxlength="2000" placeholder="Votre réponse…" aria-label="Votre réponse" required></textarea>
+              <button type="submit" class="bouton principal">Répondre</button>
+            </form>
+          </div>
+        </div>
+      </section>
       <div class="outils">
         <input id="filtre" type="search" placeholder="Chercher un identifiant" aria-label="Chercher un identifiant" autocomplete="off">
         <button type="button" class="bouton" id="actualiser">↻ Actualiser</button>
@@ -313,7 +357,7 @@
           $('#moi').textContent = 'Compte : ' + identifiant;
           var s = x.r.stats;
           $('#chiffres').replaceChildren.apply($('#chiffres'), [
-            [s.comptes, 'comptes'], [s.enseignants, 'enseignants'], [s.classes, 'classes'], [s.eleves, 'élèves (connexion par code)'],
+            [s.support_non_lus, 'messages non lus (service client)'], [s.comptes, 'comptes'], [s.enseignants, 'enseignants'], [s.classes, 'classes'], [s.eleves, 'élèves (connexion par code)'],
             [s.codes, 'sauvegardes avec un code'], [s.versions, 'versions gardées'],
             [taille(s.taille), 'de place utilisée (5 Go offerts)'], [s.sessions, 'sessions ouvertes'],
           ].map(function (c) {
@@ -327,6 +371,7 @@
           }));
           comptes = x.r.comptes;
           afficher();
+          chargerSupport();
         }).catch(function (e) { horsSession('Impossible de joindre le serveur : ' + e.message); });
       }
 
@@ -450,6 +495,140 @@
           charger();
         }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
       }
+
+      /* Service client (functions/api/support/ côté visiteurs) */
+
+      var fils = [], filOuvert = null;
+      var dateCourte = function (iso) { return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+
+      function chargerSupport() {
+        return appel('support').then(function (x) {
+          if (x.statut !== 200) return;
+          fils = x.r.fils;
+          var nonLus = fils.reduce(function (n, f) { return n + f.non_lus; }, 0);
+          $('#support-badge').hidden = !nonLus;
+          $('#support-badge').textContent = nonLus + ' non lu' + (nonLus > 1 ? 's' : '');
+          afficherFils();
+          var f = filCourant();
+          if (f && f.non_lus) ouvrirFil(f.id);
+          if (filOuvert && !f) { filOuvert = null; $('#support-fil').hidden = true; }
+        }).catch(function () { /* on réessaiera */ });
+      }
+      function filCourant() { return fils.filter(function (f) { return f.id === filOuvert; })[0] || null; }
+
+      function afficherFils() {
+        var liste = $('#support-liste');
+        if (!fils.length) {
+          var li = document.createElement('li');
+          li.className = 'vide';
+          li.textContent = 'Aucun message pour l\'instant.';
+          liste.replaceChildren(li);
+          return;
+        }
+        liste.replaceChildren.apply(liste, fils.map(function (f) {
+          var li = document.createElement('li');
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('aria-current', String(f.id === filOuvert));
+          if (f.resolu) b.className = 'resolue';
+          var t = document.createElement('strong');
+          t.textContent = (f.resolu ? '✓ ' : '') + f.qui;
+          b.appendChild(t);
+          if (f.non_lus) {
+            var n = document.createElement('span');
+            n.className = 'badge';
+            n.textContent = f.non_lus;
+            b.appendChild(n);
+          }
+          var d = document.createElement('small');
+          d.textContent = dateCourte(f.maj) + ' · ' + f.dernier;
+          b.appendChild(d);
+          b.addEventListener('click', function () { ouvrirFil(f.id); });
+          li.appendChild(b);
+          return li;
+        }));
+      }
+
+      function ouvrirFil(id) {
+        filOuvert = id;
+        appel('support-fil?id=' + encodeURIComponent(id)).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
+          var f = filCourant();
+          if (f) f.non_lus = 0;
+          $('#support-fil').hidden = false;
+          $('#support-qui').textContent = f ? f.qui : '';
+          $('#support-detail').textContent = f ? f.detail : '';
+          $('#support-resolu').textContent = f && f.resolu ? 'Rouvrir' : '✓ Marquer résolu';
+          afficherBulles(x.r.messages);
+          afficherFils();
+          var nonLus = fils.reduce(function (n, g) { return n + g.non_lus; }, 0);
+          $('#support-badge').hidden = !nonLus;
+          $('#support-badge').textContent = nonLus + ' non lu' + (nonLus > 1 ? 's' : '');
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); });
+      }
+
+      function afficherBulles(messages) {
+        var zone = $('#support-bulles');
+        zone.replaceChildren.apply(zone, messages.map(function (m) {
+          var b = document.createElement('div');
+          b.className = 'bulle ' + m.auteur;
+          b.textContent = m.texte;
+          var d = document.createElement('small');
+          d.textContent = (m.auteur === 'admin' ? 'Vous · ' : '') + dateCourte(m.date);
+          b.appendChild(d);
+          return b;
+        }));
+        zone.scrollTop = zone.scrollHeight;
+      }
+
+      $('#support-form').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var texte = $('#support-texte').value.trim();
+        if (!texte || !filOuvert) return;
+        var b = ev.target.querySelector('button');
+        b.disabled = true;
+        appel('support-reponse', { id: filOuvert, texte: texte }).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
+          $('#support-texte').value = '';
+          afficherBulles(x.r.messages);
+          message('Réponse envoyée : elle s\'affiche dans la page « Service client » du visiteur.');
+          chargerSupport();
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); })
+          .then(function () { b.disabled = false; });
+      });
+
+      $('#support-resolu').addEventListener('click', function () {
+        var f = filCourant();
+        if (!f) return;
+        appel('support-resolu', { id: f.id, resolu: !f.resolu }).then(function (x) {
+          if (x.statut !== 204) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
+          f.resolu = !f.resolu;
+          $('#support-resolu').textContent = f.resolu ? 'Rouvrir' : '✓ Marquer résolu';
+          chargerSupport();
+        });
+      });
+
+      $('#support-supprimer').addEventListener('click', function (ev) {
+        var b = ev.currentTarget;
+        if (!b.classList.contains('confirmer')) {
+          b.classList.add('confirmer');
+          b.textContent = 'Effacer toute la conversation ?';
+          setTimeout(function () { b.classList.remove('confirmer'); b.textContent = 'Supprimer'; }, 4000);
+          return;
+        }
+        b.classList.remove('confirmer');
+        b.textContent = 'Supprimer';
+        appel('support-suppression', { id: filOuvert }).then(function (x) {
+          if (x.statut !== 204) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
+          filOuvert = null;
+          $('#support-fil').hidden = true;
+          message('Conversation supprimée.');
+          chargerSupport();
+        });
+      });
+
+      // Les nouveaux messages arrivent sans recharger la page.
+      setInterval(function () { if (document.visibilityState === 'visible' && !$('#contenu').hidden) chargerSupport(); }, 30000);
 
       $('#filtre').addEventListener('input', afficher);
       $('#actualiser').addEventListener('click', function () { message(''); charger(); });

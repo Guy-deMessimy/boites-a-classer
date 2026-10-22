@@ -106,6 +106,10 @@ Le **rôle enseignant** est donné par un admin, dans la page `site/admin/` (« 
 
 Avant de publier cette version : `npx wrangler d1 migrations apply boites-a-classer --remote` (migration 0007).
 
+## Service client (depuis la 2.10.0)
+
+Page `site/aide/` (« 💬 Service client » sur l'accueil, dans la fenêtre 👤 du logiciel et sur « Mes classes ») : chacun écrit à l'administrateur du site, qui répond depuis la page `site/admin/` (liste des conversations, non lus, « Marquer résolu », suppression). Une seule conversation par compte connecté (retrouvée sur tous ses appareils), ou par navigateur pour un visiteur sans compte (jeton tiré au hasard, gardé sous `boites-a-classer-support:jeton`, le serveur n'en garde que l'empreinte). Les réponses arrivent sans recharger (toutes les 20 s, 30 s côté admin) ; le logiciel met une pastille sur 👤 quand une réponse n'est pas lue. API `functions/api/support/[action].js` (visiteur) et `functions/api/admin/[action].js` (admin), tables dans `migrations/0008_support.sql` ; 2 000 caractères par message, 20 messages par heure et par adresse, 200 messages gardés par conversation, effacée après un an sans message ou avec le compte.
+
 ## Collections du site et réservées à l'admin (depuis la 2.4.0)
 
 Seul un compte admin crée et modifie des collections. Ce qu'il enregistre dans l'éditeur est **publié sur le site** (table `collections`, `migrations/0004_collections.sql`) et proposé à tout le monde dans le groupe « Collections du site », en lecture seule comme les collections fournies. Identifiants `site-…`. Le logiciel les lit au démarrage (`GET /api/collections`, `functions/api/collections.js`) et en garde une copie sous `boites-a-classer-site:collections` pour le hors-ligne (hors de ce qui est sauvegardé en ligne). Publier, modifier, retirer : `POST /api/admin/collection` et `/api/admin/collection-suppression` (droit d'admin vérifié par le serveur ; taille au plus 1,9 Mo).

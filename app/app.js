@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.9.1';
+  const VERSION = '2.10.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2692,6 +2692,25 @@
     setInterval(siteArrete, 20000);
     document.addEventListener('visibilitychange', siteArrete);
   }
+
+  // Service client (page site/aide/) : une pastille sur 👤 quand l'admin a répondu et que la réponse n'a pas été lue.
+  $('#sv-lien-aide').href = SITE + '/aide/';
+  async function reponsesSupport() {
+    if (!enLignePossible || document.body.classList.contains('consultation')) return;
+    const jeton = jetonCompte();
+    const support = lire('boites-a-classer-support:jeton'); // conversation sans compte (gardée par la page site/aide/)
+    if (!jeton && !support) return;
+    try {
+      const rep = await fetch(RACINE_API + '/support/nouveau', { headers: jeton ? { Authorization: 'Bearer ' + jeton } : { 'X-Support-Jeton': support } });
+      if (!rep.ok) return;
+      const { nonLus } = await rep.json();
+      boutonCompte.classList.toggle('reponse', nonLus > 0);
+      $('#sv-aide-nouveau').hidden = !(nonLus > 0);
+      if (nonLus > 0) info.textContent = '💬 Le service client t\'a répondu : bouton 👤 → Service client.';
+    } catch (e) { /* hors connexion */ }
+  }
+  reponsesSupport();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reponsesSupport(); });
 
   // Version installable (écran d'accueil du téléphone) et utilisable hors connexion, seulement en ligne.
   if ('serviceWorker' in navigator && location.protocol === 'https:') {

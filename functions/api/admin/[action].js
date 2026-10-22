@@ -10,6 +10,11 @@
 //   POST /api/admin/enseignant   { identifiant, actif }   donne (true) ou retire (false) le rôle enseignant → 204
 //   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
 //   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
+//   GET  /api/admin/support                    → { fils: [{ id, qui, detail, anonyme, resolu, maj, non_lus, dernier }] }  service client
+//   GET  /api/admin/support-fil?id=…           → { messages: [{ auteur, texte, date }] }   (les messages du visiteur deviennent lus)
+//   POST /api/admin/support-reponse { id, texte } répond au visiteur → { messages }
+//   POST /api/admin/support-resolu  { id, resolu } marque la conversation résolue (ou non) → 204
+//   POST /api/admin/support-suppression { id }  efface la conversation → 204
 //   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
 //   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
 //
@@ -22,6 +27,8 @@ import { effacerCompte } from '../../../serveur/classes.js';
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
 const FORME_ID_COLLECTION = /^site-[A-Za-z0-9_-]{1,55}$/;
+const FORME_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const TEXTE_MAX = 2000;
 const TAILLE_MAX_COLLECTION = 1900000; // une valeur D1 ne peut pas dépasser 2 Mo
 
 const ENTETES = {
@@ -66,7 +73,8 @@ const actions = {
         + '(SELECT count(*) FROM sessions) AS sessions, '
         + '(SELECT count(*) FROM comptes WHERE est_enseignant = 1) AS enseignants, '
         + '(SELECT count(*) FROM classes) AS classes, '
-        + '(SELECT count(*) FROM comptes WHERE classe IS NOT NULL) AS eleves'),
+        + '(SELECT count(*) FROM comptes WHERE classe IS NOT NULL) AS eleves, '
+        + '(SELECT COALESCE(sum(non_lus_admin), 0) FROM support_fils) AS support_non_lus'),
       env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, cl.nom AS classe, p.identifiant AS de, '
         + 'c.cree, c.derniere, count(s.version) AS versions, max(s.date) AS date, '
         + '(SELECT length(donnees) FROM sauvegardes WHERE cle = \'compte:\' || c.id ORDER BY version DESC LIMIT 1) AS taille '
@@ -141,6 +149,65 @@ const actions = {
     return rien();
   },
 
+  async support(request, env) {
+    const { results } = await env.DB.prepare('SELECT f.id, f.compte, f.resolu, f.maj, f.non_lus_admin AS non_lus, '
+      + 'c.identifiant, c.nom, cl.nom AS classe, p.identifiant AS de, '
+      + '(SELECT texte FROM support_messages WHERE fil = f.id ORDER BY id DESC LIMIT 1) AS dernier, '
+      + '(SELECT auteur FROM support_messages WHERE fil = f.id ORDER BY id DESC LIMIT 1) AS dernier_auteur '
+      + 'FROM support_fils f LEFT JOIN comptes c ON c.id = f.compte LEFT JOIN classes cl ON cl.id = c.classe '
+      + 'LEFT JOIN comptes p ON p.id = cl.enseignant ORDER BY f.resolu, f.maj DESC LIMIT 500').all();
+    return json({
+      fils: results.map((f) => ({
+        id: f.id,
+        anonyme: !f.compte,
+        qui: f.compte ? (f.classe ? f.nom : f.identifiant) : 'Visiteur sans compte n° ' + f.id.slice(0, 4),
+        detail: f.classe ? `élève · ${f.classe} (${f.de || '?'})` : '',
+        resolu: !!f.resolu, maj: f.maj, non_lus: f.non_lus,
+        dernier: (f.dernier_auteur === 'admin' ? 'Vous : ' : '') + String(f.dernier || '').slice(0, 140),
+      })),
+    });
+  },
+
+  async 'support-fil'(request, env) {
+    const id = new URL(request.url).searchParams.get('id');
+    if (!FORME_ID.test(id || '')) return erreur('conversation introuvable', 404);
+    const { results } = await env.DB.prepare('SELECT auteur, texte, date FROM support_messages WHERE fil = ? ORDER BY id').bind(id).all();
+    await env.DB.prepare('UPDATE support_fils SET non_lus_admin = 0 WHERE id = ?').bind(id).run();
+    return json({ messages: results });
+  },
+
+  async 'support-reponse'(request, env) {
+    const { id, texte } = await lireCorps(request);
+    if (!FORME_ID.test(id || '')) return erreur('conversation introuvable', 404);
+    const t = typeof texte === 'string' ? texte.replace(/\r\n?/g, '\n').trim() : '';
+    if (!t || t.length > TEXTE_MAX) return erreur(`réponse vide ou trop longue (${TEXTE_MAX} caractères au plus)`, 400);
+    const date = new Date().toISOString();
+    const [, maj] = await env.DB.batch([
+      env.DB.prepare('INSERT INTO support_messages (fil, auteur, texte, date) SELECT id, \'admin\', ?, ? FROM support_fils WHERE id = ?').bind(t, date, id),
+      env.DB.prepare('UPDATE support_fils SET maj = ?, non_lus_client = non_lus_client + 1, non_lus_admin = 0 WHERE id = ?').bind(date, id),
+    ]);
+    if (!maj.meta.changes) return erreur('conversation introuvable', 404);
+    const { results } = await env.DB.prepare('SELECT auteur, texte, date FROM support_messages WHERE fil = ? ORDER BY id').bind(id).all();
+    return json({ messages: results });
+  },
+
+  async 'support-resolu'(request, env) {
+    const { id, resolu } = await lireCorps(request);
+    if (!FORME_ID.test(id || '') || typeof resolu !== 'boolean') return erreur('demande invalide', 400);
+    await env.DB.prepare('UPDATE support_fils SET resolu = ? WHERE id = ?').bind(resolu ? 1 : 0, id).run();
+    return rien();
+  },
+
+  async 'support-suppression'(request, env) {
+    const { id } = await lireCorps(request);
+    if (!FORME_ID.test(id || '')) return erreur('conversation introuvable', 404);
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM support_messages WHERE fil = ?').bind(id),
+      env.DB.prepare('DELETE FROM support_fils WHERE id = ?').bind(id),
+    ]);
+    return rien();
+  },
+
   async maintenance(request, env) {
     if (request.method === 'POST') {
       const { active } = await lireCorps(request);
@@ -153,6 +220,7 @@ const actions = {
 
 const METHODES = {
   comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'],
+  support: ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], maintenance: ['GET', 'POST'],
 };
 
