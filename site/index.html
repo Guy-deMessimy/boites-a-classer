@@ -211,7 +211,7 @@
 </head>
 <body>
   <main>
-    <aside class="annonce" aria-label="Annonce"><p>🎉 Nouveau : six matières, aliments, progression ✅, thème sombre… <a href="nouveautes/">Toutes les nouveautés</a></p></aside>
+    <aside class="annonce" aria-label="Annonce"><p>🎉 Nouveau : sept matières (avec la musique), le clavier, l'impression… <a href="nouveautes/">Toutes les nouveautés</a></p></aside>
 
     <header class="panneau">
       <img src="icone.png" alt="">
@@ -285,6 +285,11 @@
           <a class="bouton secondaire" href="app/index.html#collection=anglais-temps">Days, months and numbers</a>
           <a class="bouton secondaire" href="app/index.html#collection=anglais-corps">Body and clothes</a>
         </div>
+      </article>
+      <article class="carte matiere">
+        <h3>🎵 Musique</h3>
+        <p>Ranger les instruments par famille : cordes (frottées ou non), vents (dont les cuivres), percussions.</p>
+        <div class="liens"><a class="bouton" href="app/index.html#collection=musique-instruments">Les familles d'instruments</a></div>
       </article>
     </div>
 
@@ -365,7 +370,7 @@
     </ul>
 
     <footer class="panneau">
-      Version <span id="version">3.17.1</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="nouveautes/">Nouveautés</a> · <a href="aide/">Service client</a>
+      Version <span id="version">3.18.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="nouveautes/">Nouveautés</a> · <a href="aide/">Service client</a>
     </footer>
   </main>
 
@@ -392,7 +397,7 @@
     (function () {
       var liste = window.COLLECTIONS || [];
       if (!liste.length) return;
-      var MATIERES = [['sciences', 'sciences'], ['francais', 'français'], ['maths', 'maths'], ['histoire', 'histoire'], ['geographie', 'géographie'], ['anglais', 'anglais']];
+      var MATIERES = [['sciences', 'sciences'], ['francais', 'français'], ['maths', 'maths'], ['histoire', 'histoire'], ['geographie', 'géographie'], ['anglais', 'anglais'], ['musique', 'musique']];
       var morceaux = MATIERES.map(function (m) {
         var noms = liste.filter(function (c) { return (c.matiere || 'sciences') === m[0]; }).map(function (c) { return c.nom; });
         return noms.length ? m[1] + ' (' + noms.join(', ') + ')' : null;

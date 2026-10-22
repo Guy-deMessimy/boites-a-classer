@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.17.1';
+  const VERSION = '3.18.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -62,7 +62,7 @@
   const nouvelId = (prefixe) => prefixe + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const toutes = () => [...FOURNIES, ...collectionsSite, ...mesCollections];
   // Matières des collections fournies (champ « matiere », sciences par défaut) : une partie par matière dans les listes.
-  const MATIERES = [['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'], ['geographie', '🗺 Géographie'], ['anglais', '🌍 Anglais']];
+  const MATIERES = [['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'], ['geographie', '🗺 Géographie'], ['anglais', '🌍 Anglais'], ['musique', '🎵 Musique']];
   const matiere = (c) => (c && c.matiere) || 'sciences';
   // Ce qu'on classe : des êtres vivants en sciences, des « éléments » (mots, nombres, figures…) ailleurs.
   // Une collection peut le préciser (champ « elements », au masculin : ['aliment', 'aliments']).

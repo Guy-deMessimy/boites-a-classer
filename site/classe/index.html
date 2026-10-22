@@ -384,7 +384,7 @@
 
       /* Exercices donnés à la classe : collections fournies (app/collections.js) et collections du site. */
 
-      var MATIERES = [['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'], ['geographie', '🗺 Géographie'], ['anglais', '🌍 Anglais']];
+      var MATIERES = [['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'], ['geographie', '🗺 Géographie'], ['anglais', '🌍 Anglais'], ['musique', '🎵 Musique']];
       var collectionsSite = [];
       fetch('/api/collections').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
         collectionsSite = Array.isArray(l) ? l : [];
