@@ -199,6 +199,12 @@ window.COLLECTIONS = [
   Les attributs d'une collection ne doivent jamais « se croiser » : deux attributs sont soit emboîtés (l'un contient
   l'autre), soit séparés (aucun élément n'a les deux).
 */
+// Les matières, dans l'ordre des listes (logiciel, accueil, page « Mes classes »).
+window.MATIERES = [
+  ['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'],
+  ['geographie', '🗺 Géographie'], ['anglais', '🌍 Anglais'], ['musique', '🎵 Musique'],
+];
+
 (function () {
   // Figures dessinées en SVG (image de la carte), trait bleu sur fond clair.
   const figure = (forme) => 'data:image/svg+xml,' + encodeURIComponent(

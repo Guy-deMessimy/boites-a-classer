@@ -370,7 +370,7 @@
     </ul>
 
     <footer class="panneau">
-      Version <span id="version">3.18.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="nouveautes/">Nouveautés</a> · <a href="aide/">Service client</a>
+      Version <span id="version">3.18.1</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="nouveautes/">Nouveautés</a> · <a href="aide/">Service client</a>
     </footer>
   </main>
 
@@ -397,7 +397,8 @@
     (function () {
       var liste = window.COLLECTIONS || [];
       if (!liste.length) return;
-      var MATIERES = [['sciences', 'sciences'], ['francais', 'français'], ['maths', 'maths'], ['histoire', 'histoire'], ['geographie', 'géographie'], ['anglais', 'anglais'], ['musique', 'musique']];
+      // Noms des matières de app/collections.js, sans l'emoji et en minuscules.
+      var MATIERES = (window.MATIERES || []).map(function (m) { return [m[0], m[1].replace(/^\S+\s+/, '').toLowerCase()]; });
       var morceaux = MATIERES.map(function (m) {
         var noms = liste.filter(function (c) { return (c.matiere || 'sciences') === m[0]; }).map(function (c) { return c.nom; });
         return noms.length ? m[1] + ' (' + noms.join(', ') + ')' : null;
