@@ -23,16 +23,27 @@ function tirer(n, alphabet) {
 export const nouveauCodeEleve = () => tirer(8, ALPHABET);
 export const identifiantEleve = () => 'eleve.' + tirer(12, 'abcdefghijklmnopqrstuvwxyz0123456789');
 
+// Exercices d'une classe (colonne JSON) : liste d'identifiants de collections, vide si illisible.
+export const FORME_ID_COLLECTION = /^[A-Za-z0-9_-]{1,60}$/;
+export function lireExercices(texte) {
+  try {
+    const l = JSON.parse(texte || '[]');
+    return Array.isArray(l) ? l.filter((id) => typeof id === 'string' && FORME_ID_COLLECTION.test(id)).slice(0, 30) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 // Ce que le logiciel doit savoir d'un compte : nom affiché, rôles, et pour un élève sa classe et son enseignant.
 export async function etatCompte(env, id) {
-  const c = await env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant, c.nom, cl.nom AS classe, e.identifiant AS enseignant '
+  const c = await env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant, c.nom, cl.nom AS classe, cl.exercices, e.identifiant AS enseignant '
     + 'FROM comptes c LEFT JOIN classes cl ON cl.id = c.classe LEFT JOIN comptes e ON e.id = cl.enseignant WHERE c.id = ?').bind(id).first();
   if (!c) return null;
   return {
     identifiant: c.classe ? c.nom : c.identifiant,
     admin: !!c.admin,
     enseignant: !!(c.admin || c.est_enseignant),
-    eleve: c.classe ? { classe: c.classe, enseignant: c.enseignant } : null,
+    eleve: c.classe ? { classe: c.classe, enseignant: c.enseignant, exercices: lireExercices(c.exercices) } : null,
   };
 }
 

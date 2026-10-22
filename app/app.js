@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.8.0';
+  const VERSION = '3.9.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1096,6 +1096,10 @@
       for (const c of liste) g.appendChild(new Option((reussie(c) ? '✅ ' : '') + c.nom, c.id));
       selColl.appendChild(g);
     };
+    // Élève : les exercices donnés par son enseignant d'abord (page site/classe/).
+    const eleve = jetonCompte() && eleveConnecte();
+    const donnes = eleve && Array.isArray(eleve.exercices) ? eleve.exercices.map((id) => toutes().find((c) => c.id === id)).filter(Boolean) : [];
+    if (donnes.length) groupe('📌 Donnés par ton enseignant', donnes);
     for (const [m, titre] of MATIERES) groupe(titre, FOURNIES.filter((c) => matiere(c) === m));
     if (collectionsSite.length) groupe('Collections du site', collectionsSite);
     if (mesCollections.length) groupe('Mes collections', mesCollections);
@@ -2613,6 +2617,7 @@
     ecrire(CLE_JETON, jeton);
     ecrire(CLE_IDENTIFIANT, identifiant);
     retenirDroits(etat);
+    remplirSelect();
     etatEnLigne = { texte: '', erreur: false };
     majBoutonCompte();
   }
@@ -2633,6 +2638,7 @@
       if (statut !== 200 || jetonCompte() !== jeton) return;
       if (r.identifiant) ecrire(CLE_IDENTIFIANT, r.identifiant);
       retenirDroits(r);
+      remplirSelect(); // exercices donnés par l'enseignant
       majBoutonCompte();
       if (fenSauvegarde.open) rendreSauvegarde();
     } catch (e) { /* hors connexion */ }

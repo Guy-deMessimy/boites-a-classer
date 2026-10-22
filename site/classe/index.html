@@ -119,6 +119,9 @@
     th { color: var(--doux); font-weight: 600; white-space: nowrap; }
     tr:last-child td { border-bottom: 0; }
     td.nom { font-weight: 600; }
+    .exercices { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 4px 16px; margin: 10px 0; }
+    .exercices h4 { grid-column: 1 / -1; margin: 8px 0 0; font-size: .9rem; color: var(--doux); }
+    .exercices label { display: flex; align-items: center; gap: 6px; font-size: .92rem; cursor: pointer; }
     td.reussies { white-space: nowrap; font-variant-numeric: tabular-nums; cursor: help; }
     td.actions { min-width: 330px; }
     td.actions .bouton { margin: 2px 0; }
@@ -133,7 +136,7 @@
       :root { --fond: #fff; --carte: #fff; --encre: #000; --doux: #444; --ligne: #888; --accent: #000; }
       body { background: #fff; }
       main { max-width: none; padding: 0; }
-      header, #hors-session, .comment-bloc, .onglets, .tete-classe, .ajout-bloc, .codes-tete, .defile, .message, #aucune { display: none !important; }
+      header, #hors-session, .comment-bloc, .onglets, .tete-classe, .ajout-bloc, .exercices-bloc, .codes-tete, .defile, .message, #aucune { display: none !important; }
       .codes { margin: 0; padding: 0; border: 0; }
       .cartes { grid-template-columns: repeat(3, 1fr); gap: 0; }
       .carte-code { border-radius: 0; border-color: #888; padding: 14px 16px; }
@@ -200,6 +203,13 @@
             <button type="button" class="bouton" id="fermer-codes">Fermer</button>
           </div>
           <div class="cartes" id="cartes"></div>
+        </section>
+
+        <section class="bloc exercices-bloc">
+          <h3>📌 Exercices donnés à la classe</h3>
+          <p>Cochez les collections à faire : vos élèves les trouvent en haut de leur liste, dans le logiciel.</p>
+          <div id="exercices" class="exercices"></div>
+          <div class="ajout"><div><button type="button" class="bouton principal" id="enregistrer-exercices">Enregistrer les exercices</button><p id="etat-exercices"></p></div></div>
         </section>
 
         <section class="bloc ajout-bloc">
@@ -369,8 +379,51 @@
         var c = classeChoisie();
         $('#aucune').hidden = !!c;
         $('#classe').hidden = !c;
-        if (c) $('#titre-classe').textContent = c.nom;
+        if (c) { $('#titre-classe').textContent = c.nom; afficherExercices(c); }
       }
+
+      /* Exercices donnés à la classe : collections fournies (app/collections.js) et collections du site. */
+
+      var MATIERES = [['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'], ['geographie', '🗺 Géographie'], ['anglais', '🌍 Anglais']];
+      var collectionsSite = [];
+      fetch('/api/collections').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
+        collectionsSite = Array.isArray(l) ? l : [];
+        if (classeChoisie()) afficherExercices(classeChoisie());
+      }).catch(function () {});
+      function afficherExercices(c) {
+        var choisis = c.exercices || [];
+        var zone = $('#exercices');
+        var morceaux = [];
+        var groupe = function (titre, liste) {
+          if (!liste.length) return;
+          var h = document.createElement('h4');
+          h.textContent = titre;
+          morceaux.push(h);
+          liste.forEach(function (col) {
+            var l = document.createElement('label');
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = col.id;
+            cb.checked = choisis.indexOf(col.id) !== -1;
+            l.append(cb, col.nom);
+            morceaux.push(l);
+          });
+        };
+        MATIERES.forEach(function (m) { groupe(m[1], (window.COLLECTIONS || []).filter(function (col) { return (col.matiere || 'sciences') === m[0]; })); });
+        groupe('Collections du site', collectionsSite);
+        zone.replaceChildren.apply(zone, morceaux);
+        $('#etat-exercices').textContent = choisis.length ? choisis.length + ' exercice' + (choisis.length > 1 ? 's' : '') + ' donné' + (choisis.length > 1 ? 's' : '') + '.' : 'Aucun exercice donné pour l\'instant.';
+      }
+      $('#enregistrer-exercices').addEventListener('click', function () {
+        var c = classeChoisie();
+        var ids = Array.prototype.map.call(document.querySelectorAll('#exercices input:checked'), function (cb) { return cb.value; });
+        appel('exercices', { classe: c.id, ids: ids }).then(function (x) {
+          if (x.statut !== 204) { echec(x); return; }
+          c.exercices = ids;
+          afficherExercices(c);
+          message('Exercices enregistrés : vos élèves les verront à leur prochaine ouverture du logiciel.');
+        }).catch(horsLigne);
+      });
 
       $('#form-classe').addEventListener('submit', function (ev) {
         ev.preventDefault();
