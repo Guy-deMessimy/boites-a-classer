@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.17.0';
+  const VERSION = '3.17.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -262,6 +262,11 @@
     const poignee = document.createElement('span');
     poignee.className = 'poignee';
     poignee.textContent = '⠿';
+    // Clavier : flèches pour déplacer la boîte (avec ce qu'elle contient), Alt + flèches pour l'agrandir ou la réduire.
+    poignee.tabIndex = 0;
+    poignee.setAttribute('role', 'button');
+    poignee.setAttribute('aria-label', 'Déplacer la boîte avec les flèches (Alt + flèches : changer sa taille)');
+    poignee.addEventListener('keydown', (ev) => boiteAuClavier(ev, b));
 
     const titre = document.createElement('input');
     titre.className = 'boite-titre';
@@ -355,6 +360,32 @@
     el.addEventListener('focus', () => montrerInfo(e));
     el.addEventListener('keydown', (ev) => deplacerAuClavier(ev, e));
     return el;
+  }
+
+  function boiteAuClavier(ev, b) {
+    const pas = ev.shiftKey ? 40 : 8;
+    const fleches = { ArrowLeft: [-pas, 0], ArrowRight: [pas, 0], ArrowUp: [0, -pas], ArrowDown: [0, pas] };
+    if (!fleches[ev.key]) return;
+    ev.preventDefault();
+    const [dx, dy] = fleches[ev.key];
+    if (ev.altKey) {
+      b.w = Math.max(BOITE_MIN.l, b.w + dx);
+      b.h = Math.max(BOITE_MIN.h, b.h + dy);
+    } else {
+      const mx = Math.max(-b.x, dx), my = Math.max(-b.y, dy);
+      for (const [id, p] of Object.entries(etat.positions)) {
+        const c = centre(p);
+        if (contient(b, c.x, c.y)) etat.positions[id] = { x: p.x + mx, y: p.y + my };
+      }
+      for (const c of etat.boites) if (c !== b && englobe(b, c)) { c.x += mx; c.y += my; }
+      b.x += mx;
+      b.y += my;
+    }
+    oublierVerification();
+    sauver();
+    rendre();
+    const el = elBoites.get(b.id);
+    if (el) el.querySelector('.poignee').focus();
   }
 
   function deplacerAuClavier(ev, e) {

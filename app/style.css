@@ -264,6 +264,7 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
   box-shadow: 0 8px 20px rgba(0, 0, 0, .25);
 }
 .etre:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.poignee:focus-visible { outline: 2px solid #fff; outline-offset: 1px; border-radius: 3px; }
 .etre.ok { border-color: var(--ok); box-shadow: 0 0 0 3px rgba(31, 157, 85, .25); }
 .etre.faux { border-color: var(--faux); box-shadow: 0 0 0 3px rgba(217, 58, 58, .3); }
 
