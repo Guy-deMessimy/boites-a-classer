@@ -611,6 +611,9 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 .mini-ico { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; font-size: 1.1em; vertical-align: middle; }
 .mini-ico img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
 
+.aide-etapes { display: grid; gap: .7rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.aide-etapes li { display: flex; gap: .7rem; align-items: flex-start; padding: .6rem .7rem; border-radius: 10px; background: var(--surface); border: 1px solid var(--ligne); }
+.aide-etapes li > span { flex: none; font-size: 1.6rem; line-height: 1.2; }
 .arbre { overflow: auto; padding: .5rem 0; }
 .arbre svg { display: block; margin: 0 auto; color: var(--encre); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .arbre .branches { stroke: var(--doux); }

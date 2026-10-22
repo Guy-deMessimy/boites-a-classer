@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.2.0';
+  const VERSION = '3.3.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1911,6 +1911,7 @@
         entreeMenu('📊 Tableau des caractères', ouvrirTableau),
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
         entreeMenu('💡 Un indice', donnerIndice),
+        entreeMenu('❓ Comment ça marche ?', ouvrirAide),
         document.createElement('hr'),
         entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
@@ -1919,7 +1920,16 @@
     });
   }
 
-  for (const f of ['#fen-arbre', '#fen-tableau', '#fen-jeu']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
+  // Aide : montrée d'elle-même à la toute première visite, puis dans 🧰 Outils.
+  const CLE_AIDE = 'boites-a-classer-aide:vue';
+  function ouvrirAide() {
+    fermerMenu();
+    $('#fen-aide').showModal();
+  }
+  $('#aide-ok').addEventListener('click', () => { ecrire(CLE_AIDE, '1'); $('#fen-aide').close(); });
+  $('#fen-aide').addEventListener('close', () => ecrire(CLE_AIDE, '1'));
+
+  for (const f of ['#fen-aide', '#fen-arbre', '#fen-tableau', '#fen-jeu']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
 
   // Être vivant dessiné en petit (emoji ou photo), pour le tableau et le jeu.
   function icone(e) {
@@ -3153,6 +3163,7 @@
       history.replaceState(null, '', location.pathname + location.search);
       ouvrirSauvegarde();
     }
+    if (!lire(CLE_AIDE) && !document.body.classList.contains('consultation') && !document.querySelector('dialog[open]')) ouvrirAide();
     if (recus) info.textContent = `Le site a changé d'adresse : ton travail a suivi (${pluriel(recus, 'élément récupéré', 'éléments récupérés')}).`;
     synchroniser();
   }

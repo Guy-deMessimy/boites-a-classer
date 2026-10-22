@@ -210,6 +210,26 @@
     </div>
   </dialog>
 
+  <dialog id="fen-aide" class="fenetre" aria-labelledby="titre-aide">
+    <div class="fenetre-tete">
+      <h2 id="titre-aide">❓ Comment ça marche ?</h2>
+      <button type="button" class="fermer" aria-label="Fermer">×</button>
+    </div>
+    <div class="fenetre-corps">
+      <ol class="aide-etapes">
+        <li><span aria-hidden="true">📦</span><div><strong>Crée une boîte</strong> avec « ＋ Nouvelle boîte », puis donne-lui un attribut : écris-le, ou choisis-le avec le petit menu ▾.</div></li>
+        <li><span aria-hidden="true">✋</span><div><strong>Glisse les cartes</strong> d'en bas dans les boîtes. Une boîte peut aller dans une autre : agrandis-la avec son coin en bas à droite.</div></li>
+        <li><span aria-hidden="true">📏</span><div><strong>La règle :</strong> une boîte contient <em>tous</em> ceux qui ont son attribut, et <em>seulement</em> eux. Survole une carte pour voir ses attributs.</div></li>
+        <li><span aria-hidden="true">✔</span><div><strong>Vérifie</strong> : les erreurs s'affichent une par une. Tu bloques ? 🧰 Outils → 💡 Un indice. Une bêtise ? ↩ annule.</div></li>
+        <li><span aria-hidden="true">💾</span><div><strong>Ton travail est gardé</strong> tout seul dans ce navigateur. Pour le retrouver ailleurs : 👤 (compte, code de classe ou code de sauvegarde).</div></li>
+      </ol>
+      <p class="aide">Pour changer d'exercice : la liste en haut, rangée par matière (sciences, français, maths, histoire, anglais).</p>
+    </div>
+    <div class="fenetre-pied">
+      <button type="button" class="btn principal" id="aide-ok" autofocus>C'est parti !</button>
+    </div>
+  </dialog>
+
   <dialog id="fen-arbre" class="fenetre large" aria-labelledby="titre-arbre">
     <div class="fenetre-tete">
       <h2 id="titre-arbre">🌳 Ma classification en arbre</h2>
