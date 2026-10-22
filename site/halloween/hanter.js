@@ -2,8 +2,10 @@
 // (page site/admin/) :
 // - accueil (classe « theme-halloween » sur <html>) : le fond s'anime (étoiles, lune, chauves-souris, brume, éclairs,
 //   citrouilles) et le clip d'intro (site/halloween/index.html) passe une fois par déclenchement ;
-// - partout : des fantômes traversent la page ; sur les pages du site, un clic les fait fuir. « 👻 Chasser les
-//   fantômes » les renvoie (choix gardé dans le navigateur ; dans le logiciel, l'entrée est dans 🧰 Outils).
+// - partout : des fantômes traversent la page ; un clic les attrape, et chaque fantôme attrapé par un compte connecté
+//   rapporte un point (functions/api/evenement/[action].js). « 👻 Chasser les fantômes » les renvoie (choix gardé
+//   dans le navigateur ; dans le logiciel, l'entrée est dans 🧰 Outils) ;
+// - à la fin de l'événement : le classement, une fois, sur les pages ouvertes et sur l'accueil (puis avec le bandeau).
 // Si l'appareil demande moins d'animations : ni fond animé, ni fantômes, ni clip automatique.
 (function () {
   'use strict';
@@ -11,12 +13,17 @@
   var BASE = ((document.currentScript && document.currentScript.src) || '/halloween/hanter.js').replace(/[^/]*$/, '');
   var CLE_CALME = 'boites-a-classer-halloween:calme';
   var CLE_INTRO = 'boites-a-classer-halloween:intro'; // date du déclenchement dont le clip a été vu
+  var CLE_CLASSEMENT = 'boites-a-classer-halloween:classement'; // date du déclenchement dont le classement a été vu
+  var CLE_JETON = 'boites-a-classer-compte:jeton'; // session du compte (app/app.js)
+  var RACINE = BASE.replace(/halloween\/$/, ''); // adresse du site
   var racine = document.documentElement;
   var accueil = racine.classList.contains('theme-halloween');
   var logiciel = /\/app\//.test(location.pathname);
   var reduit = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var en = null; // événement en cours : { nom, depuis }
   var fond = null, troupe = null, bouton = null, intro = null, minuteur = null, annonce = null;
+  var puce = null, toast = null, classement = null;
+  var points = null, file = 0, envoi = false, prevu = false, dernierEnvoi = 0, conseil = false;
 
   var FANTOME = '<svg viewBox="0 0 100 124" aria-hidden="true">'
     + '<path d="M50 4C24 4 10 24 10 50v62l13-11 13 11 14-11 14 11 13-11 13 11V50C90 24 76 4 50 4z" fill="#f8f5ff" stroke="#cdbff2" stroke-width="2"/>'
@@ -70,12 +77,29 @@
     '.hanter-bulle{position:absolute;bottom:100%;left:50%;margin-bottom:6px;padding:.2em .6em;border-radius:1em;background:#fff;color:#2a1840;font:22px/1.2 "Creepster",fantasy,system-ui;letter-spacing:.04em;white-space:nowrap;transform:translateX(-50%);box-shadow:0 3px 10px rgb(0 0 0 / .35);opacity:0}',
     '.coucou .hanter-bulle{animation:hanter-bulle 5s forwards}',
     '@keyframes hanter-bulle{0%,32%{opacity:0}38%,64%{opacity:1}70%,100%{opacity:0}}',
-    '.hanter-troupe.attrapable svg{pointer-events:auto;cursor:pointer}',
+    '.hanter-troupe svg{pointer-events:auto;cursor:pointer}',
     '.hanter-fantome.pouf>div{animation:hanter-pouf .55s ease-out forwards}',
     '.hanter-fantome.pouf .hanter-bulle{animation:none;opacity:1}',
     '@keyframes hanter-pouf{to{transform:scale(1.5) rotate(12deg);opacity:0}}',
     '.hanter-bouton{position:fixed;left:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:2147483001;padding:.55rem .95rem;border:1px solid rgb(255 255 255 / .25);border-radius:999px;background:rgb(25 15 40 / .92);color:#fff;font:600 14px/1.2 system-ui,sans-serif;box-shadow:0 4px 14px rgb(0 0 0 / .4);cursor:pointer}',
     '.hanter-bouton:focus-visible,.hanter-passer:focus-visible,.hanter-revoir:focus-visible{outline:3px solid #ff8c1a;outline-offset:2px}',
+    '.hanter-puce{position:fixed;left:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 48px);z-index:2147483001;padding:.35rem .85rem;border-radius:999px;background:#ff8c1a;color:#1b0f02;font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 4px 14px rgb(0 0 0 / .4)}',
+    '.hanter-puce[hidden]{display:none}',
+    '.hanter-toast{position:fixed;left:50%;bottom:96px;z-index:2147483500;width:max-content;max-width:min(92vw,440px);padding:.75rem 1.1rem;border-radius:14px;background:rgb(25 15 40 / .96);color:#fff;font:600 15px/1.4 system-ui,sans-serif;text-align:center;transform:translateX(-50%);box-shadow:0 6px 20px rgb(0 0 0 / .45)}',
+    '.hanter-classement{position:fixed;inset:0;z-index:2147483550;display:grid;place-items:center;padding:16px;background:rgb(8 4 16 / .8)}',
+    '.hanter-classement>div{width:min(100%,460px);max-height:calc(100vh - 32px);overflow:auto;padding:22px 20px 18px;border:1px solid #46325f;border-radius:22px;background:linear-gradient(180deg,#22123a,#140b24);color:#f4eefc;font:16px/1.45 "Space Grotesk",system-ui,sans-serif;box-shadow:0 12px 40px rgb(0 0 0 / .6)}',
+    '.hanter-classement h2{margin:0 0 4px;font:400 32px/1.1 "Creepster",fantasy,system-ui;letter-spacing:.04em;color:#ff9a2e;text-align:center;text-shadow:0 0 14px rgb(255 120 0 / .45)}',
+    '.hanter-classement .sous{margin:0 0 14px;color:#cbbfdf;font-size:14px;text-align:center}',
+    '.hanter-classement ol{margin:0;padding:0;list-style:none}',
+    '.hanter-classement li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px}',
+    '.hanter-classement li:nth-child(-n+3){background:rgb(255 140 26 / .13);font-weight:700}',
+    '.hanter-classement li.moi{outline:2px solid #b98cff}',
+    '.hanter-classement .place{width:2em;font-size:20px;text-align:center}',
+    '.hanter-classement .nom{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.hanter-classement .pts{font-variant-numeric:tabular-nums;white-space:nowrap}',
+    '.hanter-classement .moi-texte{margin:14px 0 0;color:#ffd2a1;text-align:center}',
+    '.hanter-classement button{display:block;margin:16px auto 0;padding:.55rem 1.4rem;border:0;border-radius:999px;background:#ff8c1a;color:#1b0f02;font:700 16px/1.2 system-ui,sans-serif;cursor:pointer}',
+    '.hanter-classement button:focus-visible{outline:3px solid #fff;outline-offset:2px}',
     '.hanter-intro{position:fixed;inset:0;z-index:2147483600;background:#000;opacity:0;transition:opacity .6s}',
     '.hanter-intro.visible{opacity:1}',
     '.hanter-intro iframe{display:block;width:100%;height:100%;border:0}',
@@ -150,15 +174,125 @@
       f.style.setProperty('--d', (logiciel ? hasard(9, 13) : hasard(10, 18)) + 's');
     }
     f.addEventListener('animationend', function (ev) { if (ev.target === f) f.remove(); });
-    if (!logiciel) f.addEventListener('click', function () { faireFuir(f); });
+    f.addEventListener('click', function () { faireFuir(f, true); });
     troupe.appendChild(f);
   }
 
-  function faireFuir(f) {
+  // parClic : attrapé par le visiteur (un point s'il est connecté), sinon renvoyé par « Chasser les fantômes ».
+  function faireFuir(f, parClic) {
     if (f.classList.contains('pouf')) return;
-    if (!f.querySelector('.hanter-bulle')) f.firstChild.appendChild(el('span', 'hanter-bulle', 'Bouh !'));
+    var b = f.querySelector('.hanter-bulle');
+    if (!b) f.firstChild.appendChild(b = el('span', 'hanter-bulle'));
+    b.textContent = parClic ? compter() : 'Bouh !';
     f.classList.add('pouf');
     setTimeout(function () { f.remove(); }, 600);
+  }
+
+  /* Points : un par fantôme attrapé, envoyés un par un, au plus un toutes les 3 s (le serveur refuse plus rapide). */
+  function jeton() { return lire(CLE_JETON); }
+  function pluriel(n, un, plusieurs) { return n + ' ' + (n > 1 ? plusieurs : un); }
+  function majPoints(n) {
+    points = n;
+    if (!puce) return;
+    puce.hidden = !n;
+    puce.textContent = '👻 ' + pluriel(n, 'attrapé', 'attrapés');
+  }
+  function compter() {
+    if (!jeton()) {
+      if (!conseil) { conseil = true; dire('Connecte-toi (bouton 👤 du logiciel) pour compter tes fantômes et entrer dans le classement 🏆'); }
+      return 'Bouh !';
+    }
+    if (file < 3) file++;
+    envoyer();
+    return '+1 !';
+  }
+  function envoyer() {
+    if (envoi || prevu || !file || !en) return;
+    var attente = dernierEnvoi + 3000 - Date.now();
+    if (attente > 0) {
+      prevu = true;
+      setTimeout(function () { prevu = false; envoyer(); }, attente);
+      return;
+    }
+    envoi = true;
+    dernierEnvoi = Date.now();
+    file--;
+    fetch(RACINE + 'api/evenement/attrape', { method: 'POST', headers: { Authorization: 'Bearer ' + jeton() } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        if (!r || typeof r.points !== 'number') return;
+        majPoints(r.points);
+        if (!r.compte && file < 3) file++; // arrivé trop tôt (un autre onglet vient de compter) : il repart dans 3 s
+      })
+      .catch(function () { /* hors connexion : ce fantôme ne compte pas */ })
+      .then(function () { envoi = false; envoyer(); });
+  }
+  function chargerPoints() {
+    var t = jeton();
+    if (!t) return;
+    fetch(RACINE + 'api/evenement/classement', { cache: 'no-store', headers: { Authorization: 'Bearer ' + t } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) { if (r && r.moi && en) majPoints(r.moi.points); })
+      .catch(function () {});
+  }
+
+  function dire(texte) {
+    if (toast) toast.remove();
+    var t = toast = el('div', 'hanter-toast');
+    t.setAttribute('role', 'status');
+    t.textContent = texte;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); if (toast === t) toast = null; }, 6000);
+  }
+
+  /* Classement, à la fin de l'événement. Les noms viennent des comptes : toujours en textContent. */
+  function montrerClassement(fini) {
+    if (classement || !fini) return;
+    ecrire(CLE_CLASSEMENT, fini.depuis);
+    styler();
+    classement = el('div', 'hanter-classement');
+    classement.setAttribute('role', 'dialog');
+    classement.setAttribute('aria-modal', 'true');
+    classement.setAttribute('aria-label', "Classement de l'événement d'Halloween");
+    var carte = el('div'), titre = el('h2'), sous = el('p', 'sous'), liste = el('ol'), moi = el('p', 'moi-texte'), fermer = el('button');
+    titre.textContent = '🏆 Classement';
+    sous.textContent = "Les meilleurs chasseurs de fantômes de l'événement d'Halloween";
+    moi.textContent = 'Chargement…';
+    fermer.type = 'button';
+    fermer.textContent = 'Fermer';
+    fermer.addEventListener('click', fermerClassement);
+    classement.addEventListener('click', function (ev) { if (ev.target === classement) fermerClassement(); });
+    carte.append(titre, sous, liste, moi, fermer);
+    classement.appendChild(carte);
+    document.body.appendChild(classement);
+    fermer.focus();
+    var t = jeton();
+    fetch(RACINE + 'api/evenement/classement', { cache: 'no-store', headers: t ? { Authorization: 'Bearer ' + t } : {} })
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        var top = r.top || [], MEDAILLES = ['🥇', '🥈', '🥉'];
+        top.forEach(function (j, i) {
+          var li = el('li'), place = el('span', 'place'), nom = el('span', 'nom'), pts = el('span', 'pts');
+          if (r.moi && r.moi.rang === i + 1) li.className = 'moi';
+          place.textContent = MEDAILLES[i] || String(i + 1);
+          nom.textContent = j.nom;
+          pts.textContent = j.points + ' 👻';
+          li.append(place, nom, pts);
+          liste.appendChild(li);
+        });
+        if (!top.length) { moi.textContent = "Personne n'a attrapé de fantôme… Ils courent toujours ! 👻"; return; }
+        sous.textContent = pluriel(r.participants, 'chasseur', 'chasseurs') + " de fantômes pendant l'événement d'Halloween";
+        moi.textContent = !t || !r.moi ? 'Connecte-toi la prochaine fois pour entrer dans le classement !'
+          : !r.moi.points ? "Tu n'as attrapé aucun fantôme cette fois-ci."
+          : 'Toi : ' + pluriel(r.moi.points, 'fantôme', 'fantômes') + ', ' + (r.moi.rang === 1 ? '1er' : r.moi.rang + 'e')
+            + ' sur ' + r.participants + (r.moi.rang <= 3 ? ' 🎉' : '');
+      })
+      .catch(function () { moi.textContent = "Le classement n'a pas pu être chargé."; });
+  }
+  function fermerClassement() {
+    if (!classement) return;
+    classement.remove();
+    classement = null;
   }
 
   // Un fantôme de temps en temps : souvent sur les pages du site, rarement dans le logiciel (on y travaille).
@@ -218,7 +352,11 @@
     var cadre = intro && intro.querySelector('iframe');
     if (cadre && ev.source === cadre.contentWindow && ev.data && ev.data.halloween === 'fin') fermerIntro();
   });
-  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && intro) fermerIntro(); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    if (intro) fermerIntro();
+    else if (classement) fermerClassement();
+  });
 
   // Bandeau de l'accueil : « prochainement » devient « a commencé », avec de quoi revoir le clip.
   function changerAnnonce() {
@@ -229,11 +367,24 @@
     revoir.type = 'button';
     revoir.textContent = "▶ Revoir l'intro";
     revoir.addEventListener('click', montrerIntro);
-    p.replaceChildren(document.createTextNode("🎃 L'événement d'Halloween a commencé ! Les fantômes hantent le site… "), revoir);
+    delete p.dataset.fini;
+    p.replaceChildren(document.createTextNode("🎃 L'événement d'Halloween a commencé ! Attrape les fantômes… "), revoir);
+  }
+  function annonceFini(fini) {
+    var p = document.querySelector('.annonce p');
+    if (!p || p.dataset.fini === fini.depuis) return;
+    if (!annonce) annonce = Array.prototype.slice.call(p.childNodes).map(function (n) { return n.cloneNode(true); });
+    styler();
+    var voir = el('button', 'hanter-revoir');
+    voir.type = 'button';
+    voir.textContent = '🏆 Voir le classement';
+    voir.addEventListener('click', function () { montrerClassement(fini); });
+    p.dataset.fini = fini.depuis;
+    p.replaceChildren(document.createTextNode("🎃 L'événement d'Halloween est terminé ! "), voir);
   }
   function remettreAnnonce() {
     var p = document.querySelector('.annonce p');
-    if (p && annonce) p.replaceChildren.apply(p, annonce);
+    if (p && annonce) { p.replaceChildren.apply(p, annonce); delete p.dataset.fini; }
     annonce = null;
   }
 
@@ -246,7 +397,7 @@
     styler();
     racine.classList.add('hanter-en-cours');
     if (accueil && !reduit) document.body.appendChild(fond = creerFond());
-    troupe = el('div', 'hanter-troupe' + (logiciel ? '' : ' attrapable'));
+    troupe = el('div', 'hanter-troupe');
     troupe.setAttribute('aria-hidden', 'true');
     document.body.appendChild(troupe);
     if (!logiciel && !reduit) {
@@ -255,7 +406,11 @@
       bouton.addEventListener('click', function () { calme(!calme()); });
       document.body.appendChild(bouton);
       majBouton();
+      puce = el('div', 'hanter-puce');
+      puce.hidden = true;
+      document.body.appendChild(puce);
     }
+    chargerPoints();
     if (accueil) changerAnnonce();
     if (accueil && !reduit && lire(CLE_INTRO) !== e.depuis) montrerIntro();
     else prochainFantome(true);
@@ -266,17 +421,33 @@
     en = null;
     clearTimeout(minuteur);
     fermerIntro(true);
-    [fond, troupe, bouton].forEach(function (x) { if (x) x.remove(); });
-    fond = troupe = bouton = null;
+    [fond, troupe, bouton, puce, toast].forEach(function (x) { if (x) x.remove(); });
+    fond = troupe = bouton = puce = toast = null;
+    points = null;
+    file = 0;
     racine.classList.remove('hanter-en-cours');
     remettreAnnonce();
   }
 
+  // Appelée à chaque réponse de /api/etat : e = événement en cours, fini = dernier événement arrêté (ou null).
+  function suivre(e, fini) {
+    var avant = en;
+    if (e) { demarrer(e); return; }
+    if (avant) arreter();
+    if (!fini) return;
+    if (accueil) annonceFini(fini);
+    // Le classement s'ouvre une fois : sur les pages ouvertes à la fin de l'événement, et sur l'accueil.
+    if (((avant && avant.depuis === fini.depuis) || accueil) && lire(CLE_CLASSEMENT) !== fini.depuis) montrerClassement(fini);
+  }
+
   window.hanter = {
+    suivre: suivre,
     demarrer: demarrer,
     arreter: arreter,
     actif: function () { return !!en; },
     calme: calme,
+    points: function () { return points; },
     intro: montrerIntro,
+    classement: montrerClassement,
   };
 })();

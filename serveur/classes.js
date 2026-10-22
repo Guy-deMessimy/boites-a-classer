@@ -47,7 +47,7 @@ export async function etatCompte(env, id) {
   };
 }
 
-// Requêtes qui effacent un compte, son travail, ses sessions et sa conversation avec le service client ; pour un
+// Requêtes qui effacent un compte, son travail, ses sessions, ses points d'événement et sa conversation avec le service client ; pour un
 // enseignant, aussi ses classes et ses élèves.
 export function effacerCompte(env, id) {
   const TOUS = 'SELECT ?1 AS id UNION SELECT e.id FROM comptes e JOIN classes cl ON cl.id = e.classe WHERE cl.enseignant = ?1';
@@ -56,6 +56,7 @@ export function effacerCompte(env, id) {
     env.DB.prepare(`DELETE FROM support_fils WHERE compte IN (${TOUS})`).bind(id),
     env.DB.prepare(`DELETE FROM sauvegardes WHERE cle IN (SELECT 'compte:' || id FROM (${TOUS}))`).bind(id),
     env.DB.prepare(`DELETE FROM sessions WHERE compte IN (${TOUS})`).bind(id),
+    env.DB.prepare(`DELETE FROM scores_evenement WHERE compte IN (${TOUS})`).bind(id),
     env.DB.prepare(`DELETE FROM comptes WHERE id IN (${TOUS})`).bind(id),
     env.DB.prepare('DELETE FROM classes WHERE enseignant = ?').bind(id),
   ];
@@ -69,6 +70,7 @@ export function effacerClasse(env, classe) {
     env.DB.prepare(`DELETE FROM support_fils WHERE compte IN (${ELEVES})`).bind(classe),
     env.DB.prepare(`DELETE FROM sauvegardes WHERE cle IN (SELECT 'compte:' || id FROM (${ELEVES}))`).bind(classe),
     env.DB.prepare(`DELETE FROM sessions WHERE compte IN (${ELEVES})`).bind(classe),
+    env.DB.prepare(`DELETE FROM scores_evenement WHERE compte IN (${ELEVES})`).bind(classe),
     env.DB.prepare('DELETE FROM comptes WHERE classe = ?').bind(classe),
     env.DB.prepare('DELETE FROM classes WHERE id = ?').bind(classe),
   ];

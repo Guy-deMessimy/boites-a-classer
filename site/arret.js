@@ -4,18 +4,19 @@
 // - Site arrêté par un admin (serveur/maintenance.js) : 503, la page se recharge et devient « … revient dans peu de
 //   temps… ».
 // - Événement déclenché (serveur/evenement.js) : ses effets sont chargés (site/halloween/hanter.js), puis retirés quand
-//   l'admin l'arrête.
+//   l'admin l'arrête ; son classement est alors montré (et reste annoncé sur l'accueil).
 (function () {
   'use strict';
   if (window.top !== window) return; // dans un cadre (la pub de l'accueil) : la page autour s'en charge
   var charge = false, connu = '?', enCours = false;
-  function suivreEvenement(e) {
-    if (window.hanter) { if (e) window.hanter.demarrer(e); else window.hanter.arreter(); return; }
-    if (!e || charge) return;
+  function suivreEvenement(e, fini) {
+    if (window.hanter) { window.hanter.suivre(e, fini); return; }
+    var accueil = document.documentElement.classList.contains('theme-halloween');
+    if ((!e && !(fini && accueil)) || charge) return;
     charge = true;
     var s = document.createElement('script');
     s.src = '/halloween/hanter.js';
-    s.onload = function () { if (window.hanter) window.hanter.demarrer(e); };
+    s.onload = function () { if (window.hanter) window.hanter.suivre(e, fini); };
     document.head.appendChild(s);
   }
   function ecouter() {
@@ -27,7 +28,7 @@
       return rep.json().then(function (r) {
         var e = (r && r.evenement) || null;
         connu = e ? e.nom + '@' + e.depuis : '-';
-        suivreEvenement(e);
+        suivreEvenement(e, (r && r.fini) || null);
         return true;
       });
     }).then(function (suite) {

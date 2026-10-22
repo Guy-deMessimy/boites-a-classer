@@ -19,14 +19,17 @@
 //   POST /api/admin/support-suppression { id }  efface la conversation → 204
 //   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
 //   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
-//   GET  /api/admin/evenement                             → { evenement: { nom, depuis } | null }  (serveur/evenement.js)
-//   POST /api/admin/evenement    { nom }                  déclenche l'événement (« halloween ») ou l'arrête (null)
+//   GET  /api/admin/evenement                             → { evenement: { nom, depuis } | null, fini: { nom, depuis, fin } | null }
+//   POST /api/admin/evenement    { nom }                  déclenche l'événement (« halloween », classement remis à zéro) ou
+//                                                         l'arrête (null, classement gardé) → comme GET  (serveur/evenement.js)
+//   GET  /api/admin/classement                            → { participants, top: [{ nom, identifiant, eleve, points }] }
+//                                                         classement du dernier événement (en direct pendant l'événement)
 //
 // Un compte admin ne peut pas être modifié ni supprimé par cette API (y compris le sien) : réglages du compte dans le logiciel.
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
-import { EVENEMENTS, evenementEnCours, changerEvenement } from '../../../serveur/evenement.js';
+import { EVENEMENTS, lireEvenement, changerEvenement, classement } from '../../../serveur/evenement.js';
 import { effacerCompte } from '../../../serveur/classes.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
@@ -241,12 +244,25 @@ const actions = {
   },
 
   async evenement(request, env) {
+    let v;
     if (request.method === 'POST') {
       const { nom } = await lireCorps(request);
       if (nom !== null && !EVENEMENTS.includes(nom)) return erreur('« nom » doit valoir ' + EVENEMENTS.join(', ') + ' ou null', 400);
-      return json({ evenement: await changerEvenement(env, nom) });
-    }
-    return json({ evenement: await evenementEnCours(env) });
+      v = await changerEvenement(env, nom);
+    } else v = await lireEvenement(env);
+    return json({ evenement: v && !v.fin ? v : null, fini: v && v.fin ? v : null });
+  },
+
+  async classement(request, env) {
+    const v = await lireEvenement(env);
+    if (!v) return json({ participants: 0, top: [] });
+    const c = await classement(env, v.depuis, 50);
+    const ids = c.top.map((t) => t.compte);
+    const { results } = ids.length
+      ? await env.DB.prepare(`SELECT id, identifiant FROM comptes WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all()
+      : { results: [] };
+    const identifiants = new Map(results.map((r) => [r.id, r.identifiant]));
+    return json({ participants: c.participants, top: c.top.map((t) => ({ nom: t.nom, identifiant: identifiants.get(t.compte), eleve: t.eleve, points: t.points })) });
   },
 };
 
@@ -254,7 +270,7 @@ const METHODES = {
   comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'],
-  evenement: ['GET', 'POST'],
+  evenement: ['GET', 'POST'], classement: ['GET'],
 };
 
 export async function onRequest({ request, env, params }) {

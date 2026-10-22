@@ -92,6 +92,10 @@
     .etat-site.evenement.en-cours { border-color: #e8741c; }
     .etat-site.evenement.en-cours strong { color: #e8741c; }
     .bouton.declencher { background: #e8741c; border-color: #e8741c; color: #fff; }
+    .classement-liste { margin: 0 0 12px; padding-left: 1.6em; }
+    .classement-liste li { padding: 2px 0; }
+    .classement-liste small { color: var(--doux); }
+    #classement-detail { color: var(--doux); font-size: .9rem; }
     .chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 24px; padding: 0; list-style: none; }
     .chiffres li { padding: 14px 16px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
     .chiffres strong { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
@@ -172,6 +176,12 @@
           <span id="evenement-detail"></span>
         </div>
         <button type="button" class="bouton" id="basculer-evenement" disabled></button>
+      </section>
+      <section class="support" id="classement-evenement" hidden>
+        <h2 id="classement-titre">🏆 Classement</h2>
+        <ol class="classement-liste" id="classement-liste"></ol>
+        <p class="aide" id="classement-detail"></p>
+        <button type="button" class="bouton" id="classement-actualiser">↻ Actualiser</button>
       </section>
       <ul class="chiffres" id="chiffres"></ul>
       <section class="support" id="support">
@@ -357,30 +367,62 @@
 
       /* Événement d'Halloween (serveur/evenement.js) : fond animé, fantômes et clip d'intro sur les pages ouvertes
          (site/halloween/hanter.js), quelques secondes après le déclenchement, sans recharger (functions/api/etat.js). */
-      var evenement = null;
-      function afficherEvenement(e) {
+      var evenement = null, dernierFini = null;
+      function afficherEvenement(e, fini) {
         evenement = e;
+        dernierFini = fini;
         var b = $('#basculer-evenement');
         b.disabled = false;
         $('#etat-evenement').classList.toggle('en-cours', !!e);
         $('#evenement-texte').textContent = e ? '🎃 L\'événement d\'Halloween est en cours' : '🎃 Événement d\'Halloween : pas encore déclenché';
         $('#evenement-detail').textContent = e
-          ? 'Depuis le ' + date(e.depuis) + ' : fond animé, fantômes sur tout le site, clip d\'intro sur l\'accueil.'
-          : 'L\'accueil annonce « Événement d\'Halloween prochainement ». Le déclencher anime le fond, lâche les fantômes et montre le clip d\'intro.';
+          ? 'Depuis le ' + date(e.depuis) + ' : fond animé, fantômes à attraper sur tout le site, clip d\'intro sur l\'accueil. À l\'arrêt, le classement est montré à tous.'
+          : fini
+            ? 'Arrêté le ' + date(fini.fin) + ' : le classement est montré à tous. Le déclencher à nouveau remet le classement à zéro.'
+            : 'L\'accueil annonce « Événement d\'Halloween prochainement ». Le déclencher anime le fond, lâche les fantômes et montre le clip d\'intro.';
+        $('#classement-evenement').hidden = !(e || fini);
+        $('#classement-titre').textContent = e ? '🏆 Classement (en direct)' : '🏆 Classement final';
+        if (e || fini) chargerClassement();
         b.className = 'bouton ' + (e ? '' : 'declencher');
         b.textContent = e ? 'Arrêter l\'événement' : '🎃 Déclencher l\'événement';
       }
       function chargerEvenement() {
-        appel('evenement').then(function (x) { if (x.statut === 200) afficherEvenement(x.r.evenement); });
+        appel('evenement').then(function (x) { if (x.statut === 200) afficherEvenement(x.r.evenement, x.r.fini); });
       }
+      // Les noms viennent des comptes : toujours en textContent.
+      function chargerClassement() {
+        appel('classement').then(function (x) {
+          if (x.statut !== 200) return;
+          var top = x.r.top || [];
+          $('#classement-liste').replaceChildren.apply($('#classement-liste'), top.map(function (t) {
+            var li = document.createElement('li');
+            li.textContent = t.nom + ' — ' + t.points + ' 👻 ';
+            var detail = document.createElement('small');
+            detail.textContent = t.eleve ? '(élève, ' + t.identifiant + ')' : '';
+            li.appendChild(detail);
+            return li;
+          }));
+          $('#classement-detail').textContent = top.length
+            ? x.r.participants + ' participant' + (x.r.participants > 1 ? 's' : '') + ' (comptes connectés ; les visiteurs sans compte ne comptent pas). Les visiteurs voient les 10 premiers ; un élève apparaît sous son prénom.'
+            : 'Personne n\'a encore attrapé de fantôme.';
+        });
+      }
+      $('#classement-actualiser').addEventListener('click', chargerClassement);
       $('#basculer-evenement').addEventListener('click', function () {
         var b = $('#basculer-evenement');
+        // Redéclencher efface le classement du précédent : second appui demandé.
+        if (!evenement && dernierFini && !b.classList.contains('confirmer')) {
+          b.classList.add('confirmer');
+          b.textContent = 'Effacer le classement et redéclencher ?';
+          setTimeout(function () { if (b.classList.contains('confirmer')) afficherEvenement(evenement, dernierFini); }, 4000);
+          return;
+        }
         b.disabled = true;
         appel('evenement', { nom: evenement ? null : 'halloween' }).then(function (x) {
-          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); afficherEvenement(evenement); return; }
-          afficherEvenement(x.r.evenement);
-          message(x.r.evenement ? 'Événement déclenché : les pages ouvertes le voient en quelques secondes, sans recharger.' : 'Événement arrêté.');
-        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEvenement(evenement); });
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); chargerEvenement(); return; }
+          afficherEvenement(x.r.evenement, x.r.fini);
+          message(x.r.evenement ? 'Événement déclenché : les pages ouvertes le voient en quelques secondes, sans recharger.' : 'Événement arrêté : le classement s\'affiche chez tout le monde.');
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); chargerEvenement(); });
       });
 
       function message(texte, erreur) {

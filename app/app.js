@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.25.2';
+  const VERSION = '3.26.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2047,7 +2047,8 @@
         titre('Aide'),
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
         // Événement d'Halloween en cours (site/halloween/hanter.js) : les fantômes peuvent gêner une séance de travail.
-        ...(window.hanter && window.hanter.actif() ? [entreeMenu(window.hanter.calme() ? '👻 Rappeler les fantômes' : '👻 Chasser les fantômes', () => window.hanter.calme(!window.hanter.calme()))] : []),
+        ...(window.hanter && window.hanter.actif() ? [entreeMenu((window.hanter.calme() ? '👻 Rappeler les fantômes' : '👻 Chasser les fantômes')
+          + (window.hanter.points() ? ` (${pluriel(window.hanter.points(), 'attrapé', 'attrapés')})` : ''), () => window.hanter.calme(!window.hanter.calme()))] : []),
       );
       if (voixPossible) m.appendChild(entreeMenu(voixActive() ? '🔇 Ne plus lire à voix haute' : '🔊 Lire les noms à voix haute', basculerVoix));
     });
@@ -3543,13 +3544,13 @@
     let hanterCharge = false;
     let connu = '?';
     let enCours = false;
-    const suivreEvenement = (e) => {
-      if (window.hanter) { if (e) window.hanter.demarrer(e); else window.hanter.arreter(); return; }
+    const suivreEvenement = (e, fini) => {
+      if (window.hanter) { window.hanter.suivre(e, fini); return; }
       if (!e || hanterCharge || document.body.classList.contains('consultation')) return;
       hanterCharge = true;
       const s = document.createElement('script');
       s.src = SITE + '/halloween/hanter.js';
-      s.onload = () => { if (window.hanter) window.hanter.demarrer(e); };
+      s.onload = () => { if (window.hanter) window.hanter.suivre(e, fini); };
       document.head.appendChild(s);
     };
     const ecouterSite = async () => {
@@ -3559,9 +3560,10 @@
         const rep = await fetch(RACINE_API + '/etat?attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
         if (rep.status === 503) { location.reload(); return; }
         if (!rep.ok) throw new Error('serveur ' + rep.status);
-        const e = (await rep.json()).evenement || null;
+        const r = await rep.json();
+        const e = r.evenement || null;
         connu = e ? e.nom + '@' + e.depuis : '-';
-        suivreEvenement(e);
+        suivreEvenement(e, r.fini || null); // à la fin de l'événement : son classement
         enCours = false;
         ecouterSite();
       } catch (e) {
