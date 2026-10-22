@@ -19,7 +19,8 @@
 //   POST /api/admin/support-suppression { id }  efface la conversation → 204
 //   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
 //   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
-//   GET  /api/admin/evenement                             → { evenement: { nom, depuis } | null, fini: { nom, depuis, fin } | null }
+//   GET  /api/admin/evenement                             → { evenement: { nom, depuis } | null, fini: { nom, depuis, fin } | null,
+//                                                         boss: { pv, max, vaincu, chasseurs, gagnant } | null, total, seuil }
 //   POST /api/admin/evenement    { nom }                  déclenche l'événement (« halloween », classement remis à zéro) ou
 //                                                         l'arrête (null, classement gardé) → comme GET  (serveur/evenement.js)
 //   GET  /api/admin/classement                            → { participants, top: [{ nom, identifiant, eleve, points }] }
@@ -29,7 +30,7 @@
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
-import { EVENEMENTS, lireEvenement, changerEvenement, classement } from '../../../serveur/evenement.js';
+import { EVENEMENTS, lireEtat, changerEvenement, classement, SEUIL_BOSS } from '../../../serveur/evenement.js';
 import { effacerCompte } from '../../../serveur/classes.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
@@ -83,7 +84,7 @@ const actions = {
         + '(SELECT count(*) FROM classes) AS classes, '
         + '(SELECT count(*) FROM comptes WHERE classe IS NOT NULL) AS eleves, '
         + '(SELECT COALESCE(sum(non_lus_admin), 0) FROM support_fils) AS support_non_lus'),
-      env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, cl.nom AS classe, p.identifiant AS de, '
+      env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, c.badges, cl.nom AS classe, p.identifiant AS de, '
         + 'c.cree, c.derniere, count(s.version) AS versions, max(s.date) AS date, '
         + '(SELECT length(donnees) FROM sauvegardes WHERE cle = \'compte:\' || c.id ORDER BY version DESC LIMIT 1) AS taille '
         + 'FROM comptes c LEFT JOIN sauvegardes s ON s.cle = \'compte:\' || c.id '
@@ -244,17 +245,17 @@ const actions = {
   },
 
   async evenement(request, env) {
-    let v;
     if (request.method === 'POST') {
       const { nom } = await lireCorps(request);
       if (nom !== null && !EVENEMENTS.includes(nom)) return erreur('« nom » doit valoir ' + EVENEMENTS.join(', ') + ' ou null', 400);
-      v = await changerEvenement(env, nom);
-    } else v = await lireEvenement(env);
-    return json({ evenement: v && !v.fin ? v : null, fini: v && v.fin ? v : null });
+      await changerEvenement(env, nom);
+    }
+    const { evenement: v, boss, total } = await lireEtat(env);
+    return json({ evenement: v && !v.fin ? v : null, fini: v && v.fin ? v : null, boss, total, seuil: SEUIL_BOSS });
   },
 
   async classement(request, env) {
-    const v = await lireEvenement(env);
+    const v = (await lireEtat(env)).evenement;
     if (!v) return json({ participants: 0, top: [] });
     const c = await classement(env, v.depuis, 50);
     const ids = c.top.map((t) => t.compte);

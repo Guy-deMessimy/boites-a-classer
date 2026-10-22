@@ -51,6 +51,7 @@ export function menageComptes(env) {
     env.DB.prepare('DELETE FROM comptes WHERE classe IS NOT NULL AND classe NOT IN (SELECT id FROM classes)'),
     env.DB.prepare('DELETE FROM sessions WHERE compte NOT IN (SELECT id FROM comptes)'),
     env.DB.prepare('DELETE FROM scores_evenement WHERE compte NOT IN (SELECT id FROM comptes)'),
+    env.DB.prepare('DELETE FROM coups_boss WHERE compte NOT IN (SELECT id FROM comptes)'),
     env.DB.prepare('DELETE FROM support_fils WHERE maj < ? OR (compte IS NOT NULL AND compte NOT IN (SELECT id FROM comptes))').bind(avant),
     env.DB.prepare('DELETE FROM support_messages WHERE fil NOT IN (SELECT id FROM support_fils)'),
     env.DB.prepare('DELETE FROM limites WHERE fin < ?').bind(new Date().toISOString()),

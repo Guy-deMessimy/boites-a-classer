@@ -9,26 +9,26 @@
   'use strict';
   if (window.top !== window) return; // dans un cadre (la pub de l'accueil) : la page autour s'en charge
   var charge = false, connu = '?', enCours = false;
-  function suivreEvenement(e, fini) {
-    if (window.hanter) { window.hanter.suivre(e, fini); return; }
+  // r : toute la réponse (boss, fantômes attrapés par tous…).
+  function suivreEvenement(e, fini, r) {
+    if (window.hanter) { window.hanter.suivre(e, fini, r); return; }
     var accueil = document.documentElement.classList.contains('theme-halloween');
     if ((!e && !(fini && accueil)) || charge) return;
     charge = true;
     var s = document.createElement('script');
     s.src = '/halloween/hanter.js';
-    s.onload = function () { if (window.hanter) window.hanter.suivre(e, fini); };
+    s.onload = function () { if (window.hanter) window.hanter.suivre(e, fini, r); };
     document.head.appendChild(s);
   }
   function ecouter() {
     if (enCours || document.visibilityState !== 'visible') return;
     enCours = true;
-    fetch('/api/etat?v=2&attendre=' + encodeURIComponent(connu), { cache: 'no-store' }).then(function (rep) {
+    fetch('/api/etat?v=3&attendre=' + encodeURIComponent(connu), { cache: 'no-store' }).then(function (rep) {
       if (rep.status === 503) { location.reload(); return false; }
       if (!rep.ok) throw new Error('serveur ' + rep.status);
       return rep.json().then(function (r) {
-        var e = (r && r.evenement) || null;
-        connu = e ? e.nom + '@' + e.depuis : '-';
-        suivreEvenement(e, (r && r.fini) || null);
+        connu = (r && r.sig) || '-';
+        suivreEvenement((r && r.evenement) || null, (r && r.fini) || null, r || {});
         return true;
       });
     }).then(function (suite) {

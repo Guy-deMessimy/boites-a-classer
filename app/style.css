@@ -119,6 +119,9 @@ button { touch-action: manipulation; }
 .actions .principal, .btn.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
 .actions .attention, .btn.attention { background: var(--faux); border-color: var(--faux); color: #fff; }
 #compte.connecte { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+/* Badges gagnés pendant les événements (« vérifié par le site », Halloween), à côté du nom du compte. */
+.badge-verifie { display: inline-grid; place-items: center; width: 1.1em; height: 1.1em; margin-left: .3em; border-radius: 50%; background: #1d9bf0; color: #fff; font-size: .7em; font-weight: 900; vertical-align: .1em; }
+.badge { margin-left: .25em; }
 .bandeau-consultation { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; padding: .4rem 1rem; background: var(--fond-jaune); border-bottom: 1px solid var(--bord-jaune); font-size: .9rem; }
 .bandeau-consultation[hidden] { display: none; }
 .bandeau-consultation .btn { margin-left: auto; padding: .2rem .6rem; color: inherit; text-decoration: none; }

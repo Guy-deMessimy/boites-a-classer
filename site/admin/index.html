@@ -174,6 +174,7 @@
         <div>
           <strong id="evenement-texte">🎃 Événement d'Halloween…</strong>
           <span id="evenement-detail"></span>
+          <span id="evenement-boss"></span>
         </div>
         <button type="button" class="bouton" id="basculer-evenement" disabled></button>
       </section>
@@ -387,7 +388,19 @@
         b.textContent = e ? 'Arrêter l\'événement' : '🎃 Déclencher l\'événement';
       }
       function chargerEvenement() {
-        appel('evenement').then(function (x) { if (x.statut === 200) afficherEvenement(x.r.evenement, x.r.fini); });
+        appel('evenement').then(function (x) {
+          if (x.statut !== 200) return;
+          afficherEvenement(x.r.evenement, x.r.fini);
+          afficherBoss(x.r);
+        });
+      }
+      // Le boss : en attente des fantômes attrapés par tous, en combat, ou vaincu (et par qui).
+      function afficherBoss(r) {
+        var b = r.boss;
+        $('#evenement-boss').textContent = !(r.evenement || r.fini) ? ''
+          : !b ? '👑 Boss : ' + Math.min(r.total || 0, r.seuil) + ' / ' + r.seuil + ' fantômes attrapés par tous avant son arrivée.'
+          : !b.vaincu ? '👑 Boss en combat : ' + b.pv.toLocaleString('fr-FR') + ' / ' + b.max.toLocaleString('fr-FR') + ' PV, ' + b.chasseurs + ' chasseur' + (b.chasseurs > 1 ? 's' : '') + '.'
+          : '👑 Boss vaincu le ' + date(b.vaincu) + (b.gagnant ? ' : ' + b.gagnant.nom + ' a gagné les badges ✔ vérifié et 🎃 Halloween.' : '.');
       }
       // Les noms viennent des comptes : toujours en textContent.
       function chargerClassement() {
@@ -407,7 +420,7 @@
             : 'Personne n\'a encore attrapé de fantôme.';
         });
       }
-      $('#classement-actualiser').addEventListener('click', chargerClassement);
+      $('#classement-actualiser').addEventListener('click', function () { chargerClassement(); chargerEvenement(); });
       $('#basculer-evenement').addEventListener('click', function () {
         var b = $('#basculer-evenement');
         // Redéclencher efface le classement du précédent : second appui demandé.
@@ -421,6 +434,7 @@
         appel('evenement', { nom: evenement ? null : 'halloween' }).then(function (x) {
           if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); chargerEvenement(); return; }
           afficherEvenement(x.r.evenement, x.r.fini);
+          afficherBoss(x.r);
           message(x.r.evenement ? 'Événement déclenché : les pages ouvertes le voient en quelques secondes, sans recharger.' : 'Événement arrêté : le classement s\'affiche chez tout le monde.');
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); chargerEvenement(); });
       });
@@ -488,6 +502,8 @@
           // Un élève (créé par son enseignant) est montré par son prénom, avec sa classe.
           nom.textContent = c.classe ? c.nom + ' ' : c.identifiant;
           var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
+          // Badges gagnés pendant les événements (boss d'Halloween).
+          try { JSON.parse(c.badges || '[]').forEach(function (b) { badges.push(b === 'verifie' ? '✔ vérifié' : b === 'halloween' ? '🎃 Halloween' : b); }); } catch (e) { /* illisible */ }
           badges.forEach(function (t) {
             var badge = document.createElement('span');
             badge.className = 'badge';

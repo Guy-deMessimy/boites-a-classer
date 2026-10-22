@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.26.1';
+  const VERSION = '3.27.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2621,7 +2621,8 @@
   const CLE_ADMIN = 'boites-a-classer-compte:admin'; // « 1 » : lien vers la page d'administration (le serveur vérifie)
   const CLE_ENSEIGNANT = 'boites-a-classer-compte:enseignant'; // « 1 » : lien vers la page « Mes classes » (le serveur vérifie)
   const CLE_ELEVE = 'boites-a-classer-compte:eleve'; // élève : { classe, enseignant } en JSON (connecté avec un code)
-  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE];
+  const CLE_BADGES = 'boites-a-classer-compte:badges'; // badges gagnés pendant les événements, en JSON (serveur/evenement.js)
+  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES];
   const SITE = RACINE_API.slice(0, -'/api'.length); // pages du site (« Mes classes »)
   const FORME_CODE_ELEVE = /^[A-HJKMNP-Z2-9]{8}$/; // code de connexion d'un élève (serveur/classes.js)
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
@@ -2704,7 +2705,7 @@
   // Ce qui attendait d'être envoyé reste marqué « en attente » et partira à la prochaine connexion.
   function sessionExpiree() {
     if (lire(CLE_ELEVE)) oublier(CLE_IDENTIFIANT); // un prénom, pas un identifiant à proposer
-    for (const k of [CLE_JETON, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE]) oublier(k);
+    for (const k of [CLE_JETON, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES]) oublier(k);
     oublier(CLE_VERSION);
     oublier(CLE_DATE);
     remplirSelect();
@@ -2830,6 +2831,7 @@
   function majBoutonCompte() {
     const nom = jetonCompte() && lire(CLE_IDENTIFIANT);
     $('#compte-nom').textContent = ' ' + (nom || 'Se connecter');
+    if (nom) ajouterBadges($('#compte-nom'));
     boutonCompte.title = nom ? `Compte ${nom} : sauvegarde en ligne` : 'Se connecter pour sauvegarder son travail en ligne';
     boutonCompte.classList.toggle('connecte', !!nom);
     majBoutonExercices();
@@ -2853,7 +2855,23 @@
     if (etat && etat.admin) ecrire(CLE_ADMIN, '1'); else oublier(CLE_ADMIN);
     if (etat && etat.enseignant) ecrire(CLE_ENSEIGNANT, '1'); else oublier(CLE_ENSEIGNANT);
     if (etat && etat.eleve) ecrire(CLE_ELEVE, JSON.stringify(etat.eleve)); else oublier(CLE_ELEVE);
+    if (etat && Array.isArray(etat.badges) && etat.badges.length) ecrire(CLE_BADGES, JSON.stringify(etat.badges)); else oublier(CLE_BADGES);
   }
+
+  // Badges du compte, à côté de son nom : « vérifié par le site » ✔ et « Halloween » 🎃 (gagnés contre le boss).
+  const BADGES = { verifie: ['✔', 'Vérifié par le site', 'badge-verifie'], halloween: ['🎃', 'Badge Halloween', 'badge'] };
+  function badgesCompte() {
+    try { return (JSON.parse(lire(CLE_BADGES)) || []).filter((b) => BADGES[b]); } catch (e) { return []; }
+  }
+  function ajouterBadges(cible) {
+    for (const b of badgesCompte()) {
+      const s = document.createElement('span');
+      [s.textContent, s.title, s.className] = BADGES[b];
+      cible.appendChild(s);
+    }
+  }
+  // Le compte vient de gagner des badges (site/halloween/hanter.js, victoire contre le boss).
+  window.addEventListener('hanter:badges', () => rafraichirCompte());
 
   // Relit l'état du compte au démarrage : un rôle donné ou retiré entre-temps, un prénom changé par l'enseignant.
   async function rafraichirCompte() {
@@ -3085,7 +3103,12 @@
     $('#sv-bascule').textContent = creation ? 'J\'ai déjà un compte' : 'Créer un compte';
     if (!$('#sv-identifiant').value) $('#sv-identifiant').value = lire(CLE_IDENTIFIANT) || '';
     for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
-    if (compte) $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
+    if (compte) {
+      $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
+      ajouterBadges($('#sv-identifiant-affiche'));
+    }
+    $('#sv-badges').hidden = !compte || !badgesCompte().length;
+    $('#sv-badges').textContent = 'Badges : ' + badgesCompte().map((b) => BADGES[b][0] + ' ' + BADGES[b][1]).join(' · ');
     $('#sv-admin').hidden = !compte || !lire(CLE_ADMIN);
     const eleve = compte && eleveConnecte();
     $('#sv-enseignant').hidden = !compte || !lire(CLE_ENSEIGNANT);
@@ -3544,26 +3567,25 @@
     let hanterCharge = false;
     let connu = '?';
     let enCours = false;
-    const suivreEvenement = (e, fini) => {
-      if (window.hanter) { window.hanter.suivre(e, fini); return; }
+    const suivreEvenement = (e, fini, r) => {
+      if (window.hanter) { window.hanter.suivre(e, fini, r); return; }
       if (!e || hanterCharge || document.body.classList.contains('consultation')) return;
       hanterCharge = true;
       const s = document.createElement('script');
       s.src = SITE + '/halloween/hanter.js';
-      s.onload = () => { if (window.hanter) window.hanter.suivre(e, fini); };
+      s.onload = () => { if (window.hanter) window.hanter.suivre(e, fini, r); };
       document.head.appendChild(s);
     };
     const ecouterSite = async () => {
       if (enCours || document.visibilityState !== 'visible') return;
       enCours = true;
       try {
-        const rep = await fetch(RACINE_API + '/etat?v=2&attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
+        const rep = await fetch(RACINE_API + '/etat?v=3&attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
         if (rep.status === 503) { location.reload(); return; }
         if (!rep.ok) throw new Error('serveur ' + rep.status);
         const r = await rep.json();
-        const e = r.evenement || null;
-        connu = e ? e.nom + '@' + e.depuis : '-';
-        suivreEvenement(e, r.fini || null); // à la fin de l'événement : son classement
+        connu = r.sig || '-';
+        suivreEvenement(r.evenement || null, r.fini || null, r); // boss, et à la fin de l'événement : son classement
         enCours = false;
         ecouterSite();
       } catch (e) {

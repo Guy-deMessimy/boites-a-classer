@@ -5,6 +5,7 @@
 // personnel de 8 caractères (POST /api/compte/code) ; le serveur n'en garde que l'empreinte SHA-256 : l'enseignant le
 // voit une seule fois, à la création, et en tire un nouveau si l'élève l'a perdu.
 
+import { lireBadges } from './evenement.js';
 import { texte, hex, sha256, hasard } from './comptes.js';
 
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans 0/O ni 1/I/L, qui se confondent
@@ -36,7 +37,7 @@ export function lireExercices(texte) {
 
 // Ce que le logiciel doit savoir d'un compte : nom affiché, rôles, et pour un élève sa classe et son enseignant.
 export async function etatCompte(env, id) {
-  const c = await env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant, c.nom, cl.nom AS classe, cl.exercices, e.identifiant AS enseignant '
+  const c = await env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant, c.nom, c.badges, cl.nom AS classe, cl.exercices, e.identifiant AS enseignant '
     + 'FROM comptes c LEFT JOIN classes cl ON cl.id = c.classe LEFT JOIN comptes e ON e.id = cl.enseignant WHERE c.id = ?').bind(id).first();
   if (!c) return null;
   return {
@@ -44,6 +45,7 @@ export async function etatCompte(env, id) {
     admin: !!c.admin,
     enseignant: !!(c.admin || c.est_enseignant),
     eleve: c.classe ? { classe: c.classe, enseignant: c.enseignant, exercices: lireExercices(c.exercices) } : null,
+    badges: lireBadges(c.badges), // gagnés pendant les événements (serveur/evenement.js)
   };
 }
 
@@ -57,6 +59,7 @@ export function effacerCompte(env, id) {
     env.DB.prepare(`DELETE FROM sauvegardes WHERE cle IN (SELECT 'compte:' || id FROM (${TOUS}))`).bind(id),
     env.DB.prepare(`DELETE FROM sessions WHERE compte IN (${TOUS})`).bind(id),
     env.DB.prepare(`DELETE FROM scores_evenement WHERE compte IN (${TOUS})`).bind(id),
+    env.DB.prepare(`DELETE FROM coups_boss WHERE compte IN (${TOUS})`).bind(id),
     env.DB.prepare(`DELETE FROM comptes WHERE id IN (${TOUS})`).bind(id),
     env.DB.prepare('DELETE FROM classes WHERE enseignant = ?').bind(id),
   ];
@@ -71,6 +74,7 @@ export function effacerClasse(env, classe) {
     env.DB.prepare(`DELETE FROM sauvegardes WHERE cle IN (SELECT 'compte:' || id FROM (${ELEVES}))`).bind(classe),
     env.DB.prepare(`DELETE FROM sessions WHERE compte IN (${ELEVES})`).bind(classe),
     env.DB.prepare(`DELETE FROM scores_evenement WHERE compte IN (${ELEVES})`).bind(classe),
+    env.DB.prepare(`DELETE FROM coups_boss WHERE compte IN (${ELEVES})`).bind(classe),
     env.DB.prepare('DELETE FROM comptes WHERE classe = ?').bind(classe),
     env.DB.prepare('DELETE FROM classes WHERE id = ?').bind(classe),
   ];

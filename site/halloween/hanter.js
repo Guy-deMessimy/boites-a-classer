@@ -5,6 +5,9 @@
 // - partout : des fantômes traversent la page ; un clic les attrape, et chaque fantôme attrapé par un compte connecté
 //   rapporte un point (functions/api/evenement/[action].js). « 👻 Chasser les fantômes » les renvoie (choix gardé
 //   dans le navigateur ; dans le logiciel, l'entrée est dans 🧰 Outils) ;
+// - quand tous ensemble ont attrapé 30 fantômes, le Roi des fantômes apparaît chez tout le monde : chaque coup (compte
+//   connecté) lui retire 1 000 PV, la barre de PV suit les coups de tous ; celui qui a porté le plus de coups gagne
+//   les badges « vérifié par le site » et « Halloween » (écran de victoire, une fois) ;
 // - à la fin de l'événement : le classement, une fois, sur les pages ouvertes et sur l'accueil (puis avec le bandeau).
 // Si l'appareil demande moins d'animations : ni fond animé, ni fantômes, ni clip automatique.
 (function () {
@@ -23,6 +26,8 @@
   var en = null; // événement en cours : { nom, depuis }
   var fond = null, troupe = null, bouton = null, intro = null, minuteur = null, annonce = null;
   var puce = null, toast = null, classement = null;
+  var CLE_BOSS = 'boites-a-classer-halloween:boss'; // date du déclenchement dont la victoire sur le boss a été vue
+  var bossZone = null, bossEl = null, barre = null, bossEtat = null, recharge = 0, victoire = null, total = 0, seuil = 30;
   var points = null, file = 0, envoi = false, prevu = false, dernierEnvoi = 0, conseil = false;
 
   var FANTOME = '<svg viewBox="0 0 100 124" aria-hidden="true">'
@@ -32,6 +37,16 @@
     + '<circle cx="38" cy="43" r="2.2" fill="#fff"/><circle cx="66" cy="43" r="2.2" fill="#fff"/>'
     + '<ellipse cx="50" cy="70" rx="7" ry="9" fill="#2a1840"/>'
     + '<ellipse cx="25" cy="60" rx="6" ry="3.5" fill="#ffb3cf" opacity=".8"/><ellipse cx="75" cy="60" rx="6" ry="3.5" fill="#ffb3cf" opacity=".8"/></svg>';
+  var BOSS = '<svg viewBox="0 0 200 240" aria-hidden="true">'
+    + '<path d="M24 132q-20 6-18 32q13-2 21-13M176 132q20 6 18 32q-13-2-21-13" fill="#eee4ff" stroke="#9b7be0" stroke-width="4"/>'
+    + '<path d="M100 34C52 34 24 70 24 116v110l22-18 22 18 22-18 20 18 22-18 22 18 22-18V116C176 70 148 34 100 34z" fill="#eee4ff" stroke="#9b7be0" stroke-width="4"/>'
+    + '<path d="M60 46l8-32 19 21 13-27 13 27 19-21 8 32z" fill="#ffd34d" stroke="#b8860b" stroke-width="3" stroke-linejoin="round"/>'
+    + '<circle cx="100" cy="34" r="5" fill="#ff4d6d"/><circle cx="78" cy="38" r="4" fill="#4dabff"/><circle cx="122" cy="38" r="4" fill="#4dabff"/>'
+    + '<path d="M56 88l32 13M144 88l-32 13" stroke="#2a1840" stroke-width="7" stroke-linecap="round"/>'
+    + '<ellipse cx="74" cy="110" rx="11" ry="13" fill="#2a1840"/><ellipse cx="126" cy="110" rx="11" ry="13" fill="#2a1840"/>'
+    + '<circle cx="77" cy="112" r="4.5" fill="#ff4d4d"/><circle cx="123" cy="112" r="4.5" fill="#ff4d4d"/>'
+    + '<path d="M68 150q32 26 64 0q-32 11-64 0z" fill="#2a1840"/><path d="M80 154l5 11 5-10M110 155l5 10 5-11" fill="#fff"/>'
+    + '<ellipse cx="52" cy="132" rx="9" ry="5" fill="#d9a0ff" opacity=".6"/><ellipse cx="148" cy="132" rx="9" ry="5" fill="#d9a0ff" opacity=".6"/></svg>';
   var CHAUVE_SOURIS = '<svg viewBox="0 0 64 30" aria-hidden="true">'
     + '<path d="M32 10l-3-6-2 5C20 3 9 3 0 10c6 1 9 5 9 10 3-3 7-3 10 0 1-3 4-5 7-3 1-3 3-5 6-5s5 2 6 5c3-2 6 0 7 3 3-3 7-3 10 0 0-5 3-9 9-10-9-7-20-7-27-1l-2-5z" fill="#160c26" stroke="#7a5bb0" stroke-width=".8"/>'
     + '<circle cx="29.5" cy="11" r="1.2" fill="#ffd166"/><circle cx="34.5" cy="11" r="1.2" fill="#ffd166"/></svg>';
@@ -100,6 +115,28 @@
     '.hanter-classement .moi-texte{margin:14px 0 0;color:#ffd2a1;text-align:center}',
     '.hanter-classement button{display:block;margin:16px auto 0;padding:.55rem 1.4rem;border:0;border-radius:999px;background:#ff8c1a;color:#1b0f02;font:700 16px/1.2 system-ui,sans-serif;cursor:pointer}',
     '.hanter-classement button:focus-visible{outline:3px solid #fff;outline-offset:2px}',
+    '.hanter-verifie{display:inline-grid;place-items:center;width:1.1em;height:1.1em;margin-left:.3em;border-radius:50%;background:#1d9bf0;color:#fff;font:900 .7em/1 system-ui,sans-serif;vertical-align:.1em}',
+    '.hanter-badge{margin-left:.25em}',
+    '.hanter-boss-zone{position:fixed;inset:0;z-index:2147483100;pointer-events:none;overflow:hidden}',
+    '.hanter-boss-zone.cache{display:none}',
+    '.hanter-boss-barre{position:relative;left:50%;width:max(100%,250px);margin-bottom:8px;padding:6px 12px 8px;border:1px solid #6d52a0;border-radius:14px;background:rgb(20 10 34 / .93);color:#fff;font:600 13px/1.3 system-ui,sans-serif;text-align:center;transform:translateX(-50%);box-shadow:0 6px 22px rgb(0 0 0 / .5)}',
+    '.hanter-boss-barre b{display:block;color:#c58bff;font:400 21px/1.1 "Creepster",fantasy,system-ui;letter-spacing:.05em}',
+    '.hanter-boss-barre .jauge{display:block;height:14px;margin:6px 0 5px;border-radius:99px;background:rgb(255 255 255 / .15);overflow:hidden}',
+    '.hanter-boss-barre .jauge i{display:block;width:100%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff4d4d,#ff8c1a,#7bd88f);transition:width .4s}',
+    '.hanter-boss{position:absolute;left:50%;top:56%;width:min(44vw,44vh,320px);transform:translate(-50%,-50%);animation:hanter-boss-derive 14s ease-in-out infinite alternate}',
+    '.hanter-boss .corps{animation:hanter-onde 2.6s ease-in-out infinite alternate}',
+    '.hanter-boss svg{display:block;width:100%;pointer-events:auto;cursor:crosshair;filter:drop-shadow(0 0 28px rgb(190 120 255 / .85))}',
+    '.hanter-boss.touche svg{animation:hanter-touche .25s}',
+    '@keyframes hanter-touche{35%{transform:scale(.93) rotate(-4deg);filter:drop-shadow(0 0 28px rgb(255 70 70 / .95)) brightness(1.35)}}',
+    '@keyframes hanter-boss-derive{0%{transform:translate(-85%,-60%)}33%{transform:translate(-20%,-42%)}66%{transform:translate(-70%,-35%)}100%{transform:translate(-25%,-62%)}}',
+    '.hanter-degat{position:absolute;color:#ff5d5d;font:400 30px/1 "Creepster",fantasy,system-ui;text-shadow:0 2px 0 #3a0000,0 0 10px rgb(255 0 0 / .6);pointer-events:none;transform:translate(-50%,-50%);animation:hanter-degat .9s ease-out forwards}',
+    '.hanter-degat.rate{color:#bbb;text-decoration:line-through}',
+    '@keyframes hanter-degat{to{transform:translate(-50%,-170%);opacity:0}}',
+    '.hanter-boss-zone.vaincu .hanter-boss{animation:hanter-boss-fin 1.5s ease-in forwards}',
+    '.hanter-boss-zone.vaincu .hanter-boss svg{pointer-events:none}',
+    '@keyframes hanter-boss-fin{to{transform:translate(-50%,-50%) scale(1.8) rotate(25deg);opacity:0;filter:brightness(3) blur(4px)}}',
+    '.hanter-classement .gagnant{margin:0 0 12px;padding:10px 12px;border-radius:14px;background:rgb(255 211 77 / .14);color:#ffe7a3;text-align:center}',
+    '@media (prefers-reduced-motion:reduce){.hanter-boss,.hanter-boss .corps{animation:none}}',
     '.hanter-intro{position:fixed;inset:0;z-index:2147483600;background:#000;opacity:0;transition:opacity .6s}',
     '.hanter-intro.visible{opacity:1}',
     '.hanter-intro iframe{display:block;width:100%;height:100%;border:0}',
@@ -222,6 +259,7 @@
       .then(function (r) {
         if (!r || typeof r.points !== 'number') return;
         majPoints(r.points);
+        if (typeof r.total === 'number' && r.total > total) { total = r.total; majCollectif(); }
         if (!r.compte && file < 3) file++; // arrivé trop tôt (un autre onglet vient de compter) : il repart dans 3 s
       })
       .catch(function () { /* hors connexion : ce fantôme ne compte pas */ })
@@ -245,7 +283,20 @@
     setTimeout(function () { t.remove(); if (toast === t) toast = null; }, 6000);
   }
 
-  /* Classement, à la fin de l'événement. Les noms viennent des comptes : toujours en textContent. */
+  // Nom et badges (« vérifié par le site » ✔, « Halloween » 🎃). Les noms viennent des comptes : toujours en textContent.
+  function nomBadges(cible, nom, badges) {
+    cible.textContent = nom;
+    (badges || []).forEach(function (b) {
+      var s = b === 'verifie' ? el('span', 'hanter-verifie') : b === 'halloween' ? el('span', 'hanter-badge') : null;
+      if (!s) return;
+      s.textContent = b === 'verifie' ? '✔' : '🎃';
+      s.title = b === 'verifie' ? 'Vérifié par le site' : 'Badge Halloween';
+      cible.appendChild(s);
+    });
+    return cible;
+  }
+
+  /* Classement, à la fin de l'événement. */
   function montrerClassement(fini) {
     if (classement || !fini) return;
     ecrire(CLE_CLASSEMENT, fini.depuis);
@@ -271,11 +322,16 @@
       .then(function (r) { return r.json(); })
       .then(function (r) {
         var top = r.top || [], MEDAILLES = ['🥇', '🥈', '🥉'];
+        if (r.boss && r.boss.gagnant) {
+          var g = el('p', 'gagnant');
+          g.append('👑 Roi des fantômes vaincu ! Le plus de coups : ', nomBadges(el('strong'), r.boss.gagnant.nom, r.boss.gagnant.badges));
+          carte.insertBefore(g, liste);
+        }
         top.forEach(function (j, i) {
           var li = el('li'), place = el('span', 'place'), nom = el('span', 'nom'), pts = el('span', 'pts');
           if (r.moi && r.moi.rang === i + 1) li.className = 'moi';
           place.textContent = MEDAILLES[i] || String(i + 1);
-          nom.textContent = j.nom;
+          nomBadges(nom, j.nom, j.badges);
           pts.textContent = j.points + ' 👻';
           li.append(place, nom, pts);
           liste.appendChild(li);
@@ -295,10 +351,146 @@
     classement = null;
   }
 
+  /* Le Roi des fantômes : apparaît chez tout le monde au même moment, ses PV suivent les coups de tous (/api/etat). */
+  var bossDebout = function () { return !!(bossEtat && !bossEtat.vaincu); };
+  var fmt = function (n) { return n.toLocaleString('fr-FR'); };
+
+  function majBoss(b) {
+    if (!en) return;
+    if (b && bossEtat) b = Object.assign({}, bossEtat, b); // la réponse d'un coup n'a ni les chasseurs ni le gagnant
+    bossEtat = b;
+    if (!b) return;
+    if (!b.vaincu) {
+      if (!bossZone) apparaitreBoss();
+      afficherPv();
+    } else if (bossZone) vaincreBoss();
+    else if (lire(CLE_BOSS) !== en.depuis) montrerVictoire();
+  }
+
+  function apparaitreBoss() {
+    styler();
+    clearTimeout(minuteur); // les petits fantômes laissent la place
+    bossZone = el('div', 'hanter-boss-zone' + (calme() ? ' cache' : ''));
+    barre = el('div', 'hanter-boss-barre'); // accrochée au boss : elle le suit et ne cache pas le haut de la page
+    barre.setAttribute('role', 'status');
+    barre.innerHTML = '<b>👑 Le Roi des fantômes</b><span class="jauge"><i></i></span><small></small>';
+    bossEl = el('div', 'hanter-boss');
+    bossEl.append(barre, el('div', 'corps', BOSS));
+    bossEl.querySelector('svg').addEventListener('click', frapper);
+    bossZone.appendChild(bossEl);
+    document.body.appendChild(bossZone);
+    majCollectif();
+    dire(jeton() ? "👑 Le Roi des fantômes est apparu ! Tout le monde à l'attaque : clique dessus !"
+      : "👑 Le Roi des fantômes est apparu ! Connecte-toi (bouton 👤 du logiciel) pour l'attaquer avec les autres.");
+  }
+
+  function afficherPv() {
+    if (!barre || !bossEtat) return;
+    barre.querySelector('i').style.width = (100 * bossEtat.pv / bossEtat.max) + '%';
+    barre.querySelector('small').textContent = bossEtat.vaincu ? 'Vaincu !'
+      : fmt(bossEtat.pv) + ' / ' + fmt(bossEtat.max) + ' PV' + (bossEtat.chasseurs ? ' · ⚔️ ' + pluriel(bossEtat.chasseurs, 'chasseur', 'chasseurs') : '');
+  }
+
+  function frapper(ev) {
+    if (!bossDebout()) return;
+    if (!jeton()) { dire("Connecte-toi (bouton 👤 du logiciel) pour attaquer le Roi des fantômes avec les autres !"); return; }
+    var maintenant = Date.now();
+    if (maintenant < recharge) return;
+    recharge = maintenant + 600; // le serveur ne compte pas plus d'un coup toutes les 0,5 s
+    bossEl.classList.remove('touche');
+    void bossEl.offsetWidth;
+    bossEl.classList.add('touche');
+    var degat = el('span', 'hanter-degat');
+    degat.textContent = '-1 000';
+    degat.style.left = ev.clientX + 'px';
+    degat.style.top = ev.clientY + 'px';
+    bossZone.appendChild(degat);
+    setTimeout(function () { degat.remove(); }, 900);
+    fetch(RACINE + 'api/evenement/boss', { method: 'POST', headers: { Authorization: 'Bearer ' + jeton() } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        if (!r || !r.boss || !en) return;
+        if (!r.compte) degat.classList.add('rate');
+        if (r.gagnant) r.boss.gagnant = r.gagnant;
+        majBoss(r.boss);
+      })
+      .catch(function () { degat.classList.add('rate'); });
+  }
+
+  function vaincreBoss() {
+    if (!bossZone || bossZone.classList.contains('vaincu')) return;
+    var z = bossZone;
+    afficherPv();
+    z.classList.add('vaincu');
+    setTimeout(function () {
+      z.remove();
+      if (bossZone === z) bossZone = bossEl = barre = null;
+      if (!en) return;
+      majCollectif();
+      if (lire(CLE_BOSS) !== en.depuis) montrerVictoire();
+      prochainFantome(true);
+    }, 1600);
+  }
+
+  // Écran de victoire, une fois par événement : le gagnant et ses badges, les meilleurs chasseurs, mes coups.
+  function montrerVictoire() {
+    if (victoire || classement || !en) return;
+    ecrire(CLE_BOSS, en.depuis);
+    styler();
+    victoire = el('div', 'hanter-classement');
+    victoire.setAttribute('role', 'dialog');
+    victoire.setAttribute('aria-modal', 'true');
+    victoire.setAttribute('aria-label', 'Le Roi des fantômes est vaincu');
+    var carte = el('div'), titre = el('h2'), sous = el('p', 'sous'), gagnant = el('p', 'gagnant'), liste = el('ol'), moi = el('p', 'moi-texte'), fermer = el('button');
+    titre.textContent = '👑 Victoire !';
+    sous.textContent = 'Le Roi des fantômes est vaincu.';
+    gagnant.textContent = 'Chargement…';
+    fermer.type = 'button';
+    fermer.textContent = 'Fermer';
+    fermer.addEventListener('click', fermerVictoire);
+    victoire.addEventListener('click', function (ev) { if (ev.target === victoire) fermerVictoire(); });
+    carte.append(titre, sous, gagnant, liste, moi, fermer);
+    victoire.appendChild(carte);
+    document.body.appendChild(victoire);
+    fermer.focus();
+    var t = jeton();
+    fetch(RACINE + 'api/evenement/boss', { cache: 'no-store', headers: t ? { Authorization: 'Bearer ' + t } : {} })
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        var b = r.boss || {}, top = r.top || [];
+        if (b.chasseurs) sous.textContent = 'Le Roi des fantômes est vaincu par ' + pluriel(b.chasseurs, 'chasseur', 'chasseurs') + ' ensemble !';
+        if (b.gagnant) {
+          gagnant.textContent = '';
+          gagnant.append('🏆 ', nomBadges(el('strong'), b.gagnant.nom, b.gagnant.badges),
+            ' a porté le plus de coups : vérifié par le site ✔ et badge Halloween 🎃 !');
+        } else gagnant.remove();
+        top.forEach(function (j, i) {
+          var li = el('li'), place = el('span', 'place'), nom = el('span', 'nom'), pts = el('span', 'pts');
+          place.textContent = ['🥇', '🥈', '🥉'][i] || String(i + 1);
+          nomBadges(nom, j.nom, j.badges);
+          pts.textContent = pluriel(j.coups, 'coup', 'coups');
+          li.append(place, nom, pts);
+          liste.appendChild(li);
+        });
+        moi.textContent = !t || !r.moi ? 'Connecte-toi la prochaine fois pour combattre le boss !'
+          : r.moi.gagnant ? "🎉 C'est toi ! Ton compte est vérifié par le site et tu as le badge Halloween."
+          : r.moi.coups ? 'Toi : ' + pluriel(r.moi.coups, 'coup porté', 'coups portés') + '.'
+          : "Tu n'as pas combattu le boss cette fois-ci.";
+        if (r.moi && r.moi.gagnant) window.dispatchEvent(new CustomEvent('hanter:badges')); // le logiciel relit le compte
+      })
+      .catch(function () { gagnant.textContent = "Les résultats n'ont pas pu être chargés."; });
+  }
+  function fermerVictoire() {
+    if (!victoire) return;
+    victoire.remove();
+    victoire = null;
+  }
+
   // Un fantôme de temps en temps : souvent sur les pages du site, rarement dans le logiciel (on y travaille).
+  // Pas pendant le combat contre le boss.
   function prochainFantome(vite) {
     clearTimeout(minuteur);
-    if (!en || reduit || calme() || intro) return;
+    if (!en || reduit || calme() || intro || bossDebout()) return;
     var attente = vite ? 1200 : logiciel ? hasard(25000, 45000) : hasard(5000, 10000);
     minuteur = setTimeout(function () { lacher(); prochainFantome(false); }, attente);
   }
@@ -307,6 +499,7 @@
     if (v === undefined) return lire(CLE_CALME) === '1';
     ecrire(CLE_CALME, v ? '1' : null);
     if (v && troupe) Array.prototype.slice.call(troupe.children).forEach(faireFuir);
+    if (bossZone) bossZone.classList.toggle('cache', !!v);
     majBouton();
     prochainFantome(true);
     return v;
@@ -355,11 +548,19 @@
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
     if (intro) fermerIntro();
+    else if (victoire) fermerVictoire();
     else if (classement) fermerClassement();
   });
 
-  // Bandeau de l'accueil : « prochainement » devient « a commencé », avec de quoi revoir le clip.
-  function changerAnnonce() {
+  // Bandeau de l'accueil : « prochainement » devient « a commencé » (avec la progression vers le boss), avec de quoi
+  // revoir le clip.
+  function majCollectif() {
+    if (!accueil || !en) return;
+    changerAnnonce(bossDebout() ? "👑 Le Roi des fantômes est là : tout le monde à l'attaque ! "
+      : bossEtat && bossEtat.vaincu ? '🎃 Le Roi des fantômes est vaincu' + (bossEtat.gagnant ? ' (le plus de coups : ' + bossEtat.gagnant.nom + ')' : '') + ' ! Les fantômes reviennent… '
+      : "🎃 L'événement d'Halloween a commencé ! Fantômes attrapés par tous : " + Math.min(total, seuil) + ' / ' + seuil + ' avant le boss… ');
+  }
+  function changerAnnonce(texte) {
     var p = document.querySelector('.annonce p');
     if (!p) return;
     if (!annonce) annonce = Array.prototype.slice.call(p.childNodes).map(function (n) { return n.cloneNode(true); });
@@ -368,7 +569,7 @@
     revoir.textContent = "▶ Revoir l'intro";
     revoir.addEventListener('click', montrerIntro);
     delete p.dataset.fini;
-    p.replaceChildren(document.createTextNode("🎃 L'événement d'Halloween a commencé ! Attrape les fantômes… "), revoir);
+    p.replaceChildren(document.createTextNode(texte || "🎃 L'événement d'Halloween a commencé ! Attrape les fantômes… "), revoir);
   }
   function annonceFini(fini) {
     var p = document.querySelector('.annonce p');
@@ -421,18 +622,29 @@
     en = null;
     clearTimeout(minuteur);
     fermerIntro(true);
-    [fond, troupe, bouton, puce, toast].forEach(function (x) { if (x) x.remove(); });
-    fond = troupe = bouton = puce = toast = null;
+    [fond, troupe, bouton, puce, toast, bossZone].forEach(function (x) { if (x) x.remove(); });
+    fond = troupe = bouton = puce = toast = bossZone = bossEl = barre = bossEtat = null;
+    total = 0;
+    fermerVictoire();
     points = null;
     file = 0;
     racine.classList.remove('hanter-en-cours');
     remettreAnnonce();
   }
 
-  // Appelée à chaque réponse de /api/etat : e = événement en cours, fini = dernier événement arrêté (ou null).
-  function suivre(e, fini) {
+  // Appelée à chaque réponse de /api/etat : e = événement en cours, fini = dernier événement arrêté (ou null),
+  // r = toute la réponse (boss, total des fantômes attrapés, seuil du boss).
+  function suivre(e, fini, r) {
     var avant = en;
-    if (e) { demarrer(e); return; }
+    r = r || {};
+    if (e) {
+      demarrer(e);
+      if (typeof r.seuil === 'number') seuil = r.seuil;
+      if (typeof r.total === 'number') total = r.total;
+      majBoss(r.boss || null);
+      majCollectif();
+      return;
+    }
     if (avant) arreter();
     if (!fini) return;
     if (accueil) annonceFini(fini);
