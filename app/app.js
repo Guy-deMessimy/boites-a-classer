@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.5.0';
+  const VERSION = '3.6.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1922,6 +1922,7 @@
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
         entreeMenu('💡 Un indice', donnerIndice),
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
+        entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
         document.createElement('hr'),
         entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
@@ -1952,6 +1953,20 @@
       s.appendChild(img);
     } else s.textContent = e.emoji || '❓';
     return s;
+  }
+
+  // Lien qui ouvre directement la collection affichée (à donner à une classe). Rien du travail n'y est mis.
+  async function partagerExercice() {
+    fermerMenu();
+    const lien = 'https://boites-a-classer.pages.dev/app/#collection=' + encodeURIComponent(coll.id);
+    try {
+      if (tactile.matches && navigator.share) await navigator.share({ title: `Boîtes à classer : ${coll.nom}`, url: lien });
+      else await navigator.clipboard.writeText(lien);
+      info.textContent = `🔗 Lien de « ${coll.nom} » ${tactile.matches && navigator.share ? 'partagé' : 'copié'} : ${lien}`;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+      info.textContent = `🔗 Lien de « ${coll.nom} » : ${lien}`;
+    }
   }
 
   /* L'arbre : la classification emboîtée dessinée comme un arbre de parenté. */
