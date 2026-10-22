@@ -187,7 +187,7 @@ const actions = {
 
   async support(request, env) {
     const { results } = await env.DB.prepare('SELECT f.id, f.compte, f.resolu, f.maj, f.non_lus_admin AS non_lus, '
-      + 'c.identifiant, c.nom, cl.nom AS classe, p.identifiant AS de, '
+      + 'c.identifiant, c.nom, c.avatar, cl.nom AS classe, p.identifiant AS de, '
       + '(SELECT texte FROM support_messages WHERE fil = f.id ORDER BY id DESC LIMIT 1) AS dernier, '
       + '(SELECT auteur FROM support_messages WHERE fil = f.id ORDER BY id DESC LIMIT 1) AS dernier_auteur '
       + 'FROM support_fils f LEFT JOIN comptes c ON c.id = f.compte LEFT JOIN classes cl ON cl.id = c.classe '
@@ -196,7 +196,7 @@ const actions = {
       fils: results.map((f) => ({
         id: f.id,
         anonyme: !f.compte,
-        qui: f.compte ? (f.classe ? f.nom : f.identifiant) : 'Visiteur sans compte n° ' + f.id.slice(0, 4),
+        qui: f.compte ? (f.avatar ? f.avatar + ' ' : '') + (f.classe ? f.nom : f.identifiant) : 'Visiteur sans compte n° ' + f.id.slice(0, 4),
         detail: f.classe ? `élève · ${f.classe} (${f.de || '?'})` : '',
         resolu: !!f.resolu, maj: f.maj, non_lus: f.non_lus,
         dernier: (f.dernier_auteur === 'admin' ? 'Vous : ' : '') + String(f.dernier || '').slice(0, 140),

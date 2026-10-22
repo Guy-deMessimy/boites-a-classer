@@ -115,7 +115,10 @@
     td.date { min-width: 9em; }
     .badge { display: inline-block; margin: 2px 0 2px 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent-doux); color: var(--accent); font-size: .78rem; font-weight: 600; white-space: nowrap; }
     .resultat td { background: var(--accent-doux); }
+    .avatar { display: inline-grid; place-items: center; width: 1.7em; height: 1.7em; margin-right: 6px; border-radius: 50%; background: var(--accent-doux); line-height: 1; vertical-align: middle; }
     .choix-avatar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .choix-avatar .groupe { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; width: 100%; }
+    .choix-avatar .groupe small { min-width: 6.5em; color: var(--doux); }
     .choix-avatar .emoji { min-width: 2.4em; padding: 4px; font-size: 1.3rem; line-height: 1; }
     .choix-avatar .emoji.actuel { outline: 2px solid var(--accent); }
     .choix-avatar input { width: 7em; padding: 6px 8px; font: inherit; font-size: 1.1rem; }
@@ -257,7 +260,12 @@
       var comptes = [];
       var resultats = {}; // identifiant → nouveau mot de passe à afficher sous sa ligne
       var choixAvatar = null; // identifiant dont on choisit la photo de profil (ligne sous la sienne)
-      var AVATARS = ['🎃', '👻', '🦊', '🐱', '🐶', '🐼', '🦁', '🐸', '🦉', '🐢', '🦄', '🐙', '🌻', '⭐', '🚀', '⚽', '🎨', '🎸', '🧑‍🏫', '🧑‍🔬'];
+      var AVATARS = [
+        ['Événements', ['🎃', '🧛', '👻', '🦇', '🎅', '⛄', '🧝', '🎄']],
+        ['Animaux', ['🦊', '🐱', '🐶', '🐼', '🦁', '🐸', '🦉', '🐢', '🦄', '🐙', '🐝', '🦋']],
+        ['Autres', ['🌻', '⭐', '🚀', '⚽', '🎨', '🎸', '📚', '🔬', '🧑‍🏫', '🧑‍🔬']],
+      ];
+      var TOUS_AVATARS = AVATARS.reduce(function (t, g) { return t.concat(g[1]); }, []);
 
       // Mots pour fabriquer un mot de passe facile à dicter à un élève (3 mots + 2 chiffres, environ 30 bits).
       var MOTS = ('abeille agneau aigle baleine bison castor chameau cheval chevre cigale cigogne crabe criquet cygne dauphin '
@@ -527,7 +535,14 @@
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
           // Un élève (créé par son enseignant) est montré par son prénom, avec sa classe.
-          nom.textContent = (c.avatar ? c.avatar + ' ' : '') + (c.classe ? c.nom + ' ' : c.identifiant);
+          if (c.avatar) {
+            var avatar = document.createElement('span');
+            avatar.className = 'avatar';
+            avatar.title = 'Photo de profil';
+            avatar.textContent = c.avatar;
+            nom.appendChild(avatar);
+          }
+          nom.append(c.classe ? c.nom + ' ' : c.identifiant);
           var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
           // Badges gagnés pendant les événements (boss d'Halloween).
           var gagnes = [];
@@ -626,16 +641,26 @@
         td.colSpan = 6;
         var boite = document.createElement('div');
         boite.className = 'choix-avatar';
-        boite.append('Photo de profil de ' + (c.nom || c.identifiant) + ' : ');
-        AVATARS.forEach(function (a) {
-          var b = bouton(a, function (ev) { changerAvatar(c, a, ev.currentTarget); }, 'emoji' + (c.avatar === a ? ' actuel' : ''));
-          b.title = 'Choisir ' + a;
-          boite.appendChild(b);
+        var titre = document.createElement('strong');
+        titre.textContent = 'Photo de profil de ' + (c.nom || c.identifiant) + (c.avatar ? ' (aujourd\'hui : ' + c.avatar + ')' : '') + ' :';
+        boite.appendChild(titre);
+        AVATARS.forEach(function (g) {
+          var groupe = document.createElement('div');
+          groupe.className = 'groupe';
+          var nomGroupe = document.createElement('small');
+          nomGroupe.textContent = g[0];
+          groupe.appendChild(nomGroupe);
+          g[1].forEach(function (a) {
+            var b = bouton(a, function (ev) { changerAvatar(c, a, ev.currentTarget); }, 'emoji' + (c.avatar === a ? ' actuel' : ''));
+            b.title = 'Choisir ' + a;
+            groupe.appendChild(b);
+          });
+          boite.appendChild(groupe);
         });
         var autre = document.createElement('input');
         autre.placeholder = 'autre emoji';
         autre.setAttribute('aria-label', 'Autre emoji');
-        autre.value = c.avatar && AVATARS.indexOf(c.avatar) < 0 ? c.avatar : '';
+        autre.value = c.avatar && TOUS_AVATARS.indexOf(c.avatar) < 0 ? c.avatar : '';
         autre.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') changerAvatar(c, autre.value.trim(), autre); });
         boite.append(autre, bouton('OK', function (ev) { changerAvatar(c, autre.value.trim(), ev.currentTarget); }));
         if (c.avatar) boite.append(bouton('Enlever la photo', function (ev) { changerAvatar(c, null, ev.currentTarget); }));
@@ -651,7 +676,7 @@
         appel('avatar', { identifiant: c.identifiant, avatar: avatar }).then(function (x) {
           if (x.statut !== 204) { b.disabled = false; message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
           choixAvatar = null;
-          message(avatar ? 'Photo de profil de ' + (c.nom || c.identifiant) + ' : ' + avatar + ' (visible à sa prochaine ouverture du logiciel).'
+          message(avatar ? 'Photo de profil de ' + (c.nom || c.identifiant) + ' : ' + avatar + ' (visible dans son logiciel dès qu\'il l\'ouvre ou y revient).'
             : 'Photo de profil de ' + (c.nom || c.identifiant) + ' enlevée.');
           charger();
         }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });

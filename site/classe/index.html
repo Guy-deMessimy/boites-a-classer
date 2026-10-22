@@ -119,6 +119,7 @@
     th { color: var(--doux); font-weight: 600; white-space: nowrap; }
     tr:last-child td { border-bottom: 0; }
     td.nom { font-weight: 600; }
+    .avatar { display: inline-grid; place-items: center; width: 1.7em; height: 1.7em; margin-right: 6px; border-radius: 50%; background: var(--accent-doux); font-weight: 400; line-height: 1; vertical-align: middle; }
     .exercices { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 4px 16px; margin: 10px 0; }
     .exercices h4 { grid-column: 1 / -1; margin: 8px 0 0; font-size: .9rem; color: var(--doux); }
     .exercices label { display: flex; align-items: center; gap: 6px; font-size: .92rem; cursor: pointer; }
@@ -510,7 +511,14 @@
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
           nom.className = 'nom';
-          nom.textContent = e.nom;
+          if (e.avatar) { // photo de profil donnée par l'admin
+            var avatar = document.createElement('span');
+            avatar.className = 'avatar';
+            avatar.title = 'Photo de profil';
+            avatar.textContent = e.avatar;
+            nom.appendChild(avatar);
+          }
+          nom.append(e.nom);
           var connexion = document.createElement('td');
           if (e.derniere === e.cree) {
             connexion.className = 'jamais';

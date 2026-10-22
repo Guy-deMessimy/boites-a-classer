@@ -6,7 +6,7 @@
 //   POST /api/classe/renommer      { classe, nom } → 204
 //   POST /api/classe/exercices     { classe, ids: [id de collection…] } exercices donnés à la classe (30 au plus) → 204
 //   POST /api/classe/suppression   { classe }    efface la classe, les comptes de ses élèves et leur travail → 204
-//   GET  /api/classe/eleves?classe=…             → { classe: { id, nom }, eleves: [{ id, nom, cree, derniere, versions, date }] }
+//   GET  /api/classe/eleves?classe=…             → { classe: { id, nom }, eleves: [{ id, nom, avatar, cree, derniere, versions, date }] }
 //   POST /api/classe/ajouter       { classe, noms: [prénom…] } → { eleves: [{ id, nom, code }] }   codes montrés une seule fois
 //   POST /api/classe/nouveau-code  { eleve }     → { id, nom, code }   l'ancien code ne marche plus, ses appareils sont déconnectés
 //   POST /api/classe/nouveaux-codes { classe }   → { eleves: [{ id, nom, code }] }   la même chose pour toute la classe
@@ -132,7 +132,7 @@ const actions = {
   async eleves(request, env, moi) {
     const c = await maClasse(env, moi, new URL(request.url).searchParams.get('classe'));
     if (c instanceof Response) return c;
-    const { results } = await env.DB.prepare('SELECT e.id, e.nom, e.cree, e.derniere, count(s.version) AS versions, max(s.date) AS date '
+    const { results } = await env.DB.prepare('SELECT e.id, e.nom, e.avatar, e.cree, e.derniere, count(s.version) AS versions, max(s.date) AS date '
       + 'FROM comptes e LEFT JOIN sauvegardes s ON s.cle = \'compte:\' || e.id '
       + 'WHERE e.classe = ? GROUP BY e.id ORDER BY e.nom COLLATE NOCASE').bind(c.id).all();
     return json({ classe: c, eleves: results });

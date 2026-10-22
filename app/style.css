@@ -880,3 +880,10 @@ body.consultation #exercices { display: none; }
   .actions { width: 100%; margin-left: 0; }
   #compte { margin-left: auto; }
 }
+
+/* Photo de profil (un emoji choisi par l'admin) : dans un rond, sur le bouton du compte et dans sa fenêtre. */
+.avatar { display: inline-grid; place-items: center; width: 1.55em; height: 1.55em; border-radius: 50%; background: var(--fond-accent); box-shadow: inset 0 0 0 1px var(--ligne); line-height: 1; vertical-align: middle; }
+#compte .avatar { margin-block: -.3em; }
+#compte.connecte .avatar { background: var(--surface); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 35%, transparent); }
+.avatar.grand { width: 2.4em; height: 2.4em; font-size: 1.5rem; flex: none; }
+.sv-qui { display: flex; align-items: center; gap: .7rem; }

@@ -2831,7 +2831,9 @@
   const boutonCompte = $('#compte');
   function majBoutonCompte() {
     const nom = jetonCompte() && lire(CLE_IDENTIFIANT);
-    $('#compte-avatar').textContent = (nom && lire(CLE_AVATAR)) || '👤';
+    const avatar = nom && lire(CLE_AVATAR);
+    $('#compte-avatar').textContent = avatar || '👤';
+    $('#compte-avatar').classList.toggle('avatar', !!avatar); // photo de profil dans un rond
     $('#compte-nom').textContent = ' ' + (nom || 'Se connecter');
     if (nom) ajouterBadges($('#compte-nom'));
     boutonCompte.title = nom ? `Compte ${nom} : sauvegarde en ligne` : 'Se connecter pour sauvegarder son travail en ligne';
@@ -2884,8 +2886,11 @@
   // Le compte vient de gagner des badges (site/evenement.js, victoire contre le boss).
   window.addEventListener('hanter:badges', () => rafraichirCompte());
 
-  // Relit l'état du compte au démarrage : un rôle donné ou retiré entre-temps, un prénom changé par l'enseignant.
+  // Relit l'état du compte au démarrage et au retour sur l'onglet (une fois par minute au plus) : un rôle donné ou retiré
+  // entre-temps, un prénom changé par l'enseignant, une photo de profil donnée par l'admin.
+  let compteRelu = 0;
   async function rafraichirCompte() {
+    compteRelu = Date.now();
     const jeton = jetonCompte();
     if (!jeton || !enLignePossible) return;
     try {
@@ -3115,9 +3120,11 @@
     if (!$('#sv-identifiant').value) $('#sv-identifiant').value = lire(CLE_IDENTIFIANT) || '';
     for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
     if (compte) {
-      $('#sv-identifiant-affiche').textContent = (lire(CLE_AVATAR) ? lire(CLE_AVATAR) + ' ' : '') + (lire(CLE_IDENTIFIANT) || '');
+      $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
       ajouterBadges($('#sv-identifiant-affiche'));
     }
+    $('#sv-avatar').hidden = !compte || !lire(CLE_AVATAR);
+    $('#sv-avatar').textContent = (compte && lire(CLE_AVATAR)) || '';
     $('#sv-badges').hidden = !compte || !badgesCompte().length;
     $('#sv-badges').textContent = 'Badges : ' + badgesCompte().map((b) => BADGES[b][0] + ' ' + BADGES[b][1]).join(' · ');
     $('#sv-admin').hidden = !compte || !lire(CLE_ADMIN);
@@ -3484,6 +3491,9 @@
   window.addEventListener('online', () => { if (lire(CLE_ATTENTE)) envoyer(); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') { if (lire(CLE_ATTENTE)) envoyer(); } else synchroniser();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - compteRelu > 60000 && !document.body.classList.contains('consultation')) rafraichirCompte();
   });
 
   $('#sv-lien-classes').href = SITE + '/classe/';
