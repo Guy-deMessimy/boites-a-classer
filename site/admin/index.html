@@ -313,7 +313,7 @@
           $('#moi').textContent = 'Compte : ' + identifiant;
           var s = x.r.stats;
           $('#chiffres').replaceChildren.apply($('#chiffres'), [
-            [s.comptes, 'comptes'], [s.abonnes, 'abonnés (3 €/mois)'], [s.codes, 'sauvegardes avec un code'], [s.versions, 'versions gardées'],
+            [s.comptes, 'comptes'], [s.codes, 'sauvegardes avec un code'], [s.versions, 'versions gardées'],
             [taille(s.taille), 'de place utilisée (5 Go offerts)'], [s.sessions, 'sessions ouvertes'],
           ].map(function (c) {
             var li = document.createElement('li');
@@ -345,15 +345,12 @@
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
           nom.textContent = c.identifiant;
-          var badges = [];
-          if (c.admin) badges.push('admin');
-          if (c.abonne_jusqua && Date.parse(c.abonne_jusqua) > Date.now()) badges.push('abonné');
-          badges.forEach(function (t) {
+          if (c.admin) {
             var badge = document.createElement('span');
             badge.className = 'badge';
-            badge.textContent = t;
+            badge.textContent = 'admin';
             nom.appendChild(badge);
-          });
+          }
           tr.appendChild(nom);
           [date(c.cree), date(c.derniere), c.versions ? date(c.date) + ' (' + c.versions + ' v.)' : 'aucune'].forEach(function (t) {
             var td = document.createElement('td');

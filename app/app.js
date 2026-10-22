@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.5.0';
+  const VERSION = '2.4.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -59,11 +59,8 @@
   const toutes = () => [...FOURNIES, ...collectionsSite, ...mesCollections];
   const estPerso = (c) => mesCollections.includes(c);
   const estSite = (c) => collectionsSite.includes(c);
-  // Seuls un admin et un abonné créent et modifient des collections (le serveur le vérifie aussi pour celles du site) ;
-  // un abonné ne modifie que les siennes (modifiablesSite, donné par le serveur).
+  // Seul un admin crée et modifie des collections (le serveur le vérifie aussi pour celles du site).
   const estAdmin = () => !!jetonCompte() && lire(CLE_ADMIN) === '1';
-  const peutCreer = () => !!jetonCompte() && (lire(CLE_ADMIN) === '1' || lire(CLE_ABONNE) === '1');
-  let modifiablesSite = new Set();
 
   const nomAttr = (id) => (attrParId.get(id) || { nom: id }).nom;
   const couleurBoite = (b) => (b.attr && attrParId.has(b.attr) ? attrParId.get(b.attr).couleur : GRIS);
@@ -909,7 +906,7 @@
         return;
       }
       // Un fichier de travail apporte sa collection ; un fichier de collection seule est réservé à l'admin.
-      if (lu.type === 'collection' && !peutCreer()) throw new Error('seuls les abonnés et les administrateurs peuvent ajouter une collection');
+      if (lu.type === 'collection' && !estAdmin()) throw new Error('seul un administrateur peut ajouter une collection');
       const c = integrerCollection(lu.collection);
       fermerFenetres();
       if (lu.type === 'travail') {
@@ -1080,11 +1077,10 @@
       return b;
     };
 
-    const createur = peutCreer();
+    const admin = estAdmin();
     const ligne = (c) => {
       const perso = estPerso(c);
       const site = estSite(c);
-      const modifiable = site && (estAdmin() || modifiablesSite.has(c.id));
       const el = document.createElement('div');
       el.className = 'coll' + (c === coll ? ' courante' : '');
       const infos = document.createElement('div');
@@ -1101,9 +1097,9 @@
       if (c !== coll) {
         actions.appendChild(bouton('Utiliser', () => { fermerFenetres(); choisirCollection(c.id); }));
       }
-      if (createur && (perso || modifiable)) {
+      if (admin && (perso || site)) {
         actions.appendChild(bouton('✎ Modifier', () => ouvrirEditeur(c, false)));
-      } else if (createur) {
+      } else if (admin) {
         actions.appendChild(bouton('Copier pour modifier', () => {
           const copie = copieCollection(c);
           copie.id = nouvelId('site-');
@@ -1111,7 +1107,7 @@
           ouvrirEditeur(copie, true);
         }));
       }
-      if (createur && perso) {
+      if (admin && perso) {
         actions.appendChild(bouton('☁️ Publier sur le site', async () => {
           const zone = fenCollections.querySelector('.message');
           try {
@@ -1143,7 +1139,7 @@
         suppr.innerHTML = '<span class="txt-normal">Supprimer</span><span class="txt-confirmer">Confirmer ?</span>';
         actions.appendChild(suppr);
       }
-      if (createur && modifiable) {
+      if (admin && site) {
         const retirer = bouton('', async () => {
           if (!retirer.classList.contains('confirmer')) {
             retirer.classList.add('attention', 'confirmer');
@@ -1181,12 +1177,12 @@
       return s;
     };
 
-    $('#coll-aide').textContent = createur
-      ? 'Les collections que vous créez ici sont publiées sur le site et proposées à tout le monde ; vous pouvez modifier ou retirer les vôtres. Les collections fournies ne se modifient pas : copiez-en une pour l\'adapter.'
-      : 'Choisissez la collection à classer. Pour créer vos propres collections, abonnez-vous (bouton 👤).';
-    $('#coll-nouvelle').hidden = !createur;
+    $('#coll-aide').textContent = admin
+      ? 'Administrateur : les collections que vous créez ou modifiez ici sont publiées sur le site et proposées à tout le monde. Les collections fournies ne se modifient pas : copiez-en une pour l\'adapter.'
+      : 'Choisissez la collection à classer. Seul un administrateur peut créer ou modifier des collections.';
+    $('#coll-nouvelle').hidden = !admin;
     const sections = [];
-    if (createur || collectionsSite.length) {
+    if (admin || collectionsSite.length) {
       sections.push(section('Collections du site', collectionsSite, 'Aucune pour l\'instant : créez-en une, ou copiez une collection fournie.'));
     }
     if (mesCollections.length) sections.push(section('Mes collections (dans ce navigateur)', mesCollections, ''));
@@ -1875,7 +1871,6 @@
   // l'application de bureau (http://localhost:47821) et un fichier ouvert en local passent par le site.
   const RACINE_API = location.protocol === 'https:' || location.port === '8788' ? '/api' : 'https://boites-a-classer.pages.dev/api';
   const API = RACINE_API + '/sauvegarde';
-  const SITE = RACINE_API.slice(0, -'/api'.length); // pages du site (abonnement, classe, administration)
   const API_COMPTE = RACINE_API + '/compte/';
   // Ces clés n'ont pas le préfixe « boites-a-classer: » : elles ne font pas partie de ce qu'on sauvegarde.
   const CLE_CODE = 'boites-a-classer-sauvegarde:code';
@@ -1885,7 +1880,6 @@
   const CLE_JETON = 'boites-a-classer-compte:jeton'; // session ouverte (functions/api/compte/[action].js)
   const CLE_IDENTIFIANT = 'boites-a-classer-compte:identifiant';
   const CLE_ADMIN = 'boites-a-classer-compte:admin'; // « 1 » : lien vers la page d'administration (le serveur vérifie)
-  const CLE_ABONNE = 'boites-a-classer-compte:abonne'; // « 1 » : abonné (collections, page Ma classe ; le serveur vérifie)
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
   const FORME_CODE = /^[a-z]{2,12}(-[a-z]{2,12}){3}$/;
   const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
@@ -1967,7 +1961,6 @@
   function sessionExpiree() {
     oublier(CLE_JETON);
     oublier(CLE_ADMIN);
-    oublier(CLE_ABONNE);
     oublier(CLE_VERSION);
     oublier(CLE_DATE);
     majBoutonCompte();
@@ -2097,50 +2090,14 @@
   }
 
   // Commence à sauvegarder sur ce compte (après une connexion ou une création de compte).
-  function ouvrirSession(identifiant, jeton, etat) {
+  function ouvrirSession(identifiant, jeton, admin) {
     clearTimeout(minuterieEnvoi);
     for (const k of [CLE_CODE, CLE_VERSION, CLE_DATE]) oublier(k); // un code éventuel reste valable sur le serveur
     ecrire(CLE_JETON, jeton);
     ecrire(CLE_IDENTIFIANT, identifiant);
-    retenirDroits(etat);
-    chargerCollectionsSite(); // droits de modification des collections du site
+    if (admin) ecrire(CLE_ADMIN, '1'); else oublier(CLE_ADMIN);
     etatEnLigne = { texte: '', erreur: false };
     majBoutonCompte();
-  }
-
-  // Droits du compte connecté, donnés par le serveur à la connexion et relus à l'ouverture de la fenêtre.
-  function retenirDroits(etat) {
-    if (etat && etat.admin) ecrire(CLE_ADMIN, '1'); else oublier(CLE_ADMIN);
-    if (etat && etat.abonne) ecrire(CLE_ABONNE, '1'); else oublier(CLE_ABONNE);
-    enseignant = (etat && etat.enseignant) || null;
-  }
-  let enseignant = null; // classe rejointe par l'élève connecté (identifiant de l'enseignant)
-
-  async function rafraichirCompte() {
-    const jeton = jetonCompte();
-    if (!jeton) return;
-    try {
-      const { statut, r } = await appelCompte('session', undefined, jeton);
-      if (statut === 401 && jetonCompte() === jeton) { sessionExpiree(); return; }
-      if (statut !== 200 || jetonCompte() !== jeton) return;
-      const avant = String(lire(CLE_ADMIN)) + lire(CLE_ABONNE);
-      retenirDroits(r);
-      if (avant !== String(lire(CLE_ADMIN)) + lire(CLE_ABONNE)) chargerCollectionsSite(); // droits de modification
-      if (fenSauvegarde.open) rendreCompte();
-    } catch (e) { /* hors connexion */ }
-  }
-
-  function rendreCompte() {
-    const compte = !!jetonCompte();
-    const admin = lire(CLE_ADMIN) === '1';
-    const abonne = lire(CLE_ABONNE) === '1';
-    $('#sv-admin').hidden = !compte || !admin;
-    $('#sv-abonne').hidden = !compte || !abonne;
-    $('#sv-sabonner').hidden = !compte || admin || abonne;
-    $('#sv-classe').hidden = !compte || admin || abonne;
-    $('#sv-classe-dans').hidden = !enseignant;
-    $('#sv-form-classe').hidden = !!enseignant;
-    $('#sv-nom-enseignant').textContent = enseignant || '';
   }
 
   // Deux contenus identiques, quel que soit l'ordre des clés ?
@@ -2157,7 +2114,6 @@
   function lireCollectionsSite(texte) {
     let liste = [];
     try { liste = JSON.parse(texte); } catch (e) { /* rien de gardé */ }
-    if (Array.isArray(liste)) modifiablesSite = new Set(liste.filter((c) => c && c.modifiable).map((c) => c.id));
     const res = [];
     for (const c of Array.isArray(liste) ? liste : []) {
       try {
@@ -2172,25 +2128,25 @@
     const avant = JSON.stringify(collectionsSite);
     collectionsSite = liste;
     ecrire(CLE_COLLECTIONS_SITE, JSON.stringify(liste));
-    if (fenCollections.open) remplirListeCollections(); // les droits de modification ont pu changer
     if (JSON.stringify(liste) === avant) return;
     remplirSelect();
     // La collection en cours a changé ou a été retirée : on la recharge (ou on revient à la première fournie).
     if (coll && coll.id.startsWith('site-')) choisirCollection(coll.id);
+    if (fenCollections.open) remplirListeCollections();
   }
 
   async function chargerCollectionsSite() {
     try {
-      const rep = await fetch(RACINE_API + '/collections', jetonCompte() ? { headers: { Authorization: 'Bearer ' + jetonCompte() } } : {});
+      const rep = await fetch(RACINE_API + '/collections');
       if (rep.ok) appliquerCollectionsSite(lireCollectionsSite(await rep.text()));
     } catch (e) { /* hors connexion : on garde la copie de l'appareil */ }
   }
 
-  async function appelCollections(methode, corps, id) {
-    const rep = await fetch(RACINE_API + '/collections' + (id ? '?id=' + encodeURIComponent(id) : ''), {
-      method: methode,
+  async function appelAdmin(action, corps) {
+    const rep = await fetch(RACINE_API + '/admin/' + action, {
+      method: 'POST',
       headers: { Authorization: 'Bearer ' + jetonCompte(), 'Content-Type': 'application/json' },
-      body: corps ? JSON.stringify(corps) : undefined,
+      body: JSON.stringify(corps),
     });
     if (rep.status === 401) { sessionExpiree(); throw new Error('session expirée, reconnecte-toi'); }
     if (rep.status !== 204) {
@@ -2202,14 +2158,13 @@
 
   async function publierCollection(c) {
     const propre = nettoyerCollection(c);
-    await appelCollections('POST', { collection: propre });
-    modifiablesSite.add(propre.id);
+    await appelAdmin('collection', { collection: propre });
     const existe = collectionsSite.some((x) => x.id === propre.id);
     appliquerCollectionsSite(existe ? collectionsSite.map((x) => (x.id === propre.id ? propre : x)) : [...collectionsSite, propre]);
   }
 
   async function retirerCollection(c) {
-    await appelCollections('DELETE', null, c.id);
+    await appelAdmin('collection-suppression', { id: c.id });
     appliquerCollectionsSite(collectionsSite.filter((x) => x.id !== c.id));
   }
 
@@ -2239,7 +2194,6 @@
     rendreSauvegarde();
     fenSauvegarde.showModal();
     if (!jetonCompte() && !codeSauvegarde() && enLignePossible) $('#sv-identifiant').focus();
-    rafraichirCompte();
   }
 
   function rendreSauvegarde() {
@@ -2262,9 +2216,9 @@
     $('#sv-entrer').textContent = creation ? 'Créer mon compte' : 'Se connecter';
     $('#sv-bascule').textContent = creation ? 'J\'ai déjà un compte' : 'Créer un compte';
     if (!$('#sv-identifiant').value) $('#sv-identifiant').value = lire(CLE_IDENTIFIANT) || '';
-    for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer'), $('#sv-quitter-classe')]) remettreConfirmation(b);
+    for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
     if (compte) $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
-    rendreCompte();
+    $('#sv-admin').hidden = !compte || !lire(CLE_ADMIN);
     if (code) $('#sv-code-affiche').textContent = code;
     if (compte || code) {
       majEtatEnLigne();
@@ -2365,7 +2319,7 @@
 
       if (creation) {
         // Nouveau compte : le travail de ce navigateur devient sa première version.
-        ouvrirSession(identifiant, r.jeton, r);
+        ouvrirSession(identifiant, r.jeton);
         ecrire(CLE_ATTENTE, '1');
         envoyer();
         creation = false;
@@ -2378,12 +2332,12 @@
       const v = await lireVersion('compte ' + r.jeton);
       const local = donneesLocales();
       if (v && Object.keys(local).length && !memesDonnees(local, v.donnees)) {
-        enAttenteDeChoix = { identifiant, jeton: r.jeton, etat: r, v };
+        enAttenteDeChoix = { identifiant, jeton: r.jeton, admin: r.admin, v };
         rendreSauvegarde();
         svMessage.textContent = '';
         return;
       }
-      ouvrirSession(identifiant, r.jeton, r);
+      ouvrirSession(identifiant, r.jeton, r.admin);
       if (v) {
         appliquerVersion(v.donnees, v.version, v.date);
         fermerFenetres();
@@ -2402,18 +2356,18 @@
   });
 
   $('#sv-prendre').addEventListener('click', () => {
-    const { identifiant, jeton, etat, v } = enAttenteDeChoix;
+    const { identifiant, jeton, admin, v } = enAttenteDeChoix;
     enAttenteDeChoix = null;
-    ouvrirSession(identifiant, jeton, etat);
+    ouvrirSession(identifiant, jeton, admin);
     appliquerVersion(v.donnees, v.version, v.date);
     fermerFenetres();
     info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
   });
 
   $('#sv-garder').addEventListener('click', () => {
-    const { identifiant, jeton, etat } = enAttenteDeChoix;
+    const { identifiant, jeton, admin } = enAttenteDeChoix;
     enAttenteDeChoix = null;
-    ouvrirSession(identifiant, jeton, etat);
+    ouvrirSession(identifiant, jeton, admin);
     ecrire(CLE_ATTENTE, '1'); // devient la version la plus récente du compte
     envoyer();
     rendreSauvegarde();
@@ -2447,7 +2401,7 @@
     remettreConfirmation(bouton);
     const jeton = jetonCompte();
     clearTimeout(minuterieEnvoi);
-    for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ABONNE, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+    for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
     appelCompte('deconnexion', {}, jeton).catch(() => { /* la session expirera d'elle-même */ });
     if (effacer) appliquerVersion({});
     etatEnLigne = { texte: '', erreur: false };
@@ -2455,7 +2409,6 @@
     $('#sv-effacer').checked = false;
     majBoutonCompte();
     rendreSauvegarde();
-    modifiablesSite = new Set();
     svMessage.textContent = effacer
       ? 'Déconnecté. Le travail a été effacé de ce navigateur ; il reste sur ton compte.'
       : 'Déconnecté. Ton travail reste dans ce navigateur, et sur ton compte.';
@@ -2498,51 +2451,12 @@
       if (statut === 403) { svMessage.textContent = 'Mot de passe incorrect : le compte n\'a pas été supprimé.'; return; }
       if (statut !== 204) { svMessage.textContent = messageErreur(statut, r); return; }
       clearTimeout(minuterieEnvoi);
-      for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ABONNE, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+      for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
       $('#sv-mdp-suppression').value = $('#sv-identifiant').value = '';
       ev.target.closest('details').open = false;
       majBoutonCompte();
       rendreSauvegarde();
       svMessage.textContent = 'Compte supprimé, avec tout son travail sur le serveur. Ton travail reste dans ce navigateur.';
-    } catch (e) {
-      svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
-    }
-  });
-
-  $('#sv-lien-admin').href = SITE + '/admin/';
-  $('#sv-lien-classe').href = SITE + '/classe/';
-  $('#sv-lien-abonnement').href = SITE + '/abonnement/';
-
-  $('#sv-form-classe').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const code = $('#sv-code-classe').value.trim().toUpperCase();
-    if (!/^[A-Z0-9]{6}$/.test(code)) { svMessage.textContent = 'Un code de classe a 6 lettres ou chiffres.'; return; }
-    try {
-      const rep = await fetch(RACINE_API + '/classe/rejoindre', {
-        method: 'POST', headers: { Authorization: 'Bearer ' + jetonCompte(), 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
-      });
-      const r = await rep.json().catch(() => ({}));
-      if (rep.status === 401) { sessionExpiree(); return; }
-      if (!rep.ok) { svMessage.textContent = messageErreur(rep.status, r); return; }
-      enseignant = r.enseignant;
-      $('#sv-code-classe').value = '';
-      rendreCompte();
-      svMessage.textContent = `Tu as rejoint la classe de ${r.enseignant}.`;
-    } catch (e) {
-      svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
-    }
-  });
-
-  $('#sv-quitter-classe').addEventListener('click', async (ev) => {
-    const bouton = ev.currentTarget;
-    if (!confirme(bouton)) return;
-    try {
-      const rep = await fetch(RACINE_API + '/classe/quitter', { method: 'POST', headers: { Authorization: 'Bearer ' + jetonCompte() } });
-      if (rep.status === 401) { sessionExpiree(); return; }
-      if (!rep.ok) throw new Error('serveur ' + rep.status);
-      enseignant = null;
-      rendreCompte();
-      svMessage.textContent = 'Tu as quitté la classe.';
     } catch (e) {
       svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
     }
@@ -2630,9 +2544,8 @@
     const jeton = jetonCompte();
     let donnees;
     try {
-      if (!jeton) throw new Error('connecte-toi d\'abord');
-      const source = lire(CLE_ADMIN) === '1' ? '/admin/travail' : '/classe/travail'; // admin : tous ; abonné : ses élèves
-      const rep = await fetch(RACINE_API + source + '?identifiant=' + encodeURIComponent(identifiant), {
+      if (!jeton) throw new Error('connecte-toi d\'abord avec un compte admin');
+      const rep = await fetch(RACINE_API + '/admin/travail?identifiant=' + encodeURIComponent(identifiant), {
         headers: { Authorization: 'Bearer ' + jeton },
       });
       if (!rep.ok) {
