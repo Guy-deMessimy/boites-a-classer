@@ -641,6 +641,15 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
   body.imprime-tableau .tableau-defile { max-height: none; overflow: visible; border: 0; }
   body.imprime-tableau .tableau-caracteres th, body.imprime-tableau .tableau-caracteres td { border: 1px solid #555; background: #fff !important; color: #000; position: static; min-width: 2.2em; height: 2.2em; }
   body.imprime-tableau.tableau-vide .tableau-caracteres td.oui { color: transparent !important; }
+  body.imprime-arbre > *:not(#fen-arbre) { display: none !important; }
+  body.imprime-arbre #fen-arbre { display: block !important; position: static; width: auto; max-width: none; max-height: none; margin: 0; border: 0; box-shadow: none; background: #fff; color: #000; }
+  body.imprime-arbre #fen-arbre::backdrop { display: none; }
+  body.imprime-arbre #fen-arbre .fenetre-tete, body.imprime-arbre #fen-arbre .arbre-actions, body.imprime-arbre #arbre-aide { display: none !important; }
+  body.imprime-arbre .impression-titre { display: block; margin: 0 0 8px; font-weight: 700; }
+  body.imprime-arbre .arbre { overflow: visible; }
+  body.imprime-arbre .arbre svg { max-width: 100%; height: auto; color: #000; }
+  body.imprime-arbre .arbre .branches { stroke: #444; }
+  body.imprime-arbre .arbre svg rect, body.imprime-arbre .arbre svg circle { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 .jeu-etat { min-height: 1.6em; margin: 0 0 .4rem; font-weight: 700; }

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.14.0';
+  const VERSION = '3.14.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2116,6 +2116,7 @@
     if (vides.length) notes.push(`Boîtes vides, laissées de côté : ${vides.map((b) => `« ${b.texte || '?'} »`).join(', ')}.`);
     if (racine.enfants.some((f) => f.etre)) notes.push(`Les ${des} posés hors de toute boîte partent directement du tronc.`);
     $('#arbre-notes').replaceChildren(...notes.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+    $('#arbre-titre').textContent = `Boîtes à classer · ${coll.nom} · ma classification en arbre`;
     $('#fen-arbre').showModal();
   }
 
@@ -2168,6 +2169,11 @@
   }
   $('#tableau-imprimer-vide').addEventListener('click', () => imprimerTableau(true));
   $('#tableau-imprimer').addEventListener('click', () => imprimerTableau(false));
+  $('#arbre-imprimer').addEventListener('click', () => {
+    document.body.classList.add('imprime-arbre');
+    window.addEventListener('afterprint', () => document.body.classList.remove('imprime-arbre'), { once: true });
+    window.print();
+  });
 
   /* Jeu « Qui suis-je ? » : trouver l'être vivant choisi au hasard en posant des questions sur ses attributs. */
 
