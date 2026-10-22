@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Halloween · Boîtes à classer</title>
+  <title>Halloween · Boîtes à hanter</title>
   <meta name="description" content="Le clip d'intro de l'événement d'Halloween de Boîtes à classer : même les monstres se rangent dans des boîtes… jusqu'à ce que les fantômes s'échappent !">
   <meta property="og:title" content="L'événement d'Halloween de Boîtes à classer">
   <meta property="og:image" content="https://boites-a-classer.pages.dev/icone.png">
@@ -134,6 +134,12 @@
     .titre #titre h1 { opacity: 1; transform: none; }
     .sous-titre #titre .sous, .petit #titre .petit { opacity: 1; transform: none; }
     .titre .vol { opacity: 1; }
+    /* « Boîtes à classer » devient « Boîtes à hanter » (nom du site pendant Halloween). */
+    .mot { display: inline-grid; }
+    .mot > span { grid-area: 1 / 1; transition: opacity .5s, transform .6s cubic-bezier(.3, 1.5, .5, 1), filter .5s; }
+    .nouveau { color: #c58bff; text-shadow: 0 0 3vmin rgb(180 110 255 / .8), 0 .7vmin 0 #3d1a6b; opacity: 0; transform: translateY(-.4em) scale(1.4); }
+    .hante .ancien { opacity: 0; transform: translateY(.5em) rotate(10deg); filter: blur(.08em); }
+    .hante .nouveau { opacity: 1; transform: none; }
     .vol { position: absolute; width: 7vmin; opacity: 0; transition: opacity 1s; animation: tourne 6s linear infinite; }
     .vol:nth-of-type(2) { animation-duration: 7.5s; animation-direction: reverse; }
     @keyframes tourne { from { transform: rotate(0) translateX(28vmin) rotate(0); } to { transform: rotate(360deg) translateX(28vmin) rotate(-360deg); } }
@@ -184,7 +190,7 @@
     <p id="texte"></p>
     <div id="titre">
       <div id="vols" aria-hidden="true"></div>
-      <h1>Boîtes à classer</h1>
+      <h1>Boîtes à <span class="mot"><span class="ancien">classer</span><span class="nouveau">hanter</span></span></h1>
       <p class="sous">L'événement d'Halloween commence !</p>
       <p class="petit">Les fantômes hantent le site… Bouh ! 👻</p>
     </div>
@@ -200,7 +206,7 @@
 
   <div id="depart" hidden>
     <h1>🎃 Halloween</h1>
-    <p>Le clip d'intro de l'événement d'Halloween de Boîtes à classer (18 secondes).</p>
+    <p>Le clip d'intro de l'événement d'Halloween de Boîtes à hanter (18 secondes).</p>
     <button type="button" id="lancer">▶ Lancer le clip</button>
   </div>
 
@@ -394,9 +400,10 @@
           [9900, function (t) { bip('triangle', E5, t, .4, .15); bip('triangle', 830.6, t + .12, .4, .15); bip('triangle', 987.8, t + .24, .8, .15); }],
           [11700, function (t) { ouh(t, 380); ouh(t + .25, 290); ouh(t + .5, 450); }],
           [13000, tonnerre],
+          [14300, function (t) { ouh(t, 520); }],
           [13400, function (t) { orgue(t, [110, 130.81, 164.81, 220], 3.8); theremine(t + .6, [E5, D5, C5, B4, C5, A4, A4], .45, .12); }],
         ];
-        var FIN = 17500;
+        var FIN = 18000;
         return {
           actif: function () { return actif; },
           // ecoule : temps déjà passé dans le clip (ms) ; seuls les sons à venir sont programmés.
@@ -448,9 +455,10 @@
         [12300, function () { scene.classList.add('efface'); }],
         [13000, function () { taire(); eclair(); }],
         [13400, function () { scene.classList.add('titre'); }],
-        [14200, function () { scene.classList.add('sous-titre'); }],
-        [15000, function () { scene.classList.add('petit'); }],
-        [17300, finir],
+        [14300, function () { scene.classList.add('hante'); }],
+        [15000, function () { scene.classList.add('sous-titre'); }],
+        [15700, function () { scene.classList.add('petit'); }],
+        [17800, finir],
       ];
 
       function finir() {

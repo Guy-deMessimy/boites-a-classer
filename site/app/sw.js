@@ -1,6 +1,6 @@
 // Garde le logiciel en cache pour qu'il fonctionne sans connexion une fois installé.
 // Changer VERSION à chaque publication pour que les appareils récupèrent la nouvelle version.
-const VERSION = 'boites-a-classer-3.25.0';
+const VERSION = 'boites-a-classer-3.25.1';
 const FICHIERS = [
   './', './index.html', './style.css', './app.js', './collections.js', './manifest.webmanifest',
   './icone.png', './icone-apple.png', './icone-192.png', './icone-512.png', './icone-maskable.png',
