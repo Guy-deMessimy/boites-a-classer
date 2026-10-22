@@ -326,6 +326,8 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 }
 .menu button:hover { background: var(--survol); }
 .menu hr { margin: 4px 0; border: 0; border-top: 1px solid var(--ligne); }
+.menu-titre { margin: 6px 8px 2px; color: var(--doux); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.menu-titre:first-child { margin-top: 2px; }
 .menu-attr { max-height: 50vh; }
 .pastille { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
 

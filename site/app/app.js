@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.23.0';
+  const VERSION = '3.23.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2020,19 +2020,25 @@
   /* ---------- Outils ---------- */
 
   function ouvrirMenuOutils() {
+    // En groupes : comprendre, jouer, le plan de travail, imprimer et partager, réglages.
     afficherMenu(boutonOutils, 'outils', (m) => {
+      const titre = (t) => { const h = document.createElement('div'); h.className = 'menu-titre'; h.textContent = t; return h; };
       m.append(
+        titre('Comprendre'),
+        entreeMenu('💡 Un indice', donnerIndice),
         entreeMenu('🌳 Voir ma classification en arbre', ouvrirArbre),
         entreeMenu('📊 Tableau des caractères', ouvrirTableau),
+        titre('Jouer'),
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
-        entreeMenu('💡 Un indice', donnerIndice),
-        entreeMenu('🖨 Cartes à découper (activité sur papier)', imprimerCartes),
-        entreeMenu('❓ Comment ça marche ?', ouvrirAide),
-        entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
-        document.createElement('hr'),
-        ...(peutCreer() ? [entreeMenu('🧑‍🏫 Montrer la solution (enseignants)', montrerSolution)] : []),
-        entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
+        titre('Plan de travail'),
+        entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
+        ...(peutCreer() ? [entreeMenu('🧑‍🏫 Montrer la solution (enseignants)', montrerSolution)] : []),
+        titre('Imprimer et partager'),
+        entreeMenu('🖨 Cartes à découper (activité sur papier)', imprimerCartes),
+        entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
+        titre('Aide'),
+        entreeMenu('❓ Comment ça marche ?', ouvrirAide),
       );
       if (voixPossible) m.appendChild(entreeMenu(voixActive() ? '🔇 Ne plus lire à voix haute' : '🔊 Lire les noms à voix haute', basculerVoix));
     });
