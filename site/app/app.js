@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.4.0';
+  const VERSION = '3.5.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -66,6 +66,10 @@
   const matiere = (c) => (c && c.matiere) || 'sciences';
   // Ce qu'on classe : des êtres vivants en sciences, des « éléments » (mots, nombres, figures…) ailleurs.
   const elements = (c = coll) => (matiere(c) === 'sciences' ? ['être vivant', 'êtres vivants'] : ['élément', 'éléments']);
+  // Collections réussies (tout juste à la vérification) : cochées ✅ dans les listes. Clé sauvegardée en ligne avec le
+  // reste du travail, pour retrouver sa progression sur un autre appareil.
+  const cleReussie = (c) => 'boites-a-classer:reussi:' + c.id;
+  const reussie = (c) => !!lire(cleReussie(c));
   const estPerso = (c) => mesCollections.includes(c);
   const estSite = (c) => collectionsSite.includes(c);
   // Seul un admin crée et modifie des collections (le serveur le vérifie aussi pour celles du site).
@@ -1088,7 +1092,7 @@
     const groupe = (titre, liste) => {
       const g = document.createElement('optgroup');
       g.label = titre;
-      for (const c of liste) g.appendChild(new Option(c.nom, c.id));
+      for (const c of liste) g.appendChild(new Option((reussie(c) ? '✅ ' : '') + c.nom, c.id));
       selColl.appendChild(g);
     };
     for (const [m, titre] of MATIERES) groupe(titre, FOURNIES.filter((c) => matiere(c) === m));
@@ -1136,7 +1140,7 @@
       titre.textContent = c.nom;
       const detail = document.createElement('small');
       detail.textContent = `${pluriel(c.etres.length, ...elements(c))} · ${pluriel(c.attributs.length, 'attribut', 'attributs')}`
-        + (c === coll ? ' · en cours' : '');
+        + (reussie(c) ? ' · ✅ réussie' : '') + (c === coll ? ' · en cours' : '');
       infos.append(titre, detail);
 
       const actions = document.createElement('div');
@@ -1847,6 +1851,12 @@
     for (const e of places) elEtres.get(e.id).classList.add(fautifs.has(e.id) ? 'faux' : 'ok');
     if (complet) {
       dire('Bravo ! Ta classification est correcte.');
+      if (!reussie(coll)) {
+        ecrire(cleReussie(coll), new Date().toISOString());
+        remplirSelect();
+        const faites = toutes().filter(reussie).length;
+        lignes.push(['bravo', `✅ Collection réussie ! Tu en as réussi ${faites} sur ${toutes().length}.`]);
+      }
       const fin = finirDefi();
       if (fin) lignes.splice(1, 0, ['bravo', fin]);
     }

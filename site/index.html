@@ -323,6 +323,7 @@
       <li>Voir sa classification en arbre de parenté 🌳, et le tableau des caractères 📊 de la collection.</li>
       <li>Jouer à « Qui suis-je ? » 🎲 : trouver l'être vivant secret en posant des questions sur ses attributs.</li>
       <li>Défi chronométré ⏱ avec record, et lecture des noms à voix haute 🔊 pour les jeunes lecteurs.</li>
+      <li>Progression : chaque collection réussie est cochée ✅ (et suit le compte d’un appareil à l’autre).</li>
       <li>Enregistrer son travail dans un fichier, le rouvrir plus tard ou le rendre à l'enseignant.</li>
       <li>Enregistrer son travail en PDF ou en image, pour l'imprimer ou l'envoyer.</li>
       <li>Quatorze collections, rangées par matière : sciences (jardin et mare, vertébrés, plantes, animaux marins, petites bêtes, ferme), français (nature des mots, familles de mots), maths (multiples, figures planes), histoire (grandes périodes), géographie (villes du monde) et anglais (animals, food and colours ; days, months and numbers).</li>
@@ -334,7 +335,7 @@
     </ul>
 
     <footer class="panneau">
-      Version <span id="version">3.4.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="aide/">Service client</a>
+      Version <span id="version">3.5.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="aide/">Service client</a>
     </footer>
   </main>
 
@@ -354,6 +355,14 @@
       carte.classList.add('detecte');
       carte.parentNode.insertBefore(carte, carte.parentNode.firstChild);
     })();
+  </script>
+  <script>
+    // Collections réussies dans le logiciel (même adresse, même mémoire du navigateur) : ✅ sur leurs liens.
+    try {
+      document.querySelectorAll('.matiere a[href*="#collection="]').forEach(function (a) {
+        if (localStorage.getItem('boites-a-classer:reussi:' + a.getAttribute('href').split('#collection=')[1])) a.textContent = '✅ ' + a.textContent;
+      });
+    } catch (e) { /* stockage indisponible */ }
   </script>
   <script src="/arret.js"></script>
 </body>
