@@ -137,7 +137,8 @@ const actions = {
     const { collection: c } = await lireCorps(request);
     if (!c || typeof c !== 'object' || !FORME_ID_COLLECTION.test(c.id || '') || typeof c.nom !== 'string'
       || !Array.isArray(c.attributs) || !Array.isArray(c.etres)) return erreur('collection illisible', 400);
-    const donnees = JSON.stringify({ id: c.id, nom: c.nom, attributs: c.attributs, etres: c.etres });
+    const donnees = JSON.stringify({ id: c.id, nom: c.nom, ...(typeof c.matiere === 'string' && /^[a-z]{2,20}$/.test(c.matiere) ? { matiere: c.matiere } : {}),
+      attributs: c.attributs, etres: c.etres });
     if (donnees.length > TAILLE_MAX_COLLECTION) return erreur('collection trop grosse (trop de photos)', 413);
     await env.DB.prepare('INSERT INTO collections (id, donnees, date) VALUES (?1, ?2, ?3) '
       + 'ON CONFLICT (id) DO UPDATE SET donnees = ?2, date = ?3').bind(c.id, donnees, new Date().toISOString()).run();

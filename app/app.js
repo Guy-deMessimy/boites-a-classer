@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.19.1';
+  const VERSION = '3.20.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -909,7 +909,9 @@
       etres.push(o);
     }
     if (!attributs.length || !etres.length) throw new Error('la collection est vide');
-    return { id: idSur(c.id) || nouvelId('perso-'), nom: texteSur(c.nom, LIMITES.texte) || 'Collection sans nom', attributs, etres };
+    const propre = { id: idSur(c.id) || nouvelId('perso-'), nom: texteSur(c.nom, LIMITES.texte) || 'Collection sans nom', attributs, etres };
+    if (MATIERES.some(([m]) => m === c.matiere)) propre.matiere = c.matiere; // rangée avec sa matière dans la liste
+    return propre;
   }
 
   function nettoyerEtat(o, c) {
@@ -955,7 +957,7 @@
     throw new Error("ce n'est pas un fichier Boîtes à classer");
   }
 
-  const copieCollection = (c) => JSON.parse(JSON.stringify({ id: c.id, nom: c.nom, attributs: c.attributs, etres: c.etres }));
+  const copieCollection = (c) => JSON.parse(JSON.stringify({ id: c.id, nom: c.nom, matiere: c.matiere, attributs: c.attributs, etres: c.etres }));
   const signature = (c) => JSON.stringify([
     c.attributs.map((a) => [a.id, a.nom]),
     c.etres.map((e) => [e.id, e.nom, e.emoji || '', e.image || '', e.attributs]),
@@ -1168,8 +1170,10 @@
     const eleve = jetonCompte() && eleveConnecte();
     const donnes = eleve && Array.isArray(eleve.exercices) ? eleve.exercices.map((id) => toutes().find((c) => c.id === id)).filter(Boolean) : [];
     if (donnes.length) groupe('📌 Donnés par ton enseignant', donnes);
-    for (const [m, titre] of MATIERES) groupe(titre, FOURNIES.filter((c) => matiere(c) === m));
-    if (collectionsSite.length) groupe('Collections du site', collectionsSite);
+    // Les collections du site qui ont une matière se rangent avec elle ; les autres restent à part.
+    for (const [m, titre] of MATIERES) groupe(titre, [...FOURNIES.filter((c) => matiere(c) === m), ...collectionsSite.filter((c) => c.matiere && matiere(c) === m)]);
+    const sansMatiere = collectionsSite.filter((c) => !c.matiere);
+    if (sansMatiere.length) groupe('Collections du site', sansMatiere);
     if (mesCollections.length) groupe('Mes collections', mesCollections);
     if (coll) selColl.value = coll.id;
   }
@@ -1370,6 +1374,7 @@
     $('#titre-editeur').textContent = estPerso(c) || estSite(c) ? 'Modifier la collection'
       : c.id.startsWith('site-') ? 'Nouvelle collection du site' : 'Nouvelle collection';
     edNom.value = brouillon.nom;
+    $('#ed-matiere').value = brouillon.matiere || 'sciences';
     rendreAttributs();
     rendreTableau();
     verifierBrouillon();
@@ -1697,7 +1702,7 @@
       o.attributs = e.attributs.filter((id) => ids.has(id));
       return o;
     });
-    const c = { id: brouillon.id, nom: brouillon.nom.trim(), attributs, etres };
+    const c = { id: brouillon.id, nom: brouillon.nom.trim(), matiere: brouillon.matiere, attributs, etres };
     if (c.id.startsWith('site-')) {
       const bouton = $('#ed-enregistrer');
       bouton.disabled = true;
@@ -1747,6 +1752,8 @@
   }
 
   edNom.addEventListener('input', () => { brouillon.nom = edNom.value; changement(); });
+  $('#ed-matiere').replaceChildren(...MATIERES.map(([m, titre]) => new Option(titre, m)));
+  $('#ed-matiere').addEventListener('change', () => { brouillon.matiere = $('#ed-matiere').value; changement(); });
   $('#ed-ajout-attr').addEventListener('click', ajouterAttribut);
   $('#ed-ajout-etre').addEventListener('click', ajouterEtre);
   $('#ed-enregistrer').addEventListener('click', enregistrerBrouillon);

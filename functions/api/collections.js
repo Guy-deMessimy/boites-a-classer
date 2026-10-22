@@ -53,7 +53,8 @@ export async function onRequestPost({ request, env }) {
   try { ({ collection: c } = await request.json()); } catch (e) { /* corps illisible */ }
   if (!c || typeof c !== 'object' || !FORME_ID.test(c.id || '') || typeof c.nom !== 'string'
     || !Array.isArray(c.attributs) || !Array.isArray(c.etres)) return erreur('collection illisible', 400);
-  const donnees = JSON.stringify({ id: c.id, nom: c.nom, attributs: c.attributs, etres: c.etres });
+  const donnees = JSON.stringify({ id: c.id, nom: c.nom, ...(typeof c.matiere === 'string' && /^[a-z]{2,20}$/.test(c.matiere) ? { matiere: c.matiere } : {}),
+    attributs: c.attributs, etres: c.etres });
   if (donnees.length > TAILLE_MAX) return erreur('collection trop grosse (trop de photos)', 413);
 
   const ligne = await env.DB.prepare('SELECT auteur FROM collections WHERE id = ?').bind(c.id).first();
