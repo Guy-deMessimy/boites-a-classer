@@ -630,6 +630,18 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 .tableau-caracteres tbody th { position: sticky; left: 0; background: var(--papier); text-align: left; font-weight: 600; }
 .tableau-caracteres td.oui { color: var(--c); font-weight: 700; font-size: 1.1rem; }
 .tableau-caracteres tbody tr:hover td, .tableau-caracteres tbody tr:hover th { background: var(--survol); }
+.impression-titre { display: none; }
+/* Impression du tableau des caractères seul (fiche à remplir ou corrigé). */
+@media print {
+  body.imprime-tableau > *:not(#fen-tableau) { display: none !important; }
+  body.imprime-tableau #fen-tableau { display: block !important; position: static; width: auto; max-width: none; max-height: none; margin: 0; border: 0; box-shadow: none; background: #fff; color: #000; }
+  body.imprime-tableau #fen-tableau::backdrop { display: none; }
+  body.imprime-tableau #fen-tableau .fenetre-tete, body.imprime-tableau #fen-tableau .tableau-actions, body.imprime-tableau #tableau-aide { display: none !important; }
+  body.imprime-tableau .impression-titre { display: block; margin: 0 0 8px; font-weight: 700; }
+  body.imprime-tableau .tableau-defile { max-height: none; overflow: visible; border: 0; }
+  body.imprime-tableau .tableau-caracteres th, body.imprime-tableau .tableau-caracteres td { border: 1px solid #555; background: #fff !important; color: #000; position: static; min-width: 2.2em; height: 2.2em; }
+  body.imprime-tableau.tableau-vide .tableau-caracteres td.oui { color: transparent !important; }
+}
 
 .jeu-etat { min-height: 1.6em; margin: 0 0 .4rem; font-weight: 700; }
 .jeu-etat.gagne { color: var(--ok); }

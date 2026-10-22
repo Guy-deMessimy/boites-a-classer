@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.13.0';
+  const VERSION = '3.14.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2155,8 +2155,19 @@
     const tbody = document.createElement('tbody');
     tbody.append(...lignes);
     t.replaceChildren(thead, tbody);
+    $('#tableau-titre').textContent = `Boîtes à classer · ${coll.nom} · tableau des caractères`;
     $('#fen-tableau').showModal();
   }
+
+  // Impression du seul tableau (fiche à remplir, ou corrigé avec les coches).
+  function imprimerTableau(vide) {
+    document.body.classList.add('imprime-tableau');
+    document.body.classList.toggle('tableau-vide', vide);
+    window.addEventListener('afterprint', () => document.body.classList.remove('imprime-tableau', 'tableau-vide'), { once: true });
+    window.print();
+  }
+  $('#tableau-imprimer-vide').addEventListener('click', () => imprimerTableau(true));
+  $('#tableau-imprimer').addEventListener('click', () => imprimerTableau(false));
 
   /* Jeu « Qui suis-je ? » : trouver l'être vivant choisi au hasard en posant des questions sur ses attributs. */
 
