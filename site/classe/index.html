@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Mes classes · Boîtes à classer</title>
+  <link rel="icon" href="../icone.png">
+  <style>
+    /* Page « Mes classes » des enseignants (rôle donné par un admin) : classes, comptes des élèves, codes de connexion à
+       imprimer, consultation du travail. Le serveur vérifie chaque appel (functions/api/classe/[action].js).
+       Même présentation que la page d'administration. */
+    @font-face {
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
+      font-display: swap;
+      src: url(../polices/space-grotesk-latin.woff2) format("woff2");
+    }
+    :root {
+      --fond: #f6f4ef;
+      --carte: #ffffff;
+      --encre: #1f2430;
+      --doux: #5f6675;
+      --ligne: #e2ddd2;
+      --accent: #2f6fde;
+      --accent-encre: #ffffff;
+      --accent-doux: #e8effc;
+      --faux: #c0392b;
+      --ok: #1f9d55;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fond: #15171c;
+        --carte: #1e2128;
+        --encre: #ecedf0;
+        --doux: #a3a8b4;
+        --ligne: #30343d;
+        --accent: #5b8ff0;
+        --accent-encre: #0d1220;
+        --accent-doux: #1f2a40;
+        --faux: #ef6b5b;
+        --ok: #4cc685;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--fond); color: var(--encre); font: 16px/1.5 "Space Grotesk", system-ui, sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 24px; }
+    header h1 { margin: 0; font-size: 1.6rem; }
+    header .moi { margin-left: auto; color: var(--doux); }
+    h2 { margin: 0; font-size: 1.35rem; }
+    h3 { margin: 0 0 6px; font-size: 1.05rem; }
+    a { color: var(--accent); }
+    .bouton {
+      display: inline-block;
+      padding: .35rem .8rem;
+      border: 1px solid var(--ligne);
+      border-radius: 999px;
+      background: var(--carte);
+      color: var(--encre);
+      font: inherit;
+      font-size: .9rem;
+      text-decoration: none;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .bouton:hover { border-color: var(--accent); }
+    .bouton[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+    .bouton:disabled { opacity: .5; cursor: default; }
+    .bouton.principal { background: var(--accent); border-color: var(--accent); color: var(--accent-encre); }
+    .bouton.danger { color: var(--faux); }
+    .bouton.danger.confirmer { background: var(--faux); border-color: var(--faux); color: #fff; }
+    input, textarea {
+      padding: .45rem .8rem;
+      border: 1px solid var(--ligne);
+      border-radius: 12px;
+      background: var(--carte);
+      color: var(--encre);
+      font: inherit;
+    }
+    .avis { padding: 16px 20px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
+    .avis p { margin: 0 0 12px; }
+    .connexion { display: flex; flex-wrap: wrap; gap: 8px; }
+    .connexion input { flex: 1 1 200px; border-radius: 999px; }
+    .bloc { margin: 0 0 16px; padding: 16px 20px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
+    .bloc p { margin: 0; color: var(--doux); font-size: .92rem; }
+    .comment { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0; padding: 0; list-style: none; color: var(--doux); font-size: .92rem; }
+    .comment li:not(:last-child)::after { content: "→"; margin-left: 10px; }
+    .onglets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; }
+    .liste { display: flex; flex-wrap: wrap; gap: 8px; }
+    .onglet[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-encre); }
+    .onglet span { opacity: .75; }
+    .nouvelle { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+    .nouvelle input { width: 12em; border-radius: 999px; }
+    .tete-classe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+    .tete-classe h2 { margin-right: auto; }
+    .ajout { display: grid; gap: 8px; }
+    .ajout textarea { width: 100%; min-height: 6.5em; resize: vertical; }
+    .ajout div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .codes { border: 2px solid var(--accent); }
+    .codes-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 12px; }
+    .codes-tete div { margin-right: auto; }
+    .cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+    .carte-code {
+      padding: 12px 14px;
+      border: 1.5px dashed var(--ligne);
+      border-radius: 12px;
+      background: var(--fond);
+      break-inside: avoid;
+    }
+    .carte-code .site { color: var(--doux); font-size: .78rem; font-weight: 600; }
+    .carte-code .nom { margin: 2px 0 0; font-size: 1.2rem; font-weight: 700; }
+    .carte-code .classe { color: var(--doux); font-size: .85rem; }
+    .carte-code .valeur { margin: 8px 0 6px; font-size: 1.55rem; font-weight: 700; letter-spacing: .12em; color: var(--accent); user-select: all; }
+    .carte-code .etapes { color: var(--doux); font-size: .74rem; line-height: 1.35; }
+    .defile { overflow-x: auto; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--ligne); vertical-align: middle; }
+    th { color: var(--doux); font-weight: 600; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    td.nom { font-weight: 600; }
+    td.actions { min-width: 330px; }
+    td.actions .bouton { margin: 2px 0; }
+    .jamais { color: var(--doux); font-style: italic; }
+    .message { min-height: 1.5em; margin: 12px 0 0; font-weight: 600; }
+    .message.erreur { color: var(--faux); }
+    .vide { padding: 16px; color: var(--doux); }
+    [hidden] { display: none !important; }
+
+    /* Impression : seulement les cartes des codes, à découper. */
+    @media print {
+      :root { --fond: #fff; --carte: #fff; --encre: #000; --doux: #444; --ligne: #888; --accent: #000; }
+      body { background: #fff; }
+      main { max-width: none; padding: 0; }
+      header, #hors-session, .comment-bloc, .onglets, .tete-classe, .ajout-bloc, .codes-tete, .defile, .message, #aucune { display: none !important; }
+      .codes { margin: 0; padding: 0; border: 0; }
+      .cartes { grid-template-columns: repeat(3, 1fr); gap: 0; }
+      .carte-code { border-radius: 0; border-color: #888; padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🎓 Mes classes</h1>
+      <span class="moi" id="moi"></span>
+      <a class="bouton" href="../app/index.html">Ouvrir le logiciel</a>
+      <button type="button" class="bouton" id="deconnecter" hidden>Se déconnecter</button>
+    </header>
+
+    <div id="hors-session" class="avis" hidden>
+      <p id="raison">Cette page est réservée aux enseignants : connectez-vous.</p>
+      <form id="form-connexion" class="connexion">
+        <input id="identifiant" type="text" placeholder="Identifiant" autocomplete="username" autocapitalize="off" spellcheck="false" aria-label="Identifiant" required>
+        <input id="mdp" type="password" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe" required>
+        <button type="submit" class="bouton principal">Se connecter</button>
+      </form>
+      <p class="message erreur" id="erreur-connexion" role="alert"></p>
+    </div>
+
+    <div id="contenu" hidden>
+      <section class="bloc comment-bloc">
+        <h3>Comment un élève se connecte</h3>
+        <ol class="comment">
+          <li>Il ouvre le logiciel (<span class="adresse-site"></span>, ou l'application installée)</li>
+          <li>bouton 👤 Se connecter</li>
+          <li>« Je suis élève, j'ai un code »</li>
+          <li>il tape le code de sa carte.</li>
+        </ol>
+        <p>Son travail est alors sauvegardé sur son compte, et vous pouvez le voir ici.</p>
+      </section>
+
+      <nav class="onglets" aria-label="Classes">
+        <span id="liste-classes" class="liste"></span>
+        <form id="form-classe" class="nouvelle">
+          <input id="nom-classe" type="text" maxlength="40" placeholder="ex. CM2 A" aria-label="Nom de la nouvelle classe" required>
+          <button type="submit" class="bouton principal">＋ Nouvelle classe</button>
+        </form>
+      </nav>
+
+      <p id="aucune" class="avis" hidden>Vous n'avez pas encore de classe : donnez-lui un nom ci-dessus (par exemple « CM2 A »), puis ajoutez vos élèves.</p>
+
+      <div id="classe" hidden>
+        <div class="tete-classe">
+          <h2 id="titre-classe"></h2>
+          <button type="button" class="bouton" id="renommer">✎ Renommer</button>
+          <button type="button" class="bouton" id="tous-codes">🔑 Nouveaux codes pour toute la classe</button>
+          <button type="button" class="bouton danger" id="supprimer-classe">Supprimer la classe</button>
+        </div>
+
+        <section class="bloc codes" id="codes" hidden aria-live="polite">
+          <div class="codes-tete">
+            <div>
+              <h3 id="titre-codes">Codes à distribuer</h3>
+              <p>Notez-les ou imprimez-les maintenant : pour la sécurité des élèves, ils ne seront plus affichés. Un code perdu ? « Nouveau code ».</p>
+            </div>
+            <button type="button" class="bouton principal" id="imprimer">🖨 Imprimer les cartes</button>
+            <button type="button" class="bouton" id="fermer-codes">Fermer</button>
+          </div>
+          <div class="cartes" id="cartes"></div>
+        </section>
+
+        <section class="bloc ajout-bloc">
+          <form id="form-ajout" class="ajout">
+            <label for="noms"><strong>Ajouter des élèves</strong> : un prénom par ligne (évitez les noms de famille).</label>
+            <textarea id="noms" placeholder="Léa&#10;Lucas&#10;Inès"></textarea>
+            <div>
+              <button type="submit" class="bouton principal" id="ajouter">Créer les comptes</button>
+              <p>Chaque élève reçoit un code personnel de 8 caractères pour se connecter.</p>
+            </div>
+          </form>
+        </section>
+
+        <div class="defile">
+          <table>
+            <thead>
+              <tr><th>Élève</th><th>Ajouté le</th><th>Dernière connexion</th><th>Dernière sauvegarde</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="lignes"></tbody>
+          </table>
+        </div>
+      </div>
+      <p class="message" id="message" role="status"></p>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      // Mêmes clés que le logiciel (app/app.js) : se connecter ici connecte aussi le logiciel dans ce navigateur.
+      var CLES = {
+        jeton: 'boites-a-classer-compte:jeton', identifiant: 'boites-a-classer-compte:identifiant', admin: 'boites-a-classer-compte:admin',
+        enseignant: 'boites-a-classer-compte:enseignant', eleve: 'boites-a-classer-compte:eleve',
+      };
+      var CLE_CHOISIE = 'boites-a-classer-classes:choisie';
+      var lire = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+      var garder = function (k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } };
+      var $ = function (s) { return document.querySelector(s); };
+      var jeton = lire(CLES.jeton), identifiant = lire(CLES.identifiant);
+      var classes = [];
+      var choisie = lire(CLE_CHOISIE);
+      var eleves = [];
+
+      document.querySelectorAll('.adresse-site').forEach(function (e) { e.textContent = location.host; });
+
+      // Même dérivation que le logiciel (app/app.js, secretDe) : le mot de passe ne part jamais tel quel.
+      function secretDe(id, mdp) {
+        var enc = new TextEncoder();
+        return crypto.subtle.importKey('raw', enc.encode(mdp), 'PBKDF2', false, ['deriveBits']).then(function (cle) {
+          return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', iterations: 600000, salt: enc.encode('boites-a-classer:compte:' + id) }, cle, 256);
+        }).then(function (bits) {
+          return btoa(String.fromCharCode.apply(null, new Uint8Array(bits))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        });
+      }
+
+      function appel(action, corps) {
+        var options = { headers: { Authorization: 'Bearer ' + jeton } };
+        if (corps) {
+          options.method = 'POST';
+          options.headers['Content-Type'] = 'application/json';
+          options.body = JSON.stringify(corps);
+        }
+        return fetch('/api/classe/' + action, options).then(function (rep) {
+          return rep.json().catch(function () { return {}; }).then(function (r) { return { statut: rep.status, r: r }; });
+        });
+      }
+
+      function message(texte, erreur) {
+        $('#message').textContent = texte || '';
+        $('#message').classList.toggle('erreur', !!erreur);
+      }
+      var majuscule = function (t) { return t.charAt(0).toUpperCase() + t.slice(1); };
+      // Réponse d'erreur du serveur : message affiché, et retour à la connexion si la session ou le rôle manque.
+      function echec(x) {
+        if (x.statut === 401) { jeton = null; garder(CLES.jeton, null); horsSession('Votre session a expiré : reconnectez-vous.'); return; }
+        if (x.statut === 403) { horsSession('Le compte « ' + (identifiant || '?') + ' » n\'a pas le rôle enseignant. Ce rôle est donné par l\'administrateur du site.'); return; }
+        message(majuscule(x.r.erreur || 'le serveur a répondu ' + x.statut) + '.', true);
+      }
+      var horsLigne = function (e) { message('Impossible de joindre le serveur : ' + e.message, true); };
+      var date = function (iso) {
+        return iso ? new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+      };
+
+      function horsSession(raison) {
+        $('#contenu').hidden = true;
+        $('#deconnecter').hidden = !jeton;
+        $('#hors-session').hidden = false;
+        $('#raison').textContent = raison;
+        $('#form-connexion').hidden = !!jeton;
+      }
+
+      $('#form-connexion').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var id = $('#identifiant').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        var bouton = ev.target.querySelector('button');
+        $('#erreur-connexion').textContent = '';
+        bouton.disabled = true;
+        secretDe(id, $('#mdp').value).then(function (secret) {
+          return fetch('/api/compte/connexion', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifiant: id, secret: secret }),
+          }).then(function (rep) { return rep.json().catch(function () { return {}; }).then(function (r) { return { statut: rep.status, r: r }; }); });
+        }).then(function (x) {
+          if (x.statut !== 200 || !x.r.jeton) { $('#erreur-connexion').textContent = x.statut === 401 ? 'Identifiant ou mot de passe incorrect.' : (x.r.erreur || 'Le serveur a répondu ' + x.statut) + '.'; return; }
+          jeton = x.r.jeton;
+          identifiant = x.r.identifiant;
+          garder(CLES.jeton, jeton);
+          garder(CLES.identifiant, identifiant);
+          garder(CLES.admin, x.r.admin ? '1' : null);
+          garder(CLES.enseignant, x.r.enseignant ? '1' : null);
+          garder(CLES.eleve, null);
+          $('#mdp').value = '';
+          charger();
+        }).catch(function (e) { $('#erreur-connexion').textContent = 'Impossible de joindre le serveur : ' + e.message; })
+          .then(function () { bouton.disabled = false; });
+      });
+
+      $('#deconnecter').addEventListener('click', function () {
+        var ancien = jeton;
+        jeton = identifiant = null;
+        Object.keys(CLES).forEach(function (k) { garder(CLES[k], null); });
+        fetch('/api/compte/deconnexion', { method: 'POST', headers: { Authorization: 'Bearer ' + ancien } }).catch(function () {});
+        $('#moi').textContent = '';
+        horsSession('Déconnecté.');
+      });
+
+      /* Classes */
+
+      function charger() {
+        if (!jeton) { horsSession('Cette page est réservée aux enseignants : connectez-vous.'); return; }
+        appel('liste').then(function (x) {
+          if (x.statut !== 200) { echec(x); return; }
+          $('#hors-session').hidden = true;
+          $('#contenu').hidden = false;
+          $('#deconnecter').hidden = false;
+          $('#moi').textContent = 'Compte : ' + identifiant;
+          classes = x.r.classes;
+          if (!classes.some(function (c) { return c.id === choisie; })) choisie = classes.length ? classes[0].id : null;
+          afficherClasses();
+          chargerEleves();
+        }).catch(function (e) { horsSession('Impossible de joindre le serveur : ' + e.message); });
+      }
+
+      function classeChoisie() { return classes.filter(function (c) { return c.id === choisie; })[0] || null; }
+
+      function afficherClasses() {
+        $('#liste-classes').replaceChildren.apply($('#liste-classes'), classes.map(function (c) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'bouton onglet';
+          b.setAttribute('aria-current', String(c.id === choisie));
+          b.append(c.nom + ' ');
+          var n = document.createElement('span');
+          n.textContent = '(' + c.eleves + ')';
+          b.appendChild(n);
+          b.addEventListener('click', function () {
+            if (c.id === choisie) return;
+            choisie = c.id;
+            garder(CLE_CHOISIE, choisie);
+            cacherCodes();
+            message('');
+            afficherClasses();
+            chargerEleves();
+          });
+          return b;
+        }));
+        var c = classeChoisie();
+        $('#aucune').hidden = !!c;
+        $('#classe').hidden = !c;
+        if (c) $('#titre-classe').textContent = c.nom;
+      }
+
+      $('#form-classe').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var nom = $('#nom-classe').value.trim();
+        if (!nom) return;
+        appel('creer', { nom: nom }).then(function (x) {
+          if (x.statut !== 200) { echec(x); return; }
+          $('#nom-classe').value = '';
+          choisie = x.r.id;
+          garder(CLE_CHOISIE, choisie);
+          cacherCodes();
+          message('Classe « ' + x.r.nom + ' » créée : ajoutez-y vos élèves.');
+          charger();
+          $('#noms').focus();
+        }).catch(horsLigne);
+      });
+
+      $('#renommer').addEventListener('click', function () {
+        var c = classeChoisie();
+        var nom = window.prompt('Nouveau nom de la classe :', c.nom);
+        if (!nom || !nom.trim() || nom.trim() === c.nom) return;
+        appel('renommer', { classe: c.id, nom: nom }).then(function (x) {
+          if (x.statut !== 204) { echec(x); return; }
+          message('Classe renommée.');
+          charger();
+        }).catch(horsLigne);
+      });
+
+      // Double appui : le premier arme le bouton pendant 4 secondes.
+      function confirmer(b, texte) {
+        if (b.classList.contains('confirmer')) { b.classList.remove('confirmer'); b.textContent = b.dataset.texte; return true; }
+        b.dataset.texte = b.textContent;
+        b.classList.add('confirmer');
+        b.textContent = texte;
+        setTimeout(function () { if (b.classList.contains('confirmer')) { b.classList.remove('confirmer'); b.textContent = b.dataset.texte; } }, 4000);
+        return false;
+      }
+
+      $('#supprimer-classe').addEventListener('click', function (ev) {
+        var c = classeChoisie();
+        if (!confirmer(ev.currentTarget, 'Effacer « ' + c.nom + ' », ses ' + c.eleves + ' élèves et leur travail ?')) return;
+        appel('suppression', { classe: c.id }).then(function (x) {
+          if (x.statut !== 204) { echec(x); return; }
+          cacherCodes();
+          message('Classe « ' + c.nom + ' » supprimée.');
+          charger();
+        }).catch(horsLigne);
+      });
+
+      $('#tous-codes').addEventListener('click', function (ev) {
+        var c = classeChoisie();
+        if (!c.eleves) { message('Cette classe n\'a pas encore d\'élève.', true); return; }
+        if (!confirmer(ev.currentTarget, 'Les anciens codes ne marcheront plus : continuer ?')) return;
+        appel('nouveaux-codes', { classe: c.id }).then(function (x) {
+          if (x.statut !== 200) { echec(x); return; }
+          afficherCodes(x.r.eleves, 'Nouveaux codes de la classe');
+          message('');
+        }).catch(horsLigne);
+      });
+
+      /* Élèves */
+
+      function chargerEleves() {
+        var c = classeChoisie();
+        if (!c) return;
+        appel('eleves?classe=' + encodeURIComponent(c.id)).then(function (x) {
+          if (x.statut !== 200) { echec(x); return; }
+          eleves = x.r.eleves;
+          afficherEleves();
+        }).catch(horsLigne);
+      }
+
+      function bouton(texte, action, classe) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'bouton' + (classe ? ' ' + classe : '');
+        b.textContent = texte;
+        b.addEventListener('click', action);
+        return b;
+      }
+
+      function afficherEleves() {
+        var lignes = eleves.map(function (e) {
+          var tr = document.createElement('tr');
+          var nom = document.createElement('td');
+          nom.className = 'nom';
+          nom.textContent = e.nom;
+          var connexion = document.createElement('td');
+          if (e.derniere === e.cree) {
+            connexion.className = 'jamais';
+            connexion.textContent = 'pas encore';
+          } else connexion.textContent = date(e.derniere);
+          var travail = document.createElement('td');
+          travail.textContent = e.versions ? date(e.date) : 'aucune';
+          var cree = document.createElement('td');
+          cree.textContent = date(e.cree);
+          tr.append(nom, cree, connexion, travail);
+
+          var actions = document.createElement('td');
+          actions.className = 'actions';
+          var voir = document.createElement('a');
+          voir.className = 'bouton';
+          voir.textContent = '👁 Voir le travail';
+          voir.href = '../app/index.html#consulter-eleve=' + encodeURIComponent(e.id);
+          if (!e.versions) voir.setAttribute('aria-disabled', 'true');
+          actions.append(voir, ' ',
+            bouton('🔑 Nouveau code', function () { nouveauCode(e); }), ' ',
+            bouton('✎ Prénom', function () { renommerEleve(e); }), ' ',
+            bouton('Retirer', function (ev) { retirer(e, ev.currentTarget); }, 'danger'));
+          tr.appendChild(actions);
+          return tr;
+        });
+        if (!lignes.length) {
+          var tr = document.createElement('tr');
+          var td = document.createElement('td');
+          td.colSpan = 5;
+          td.className = 'vide';
+          td.textContent = 'Aucun élève dans cette classe pour l\'instant : ajoutez-les ci-dessus.';
+          tr.appendChild(td);
+          lignes.push(tr);
+        }
+        $('#lignes').replaceChildren.apply($('#lignes'), lignes);
+      }
+
+      $('#form-ajout').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var noms = $('#noms').value.split('\n').map(function (n) { return n.trim(); }).filter(Boolean);
+        if (!noms.length) { message('Écrivez au moins un prénom, un par ligne.', true); return; }
+        var b = $('#ajouter');
+        b.disabled = true;
+        appel('ajouter', { classe: choisie, noms: noms }).then(function (x) {
+          if (x.statut !== 200) { echec(x); return; }
+          $('#noms').value = '';
+          afficherCodes(x.r.eleves, x.r.eleves.length > 1 ? x.r.eleves.length + ' comptes créés : leurs codes' : 'Compte créé : son code');
+          message('');
+          charger();
+        }).catch(horsLigne).then(function () { b.disabled = false; });
+      });
+
+      function nouveauCode(e) {
+        appel('nouveau-code', { eleve: e.id }).then(function (x) {
+          if (x.statut !== 200) { echec(x); return; }
+          afficherCodes([x.r], 'Nouveau code de ' + e.nom + ' (l\'ancien ne marche plus)');
+          message('');
+        }).catch(horsLigne);
+      }
+
+      function renommerEleve(e) {
+        var nom = window.prompt('Prénom de l\'élève :', e.nom);
+        if (!nom || !nom.trim() || nom.trim() === e.nom) return;
+        appel('nom-eleve', { eleve: e.id, nom: nom }).then(function (x) {
+          if (x.statut !== 204) { echec(x); return; }
+          message('');
+          chargerEleves();
+        }).catch(horsLigne);
+      }
+
+      function retirer(e, b) {
+        if (!confirmer(b, 'Effacer ' + e.nom + ' et son travail ?')) return;
+        appel('retirer', { eleve: e.id }).then(function (x) {
+          if (x.statut !== 204) { echec(x); return; }
+          message(e.nom + ' a été retiré de la classe.');
+          charger();
+        }).catch(horsLigne);
+      }
+
+      /* Codes à distribuer */
+
+      function afficherCodes(liste, titre) {
+        var c = classeChoisie();
+        $('#titre-codes').textContent = titre;
+        $('#cartes').replaceChildren.apply($('#cartes'), liste.map(function (e) {
+          var carte = document.createElement('div');
+          carte.className = 'carte-code';
+          [['site', '📦 Boîtes à classer'], ['nom', e.nom], ['classe', c ? c.nom : ''],
+            ['valeur', e.code.slice(0, 4) + '-' + e.code.slice(4)],
+            ['etapes', location.host + ' → 👤 Se connecter → « Je suis élève, j\'ai un code »']].forEach(function (p) {
+            var d = document.createElement('div');
+            d.className = p[0];
+            d.textContent = p[1];
+            carte.appendChild(d);
+          });
+          return carte;
+        }));
+        $('#codes').hidden = false;
+        $('#codes').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      function cacherCodes() {
+        $('#codes').hidden = true;
+        $('#cartes').replaceChildren();
+      }
+      $('#imprimer').addEventListener('click', function () { window.print(); });
+      $('#fermer-codes').addEventListener('click', cacherCodes);
+
+      charger();
+    })();
+  </script>
+</body>
+</html>

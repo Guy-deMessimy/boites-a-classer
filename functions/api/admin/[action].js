@@ -1,10 +1,13 @@
 // API d'administration (page site/admin/), réservée aux comptes dont la colonne « admin » vaut 1 (migrations/0003_admin.sql).
 // Le jeton de session voyage comme pour les comptes, dans « Authorization: Bearer … ».
 //
-//   GET  /api/admin/comptes                   → { stats, comptes: [{ identifiant, admin, cree, derniere, versions, date, taille }] }
+//   GET  /api/admin/comptes                   → { stats, comptes: [{ identifiant, admin, enseignant, nom, classe, de, cree, derniere, versions, date, taille }] }
+//                                               (élève : nom = prénom, classe = nom de sa classe, de = identifiant de son enseignant)
 //   GET  /api/admin/travail?identifiant=…     dernière version du travail d'un compte (gzip, en-têtes X-Version et X-Date) ; 404 s'il n'y en a pas
 //   POST /api/admin/mot-de-passe { identifiant, secret }  nouveau mot de passe (secret dérivé par la page) ; ferme ses sessions → 204
-//   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail → 204
+//   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail (enseignant : aussi
+//                                                         ses classes et ses élèves) → 204
+//   POST /api/admin/enseignant   { identifiant, actif }   donne (true) ou retire (false) le rôle enseignant → 204
 //   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
 //   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
 //   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
@@ -14,6 +17,7 @@
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
+import { effacerCompte } from '../../../serveur/classes.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
@@ -42,10 +46,10 @@ async function lireCorps(request) {
   }
 }
 
-// Compte visé par une action : { id, admin } ou une réponse d'erreur ; avec « modifier », pas un compte admin.
+// Compte visé par une action : { id, admin, classe } ou une réponse d'erreur ; avec « modifier », pas un compte admin.
 async function compteVise(env, identifiant, modifier) {
   if (!FORME_IDENTIFIANT.test(identifiant || '')) return erreur('identifiant invalide', 400);
-  const c = await env.DB.prepare('SELECT id, admin FROM comptes WHERE identifiant = ?').bind(identifiant).first();
+  const c = await env.DB.prepare('SELECT id, admin, classe FROM comptes WHERE identifiant = ?').bind(identifiant).first();
   if (!c) return erreur('compte introuvable', 404);
   if (modifier && c.admin) return erreur('un compte admin ne se modifie pas d\'ici', 403);
   return c;
@@ -59,11 +63,15 @@ const actions = {
         + '(SELECT count(DISTINCT cle) FROM sauvegardes WHERE cle NOT LIKE \'compte:%\') AS codes, '
         + '(SELECT count(*) FROM sauvegardes) AS versions, '
         + '(SELECT COALESCE(sum(length(donnees)), 0) FROM sauvegardes) AS taille, '
-        + '(SELECT count(*) FROM sessions) AS sessions'),
-      env.DB.prepare('SELECT c.identifiant, c.admin, c.cree, c.derniere, '
-        + 'count(s.version) AS versions, max(s.date) AS date, '
+        + '(SELECT count(*) FROM sessions) AS sessions, '
+        + '(SELECT count(*) FROM comptes WHERE est_enseignant = 1) AS enseignants, '
+        + '(SELECT count(*) FROM classes) AS classes, '
+        + '(SELECT count(*) FROM comptes WHERE classe IS NOT NULL) AS eleves'),
+      env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, cl.nom AS classe, p.identifiant AS de, '
+        + 'c.cree, c.derniere, count(s.version) AS versions, max(s.date) AS date, '
         + '(SELECT length(donnees) FROM sauvegardes WHERE cle = \'compte:\' || c.id ORDER BY version DESC LIMIT 1) AS taille '
         + 'FROM comptes c LEFT JOIN sauvegardes s ON s.cle = \'compte:\' || c.id '
+        + 'LEFT JOIN classes cl ON cl.id = c.classe LEFT JOIN comptes p ON p.id = cl.enseignant '
         + 'GROUP BY c.id ORDER BY c.derniere DESC LIMIT 2000'),
     ]);
     return json({ stats: stats.results[0], comptes: liste.results });
@@ -85,6 +93,7 @@ const actions = {
     if (!FORME_SECRET.test(secret || '')) return erreur('mot de passe invalide', 400);
     const c = await compteVise(env, identifiant, true);
     if (c instanceof Response) return c;
+    if (c.classe) return erreur('un élève se connecte avec un code : son enseignant lui en donne un nouveau', 400);
     const sel = hasard(16);
     await env.DB.batch([
       env.DB.prepare('UPDATE comptes SET sel = ?, empreinte = ? WHERE id = ?')
@@ -98,11 +107,17 @@ const actions = {
     const { identifiant } = await lireCorps(request);
     const c = await compteVise(env, identifiant, true);
     if (c instanceof Response) return c;
-    await env.DB.batch([
-      env.DB.prepare('DELETE FROM sauvegardes WHERE cle = ?').bind('compte:' + c.id),
-      env.DB.prepare('DELETE FROM sessions WHERE compte = ?').bind(c.id),
-      env.DB.prepare('DELETE FROM comptes WHERE id = ?').bind(c.id),
-    ]);
+    await env.DB.batch(effacerCompte(env, c.id));
+    return rien();
+  },
+
+  async enseignant(request, env) {
+    const { identifiant, actif } = await lireCorps(request);
+    if (typeof actif !== 'boolean') return erreur('« actif » doit valoir true ou false', 400);
+    const c = await compteVise(env, identifiant, true);
+    if (c instanceof Response) return c;
+    if (c.classe) return erreur('un compte d\'élève ne peut pas devenir enseignant', 400);
+    await env.DB.prepare('UPDATE comptes SET est_enseignant = ? WHERE id = ?').bind(actif ? 1 : 0, c.id).run();
     return rien();
   },
 
@@ -137,7 +152,7 @@ const actions = {
 };
 
 const METHODES = {
-  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'],
+  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], maintenance: ['GET', 'POST'],
 };
 

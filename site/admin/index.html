@@ -313,7 +313,8 @@
           $('#moi').textContent = 'Compte : ' + identifiant;
           var s = x.r.stats;
           $('#chiffres').replaceChildren.apply($('#chiffres'), [
-            [s.comptes, 'comptes'], [s.codes, 'sauvegardes avec un code'], [s.versions, 'versions gardées'],
+            [s.comptes, 'comptes'], [s.enseignants, 'enseignants'], [s.classes, 'classes'], [s.eleves, 'élèves (connexion par code)'],
+            [s.codes, 'sauvegardes avec un code'], [s.versions, 'versions gardées'],
             [taille(s.taille), 'de place utilisée (5 Go offerts)'], [s.sessions, 'sessions ouvertes'],
           ].map(function (c) {
             var li = document.createElement('li');
@@ -341,16 +342,20 @@
       function afficher() {
         var filtre = $('#filtre').value.trim().toLowerCase();
         var lignes = [];
-        comptes.filter(function (c) { return c.identifiant.indexOf(filtre) !== -1; }).forEach(function (c) {
+        comptes.filter(function (c) {
+          return c.identifiant.indexOf(filtre) !== -1 || (c.nom && c.nom.toLowerCase().indexOf(filtre) !== -1);
+        }).forEach(function (c) {
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
-          nom.textContent = c.identifiant;
-          if (c.admin) {
+          // Un élève (créé par son enseignant) est montré par son prénom, avec sa classe.
+          nom.textContent = c.classe ? c.nom + ' ' : c.identifiant;
+          var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
+          badges.forEach(function (t) {
             var badge = document.createElement('span');
             badge.className = 'badge';
-            badge.textContent = 'admin';
+            badge.textContent = t;
             nom.appendChild(badge);
-          }
+          });
           tr.appendChild(nom);
           [date(c.cree), date(c.derniere), c.versions ? date(c.date) + ' (' + c.versions + ' v.)' : 'aucune'].forEach(function (t) {
             var td = document.createElement('td');
@@ -370,9 +375,12 @@
           voir.href = '../app/index.html#consulter=' + encodeURIComponent(c.identifiant);
           if (!c.versions) voir.setAttribute('aria-disabled', 'true');
           actions.appendChild(voir);
-          if (!c.admin) {
+          if (!c.admin && !c.classe) {
             actions.append(' ', bouton('🔑 Nouveau mot de passe', function (ev) { nouveauMotDePasse(c.identifiant, ev.currentTarget); }),
-              ' ', bouton('Supprimer', function (ev) { supprimer(c.identifiant, ev.currentTarget); }, 'danger'));
+              ' ', bouton(c.enseignant ? 'Retirer le rôle enseignant' : '🎓 Rendre enseignant', function (ev) { changerEnseignant(c, ev.currentTarget); }));
+          }
+          if (!c.admin) {
+            actions.append(' ', bouton('Supprimer', function (ev) { supprimer(c, ev.currentTarget); }, 'danger'));
           }
           tr.appendChild(actions);
           lignes.push(tr);
@@ -415,11 +423,22 @@
         }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
       }
 
+      function changerEnseignant(c, b) {
+        b.disabled = true;
+        appel('enseignant', { identifiant: c.identifiant, actif: !c.enseignant }).then(function (x) {
+          if (x.statut !== 204) { b.disabled = false; message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
+          message(c.enseignant ? c.identifiant + ' n\'est plus enseignant (ses classes sont gardées).'
+            : c.identifiant + ' est enseignant : il crée ses classes sur la page « Mes classes » (bouton 👤 du logiciel).');
+          charger();
+        }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
+      }
+
       // Double appui : le premier arme le bouton pendant 4 secondes.
-      function supprimer(id, b) {
+      function supprimer(c, b) {
+        var id = c.identifiant;
         if (!b.classList.contains('confirmer')) {
           b.classList.add('confirmer');
-          b.textContent = 'Supprimer ' + id + ' et son travail ?';
+          b.textContent = c.enseignant ? 'Supprimer ' + id + ', ses classes et ses élèves ?' : 'Supprimer ' + (c.nom || id) + ' et son travail ?';
           setTimeout(function () { b.classList.remove('confirmer'); b.textContent = 'Supprimer'; }, 4000);
           return;
         }
@@ -427,7 +446,7 @@
         appel('suppression', { identifiant: id }).then(function (x) {
           if (x.statut !== 204) { b.disabled = false; message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
           delete resultats[id];
-          message('Compte ' + id + ' supprimé.');
+          message('Compte ' + (c.nom || id) + ' supprimé.');
           charger();
         }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
       }

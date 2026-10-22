@@ -95,6 +95,17 @@ Tester en local : `npx wrangler d1 migrations apply boites-a-classer --local`, c
 
 Limites : n'importe qui connaissant un code peut lire et modifier le travail correspondant ; il n'y a pas de limite du nombre d'envois (offre gratuite Cloudflare : 100 000 requêtes par jour, 5 Go de base). Navigateurs trop anciens (sans `CompressionStream`, par exemple iOS 15) : la sauvegarde en ligne n'est pas proposée.
 
+## Enseignants, classes et élèves (depuis la 2.9.0)
+
+Le **rôle enseignant** est donné par un admin, dans la page `site/admin/` (« 🎓 Rendre enseignant », colonne `comptes.est_enseignant`, `migrations/0007_classes.sql`) ; un admin a aussi ce rôle. Un enseignant connecté voit « 🎓 Mes classes » dans la fenêtre 👤 du logiciel : page `site/classe/` (API `functions/api/classe/[action].js`, outils `serveur/classes.js`).
+
+- Il crée des **classes** (30 au plus), puis y ajoute ses **élèves** en collant leurs prénoms (un par ligne, 60 élèves au plus par classe). Chaque élève devient un compte sans mot de passe (`comptes.classe`, `comptes.nom`, identifiant interne `eleve.…`).
+- Chaque élève reçoit un **code personnel de 8 caractères** (sans 0/O ni 1/I/L, montré `K7MP-Q3RX`). Le serveur n'en garde que l'empreinte SHA-256 (`comptes.code_eleve`) : les codes ne s'affichent qu'à leur création, sous forme de cartes à imprimer et découper. Code perdu : « 🔑 Nouveau code » (l'ancien ne marche plus, les appareils de l'élève sont déconnectés), ou « Nouveaux codes pour toute la classe ».
+- L'élève se connecte dans le logiciel : 👤 → « 🎒 Je suis élève, j'ai un code » (`POST /api/compte/code`, mêmes limites d'essais que les mots de passe). Son travail est ensuite sauvegardé sur son compte comme pour tout compte ; il ne peut ni changer de mot de passe ni supprimer son compte.
+- L'enseignant voit pour chaque élève la dernière connexion et la dernière sauvegarde, ouvre son travail en consultation (`app/index.html#consulter-eleve=<id>`, rien n'est modifié), change son prénom ou le retire (compte et travail effacés). Supprimer une classe efface ses élèves ; supprimer le compte d'un enseignant efface ses classes et ses élèves. Retirer le rôle garde les classes (elles reviennent si le rôle est redonné).
+
+Avant de publier cette version : `npx wrangler d1 migrations apply boites-a-classer --remote` (migration 0007).
+
 ## Collections du site et réservées à l'admin (depuis la 2.4.0)
 
 Seul un compte admin crée et modifie des collections. Ce qu'il enregistre dans l'éditeur est **publié sur le site** (table `collections`, `migrations/0004_collections.sql`) et proposé à tout le monde dans le groupe « Collections du site », en lecture seule comme les collections fournies. Identifiants `site-…`. Le logiciel les lit au démarrage (`GET /api/collections`, `functions/api/collections.js`) et en garde une copie sous `boites-a-classer-site:collections` pour le hors-ligne (hors de ce qui est sauvegardé en ligne). Publier, modifier, retirer : `POST /api/admin/collection` et `/api/admin/collection-suppression` (droit d'admin vérifié par le serveur ; taille au plus 1,9 Mo).

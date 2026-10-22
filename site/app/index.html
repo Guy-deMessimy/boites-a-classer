@@ -113,6 +113,14 @@
     <div class="fenetre-corps">
       <p class="aide" id="sv-impossible" hidden>Ce navigateur est trop ancien pour la sauvegarde en ligne : enregistre ton travail dans un fichier (Fichier → Enregistrer mon travail).</p>
       <section id="sv-connexion">
+        <div id="sv-eleve" class="sv-eleve">
+          <h3>🎒 Je suis élève, j'ai un code</h3>
+          <form id="sv-form-eleve" class="sv-form">
+            <input id="sv-code-eleve" type="text" maxlength="12" placeholder="ex. K7MP-Q3RX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code donné par ton enseignant">
+            <button type="submit" class="btn principal" id="sv-entrer-eleve">Entrer</button>
+          </form>
+          <p class="aide">Le code de 8 lettres et chiffres donné par ton enseignant.</p>
+        </div>
         <h3 id="sv-titre-connexion">Se connecter</h3>
         <p class="aide">Avec un compte, ton travail est sauvegardé sur le serveur du site : tu le retrouves en te connectant sur n'importe quel appareil. Aucune adresse e-mail n'est demandée : choisis un identifiant qui ne donne pas ton nom de famille, et retiens bien ton mot de passe, il ne peut pas être récupéré.</p>
         <form id="sv-form-compte" class="sv-compte">
@@ -141,7 +149,9 @@
       </section>
       <section id="sv-compte" hidden>
         <p>Compte : <strong id="sv-identifiant-affiche"></strong></p>
+        <p id="sv-classe-eleve" class="aide" hidden>Classe <strong id="sv-classe-nom"></strong> de <span id="sv-classe-enseignant"></span> : ton enseignant peut voir ton travail.</p>
         <p id="sv-admin" hidden><a class="btn" href="../admin/">🛠 Administration</a></p>
+        <p id="sv-enseignant" hidden><a class="btn" id="sv-lien-classes" href="../classe/">🎓 Mes classes</a></p>
         <p class="aide">Ton travail est sauvegardé sur ce compte quelques secondes après chaque changement.</p>
       </section>
       <section id="sv-inactive">
@@ -172,7 +182,7 @@
       <section id="sv-reglages" hidden>
         <label class="sv-case"><input type="checkbox" id="sv-effacer"> Effacer aussi mon travail de ce navigateur (ordinateur partagé)</label>
         <button type="button" class="btn principal" id="sv-deconnecter"><span class="txt-normal">Se déconnecter</span><span class="txt-confirmer">Se déconnecter quand même ?</span></button>
-        <details class="sv-details">
+        <details class="sv-details" id="sv-details-mdp">
           <summary>Changer de mot de passe</summary>
           <form id="sv-form-mdp" class="sv-compte">
             <label class="champ">Mot de passe actuel <input id="sv-mdp-actuel" type="password" autocomplete="current-password"></label>
@@ -181,10 +191,11 @@
             <div class="sv-boutons"><button type="submit" class="btn">Changer le mot de passe</button></div>
           </form>
         </details>
-        <details class="sv-details">
+        <details class="sv-details" id="sv-details-suppression">
           <summary>Supprimer mon compte</summary>
           <form id="sv-form-suppression" class="sv-compte">
             <p class="aide">Le compte et tout le travail gardé sur le serveur seront effacés. Le travail reste dans ce navigateur.</p>
+            <p class="aide" id="sv-suppression-classes" hidden><strong>Vos classes et les comptes de vos élèves (avec leur travail) seront effacés aussi.</strong></p>
             <label class="champ">Mot de passe <input id="sv-mdp-suppression" type="password" autocomplete="current-password"></label>
             <div class="sv-boutons"><button type="submit" class="btn attention" id="sv-supprimer"><span class="txt-normal">Supprimer mon compte</span><span class="txt-confirmer">Vraiment tout supprimer ?</span></button></div>
           </form>

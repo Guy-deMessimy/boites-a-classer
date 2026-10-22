@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.4.0';
+  const VERSION = '2.9.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1880,6 +1880,11 @@
   const CLE_JETON = 'boites-a-classer-compte:jeton'; // session ouverte (functions/api/compte/[action].js)
   const CLE_IDENTIFIANT = 'boites-a-classer-compte:identifiant';
   const CLE_ADMIN = 'boites-a-classer-compte:admin'; // « 1 » : lien vers la page d'administration (le serveur vérifie)
+  const CLE_ENSEIGNANT = 'boites-a-classer-compte:enseignant'; // « 1 » : lien vers la page « Mes classes » (le serveur vérifie)
+  const CLE_ELEVE = 'boites-a-classer-compte:eleve'; // élève : { classe, enseignant } en JSON (connecté avec un code)
+  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE];
+  const SITE = RACINE_API.slice(0, -'/api'.length); // pages du site (« Mes classes »)
+  const FORME_CODE_ELEVE = /^[A-HJKMNP-Z2-9]{8}$/; // code de connexion d'un élève (serveur/classes.js)
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
   const FORME_CODE = /^[a-z]{2,12}(-[a-z]{2,12}){3}$/;
   const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
@@ -1959,8 +1964,8 @@
   // Le serveur ne reconnaît plus la session (expirée, mot de passe changé ailleurs, compte supprimé) : on l'oublie.
   // Ce qui attendait d'être envoyé reste marqué « en attente » et partira à la prochaine connexion.
   function sessionExpiree() {
-    oublier(CLE_JETON);
-    oublier(CLE_ADMIN);
+    if (lire(CLE_ELEVE)) oublier(CLE_IDENTIFIANT); // un prénom, pas un identifiant à proposer
+    for (const k of [CLE_JETON, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE]) oublier(k);
     oublier(CLE_VERSION);
     oublier(CLE_DATE);
     majBoutonCompte();
@@ -2090,14 +2095,40 @@
   }
 
   // Commence à sauvegarder sur ce compte (après une connexion ou une création de compte).
-  function ouvrirSession(identifiant, jeton, admin) {
+  // etat : ce que le serveur dit du compte (functions/api/compte/[action].js) : admin, enseignant, eleve.
+  function ouvrirSession(identifiant, jeton, etat) {
     clearTimeout(minuterieEnvoi);
     for (const k of [CLE_CODE, CLE_VERSION, CLE_DATE]) oublier(k); // un code éventuel reste valable sur le serveur
     ecrire(CLE_JETON, jeton);
     ecrire(CLE_IDENTIFIANT, identifiant);
-    if (admin) ecrire(CLE_ADMIN, '1'); else oublier(CLE_ADMIN);
+    retenirDroits(etat);
     etatEnLigne = { texte: '', erreur: false };
     majBoutonCompte();
+  }
+
+  function retenirDroits(etat) {
+    if (etat && etat.admin) ecrire(CLE_ADMIN, '1'); else oublier(CLE_ADMIN);
+    if (etat && etat.enseignant) ecrire(CLE_ENSEIGNANT, '1'); else oublier(CLE_ENSEIGNANT);
+    if (etat && etat.eleve) ecrire(CLE_ELEVE, JSON.stringify(etat.eleve)); else oublier(CLE_ELEVE);
+  }
+
+  // Relit l'état du compte au démarrage : un rôle donné ou retiré entre-temps, un prénom changé par l'enseignant.
+  async function rafraichirCompte() {
+    const jeton = jetonCompte();
+    if (!jeton || !enLignePossible) return;
+    try {
+      const { statut, r } = await appelCompte('session', undefined, jeton);
+      if (statut === 401 && jetonCompte() === jeton) { sessionExpiree(); return; }
+      if (statut !== 200 || jetonCompte() !== jeton) return;
+      if (r.identifiant) ecrire(CLE_IDENTIFIANT, r.identifiant);
+      retenirDroits(r);
+      majBoutonCompte();
+      if (fenSauvegarde.open) rendreSauvegarde();
+    } catch (e) { /* hors connexion */ }
+  }
+
+  function eleveConnecte() {
+    try { return JSON.parse(lire(CLE_ELEVE)) || null; } catch (e) { return null; }
   }
 
   // Deux contenus identiques, quel que soit l'ordre des clés ?
@@ -2210,6 +2241,7 @@
     $('#sv-activer').disabled = boutonRecuperer.disabled = $('#sv-entrer').disabled = $('#sv-bascule').disabled = !enLignePossible;
     $('#sv-form-compte').hidden = !!enAttenteDeChoix;
     $('#sv-choix').hidden = !enAttenteDeChoix;
+    $('#sv-eleve').hidden = creation || !!enAttenteDeChoix;
     $('#sv-titre-connexion').textContent = creation ? 'Créer un compte' : 'Se connecter';
     $('#sv-champ-mdp2').hidden = !creation;
     $('#sv-mdp').autocomplete = creation ? 'new-password' : 'current-password';
@@ -2219,6 +2251,15 @@
     for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
     if (compte) $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
     $('#sv-admin').hidden = !compte || !lire(CLE_ADMIN);
+    const eleve = compte && eleveConnecte();
+    $('#sv-enseignant').hidden = !compte || !lire(CLE_ENSEIGNANT);
+    $('#sv-classe-eleve').hidden = !eleve;
+    if (eleve) {
+      $('#sv-classe-nom').textContent = eleve.classe || '';
+      $('#sv-classe-enseignant').textContent = eleve.enseignant || '';
+    }
+    $('#sv-details-mdp').hidden = $('#sv-details-suppression').hidden = !!eleve; // un élève n'a pas de mot de passe
+    $('#sv-suppression-classes').hidden = !lire(CLE_ENSEIGNANT);
     if (code) $('#sv-code-affiche').textContent = code;
     if (compte || code) {
       majEtatEnLigne();
@@ -2328,26 +2369,57 @@
         return;
       }
 
-      // Connexion : on regarde ce que le compte a déjà avant de toucher au travail de ce navigateur.
-      const v = await lireVersion('compte ' + r.jeton);
-      const local = donneesLocales();
-      if (v && Object.keys(local).length && !memesDonnees(local, v.donnees)) {
-        enAttenteDeChoix = { identifiant, jeton: r.jeton, admin: r.admin, v };
-        rendreSauvegarde();
-        svMessage.textContent = '';
-        return;
-      }
-      ouvrirSession(identifiant, r.jeton, r.admin);
-      if (v) {
-        appliquerVersion(v.donnees, v.version, v.date);
-        fermerFenetres();
-        info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
-      } else {
-        ecrire(CLE_ATTENTE, '1');
-        envoyer();
-        rendreSauvegarde();
-        svMessage.textContent = 'Connecté au compte. Ton travail est maintenant sauvegardé dessus.';
-      }
+      await entrerDansCompte(identifiant, r);
+    } catch (e) {
+      svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
+    } finally {
+      bouton.disabled = false;
+    }
+  });
+
+  // Après une connexion (mot de passe ou code d'élève) : on regarde ce que le compte a déjà avant de toucher au travail
+  // de ce navigateur.
+  async function entrerDansCompte(identifiant, r) {
+    const v = await lireVersion('compte ' + r.jeton);
+    const local = donneesLocales();
+    if (v && Object.keys(local).length && !memesDonnees(local, v.donnees)) {
+      enAttenteDeChoix = { identifiant, jeton: r.jeton, etat: r, v };
+      rendreSauvegarde();
+      svMessage.textContent = '';
+      return;
+    }
+    ouvrirSession(identifiant, r.jeton, r);
+    if (v) {
+      appliquerVersion(v.donnees, v.version, v.date);
+      fermerFenetres();
+      info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
+    } else {
+      ecrire(CLE_ATTENTE, '1');
+      envoyer();
+      rendreSauvegarde();
+      svMessage.textContent = `Bonjour ${identifiant} ! Ton travail est maintenant sauvegardé sur ton compte.`;
+    }
+  }
+
+  // Élève : connexion avec le code personnel donné par son enseignant (page site/classe/).
+  $('#sv-form-eleve').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const champ = $('#sv-code-eleve');
+    const code = champ.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!FORME_CODE_ELEVE.test(code)) {
+      svMessage.textContent = 'Ton code a 8 lettres et chiffres, par exemple K7MP-Q3RX. Vérifie-le sur ta carte.';
+      champ.focus();
+      return;
+    }
+    const bouton = $('#sv-entrer-eleve');
+    bouton.disabled = true;
+    svMessage.textContent = 'Connexion…';
+    try {
+      const { statut, r } = await appelCompte('code', { code });
+      if (statut === 401) { svMessage.textContent = 'Ce code ne marche pas : vérifie-le, ou demande à ton enseignant.'; return; }
+      if (statut !== 200 || !r.jeton) { svMessage.textContent = messageErreur(statut, r); return; }
+      champ.value = '';
+      await entrerDansCompte(r.identifiant, r);
     } catch (e) {
       svMessage.textContent = 'Impossible de joindre le serveur : ' + (e && e.message ? e.message : e);
     } finally {
@@ -2356,18 +2428,18 @@
   });
 
   $('#sv-prendre').addEventListener('click', () => {
-    const { identifiant, jeton, admin, v } = enAttenteDeChoix;
+    const { identifiant, jeton, etat, v } = enAttenteDeChoix;
     enAttenteDeChoix = null;
-    ouvrirSession(identifiant, jeton, admin);
+    ouvrirSession(identifiant, jeton, etat);
     appliquerVersion(v.donnees, v.version, v.date);
     fermerFenetres();
     info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
   });
 
   $('#sv-garder').addEventListener('click', () => {
-    const { identifiant, jeton, admin } = enAttenteDeChoix;
+    const { identifiant, jeton, etat } = enAttenteDeChoix;
     enAttenteDeChoix = null;
-    ouvrirSession(identifiant, jeton, admin);
+    ouvrirSession(identifiant, jeton, etat);
     ecrire(CLE_ATTENTE, '1'); // devient la version la plus récente du compte
     envoyer();
     rendreSauvegarde();
@@ -2401,7 +2473,7 @@
     remettreConfirmation(bouton);
     const jeton = jetonCompte();
     clearTimeout(minuterieEnvoi);
-    for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+    for (const k of [...CLES_COMPTE, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
     appelCompte('deconnexion', {}, jeton).catch(() => { /* la session expirera d'elle-même */ });
     if (effacer) appliquerVersion({});
     etatEnLigne = { texte: '', erreur: false };
@@ -2451,7 +2523,7 @@
       if (statut === 403) { svMessage.textContent = 'Mot de passe incorrect : le compte n\'a pas été supprimé.'; return; }
       if (statut !== 204) { svMessage.textContent = messageErreur(statut, r); return; }
       clearTimeout(minuterieEnvoi);
-      for (const k of [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+      for (const k of [...CLES_COMPTE, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
       $('#sv-mdp-suppression').value = $('#sv-identifiant').value = '';
       ev.target.closest('details').open = false;
       majBoutonCompte();
@@ -2533,19 +2605,29 @@
     if (document.visibilityState === 'hidden') { if (lire(CLE_ATTENTE)) envoyer(); } else synchroniser();
   });
 
-  /* ---------- Consultation (admin) ---------- */
+  $('#sv-lien-classes').href = SITE + '/classe/';
 
-  // « #consulter=<identifiant> » (lien de la page site/admin/) : un admin ouvre le travail d'un élève. Il est chargé dans
-  // une mémoire temporaire : on peut tout regarder et manipuler, rien n'est gardé ni envoyé, le travail de l'admin
-  // dans ce navigateur n'est pas touché.
+  /* ---------- Consultation (admin, enseignant) ---------- */
+
+  // « #consulter=<identifiant> » (lien de la page site/admin/) : un admin ouvre le travail d'un compte ;
+  // « #consulter-eleve=<id> » (lien de la page site/classe/) : un enseignant ouvre celui d'un de ses élèves. Il est
+  // chargé dans une mémoire temporaire : on peut tout regarder et manipuler, rien n'est gardé ni envoyé, le travail de
+  // l'admin ou de l'enseignant dans ce navigateur n'est pas touché.
+  const CONSULTATIONS = {
+    '#consulter=': { adresse: '/admin/travail?identifiant=', qui: 'un compte admin' },
+    '#consulter-eleve=': { adresse: '/classe/travail?eleve=', qui: 'ton compte enseignant' },
+  };
+  const consultationDemandee = () => Object.keys(CONSULTATIONS).find((d) => location.hash.startsWith(d));
+
   async function ouvrirConsultation() {
-    const identifiant = decodeURIComponent(location.hash.slice('#consulter='.length));
+    const sorte = CONSULTATIONS[consultationDemandee()];
+    let identifiant = decodeURIComponent(location.hash.slice(consultationDemandee().length));
     history.replaceState(null, '', location.pathname + location.search);
     const jeton = jetonCompte();
     let donnees;
     try {
-      if (!jeton) throw new Error('connecte-toi d\'abord avec un compte admin');
-      const rep = await fetch(RACINE_API + '/admin/travail?identifiant=' + encodeURIComponent(identifiant), {
+      if (!jeton) throw new Error(`connecte-toi d'abord avec ${sorte.qui}`);
+      const rep = await fetch(RACINE_API + sorte.adresse + encodeURIComponent(identifiant), {
         headers: { Authorization: 'Bearer ' + jeton },
       });
       if (!rep.ok) {
@@ -2553,10 +2635,11 @@
         try { r = await rep.json(); } catch (e) { /* réponse vide */ }
         throw new Error(r.erreur || 'serveur ' + rep.status);
       }
+      if (rep.headers.get('X-Nom')) identifiant = decodeURIComponent(rep.headers.get('X-Nom')); // prénom de l'élève
       donnees = JSON.parse(await decompresser(new Uint8Array(await rep.arrayBuffer())));
       if (!donnees || typeof donnees !== 'object') throw new Error('travail illisible');
     } catch (e) {
-      info.textContent = `Impossible d'ouvrir le travail de ${identifiant} : ${e && e.message ? e.message : e}.`;
+      info.textContent = `Impossible d'ouvrir ce travail : ${e && e.message ? e.message : e}.`;
       return;
     }
     const memoire = new Map();
@@ -2586,6 +2669,7 @@
     remplirSelect();
     choisirCollection(lire('boites-a-classer:collection'));
     majBoutonCompte();
+    if (!document.body.classList.contains('consultation')) rafraichirCompte();
     if (location.hash === '#compte') { // lien « Se connecter » de la page d'accueil
       history.replaceState(null, '', location.pathname + location.search);
       ouvrirSauvegarde();
@@ -2594,7 +2678,7 @@
     synchroniser();
   }
   if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer);
-  else if (location.hash.startsWith('#consulter=')) ouvrirConsultation().then(() => demarrer(0));
+  else if (consultationDemandee()) ouvrirConsultation().then(() => demarrer(0));
   else demarrer(0);
 
   // Version installable (écran d'accueil du téléphone) et utilisable hors connexion, seulement en ligne.

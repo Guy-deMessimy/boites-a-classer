@@ -5,15 +5,21 @@
 // mot de passe demande de refaire les 600 000 tours pour chaque essai.
 //
 //   POST /api/compte/inscription   { identifiant, secret }   → { identifiant, jeton }   409 si l'identifiant est déjà pris
-//   POST /api/compte/connexion     { identifiant, secret }   → { identifiant, jeton, admin }   401 si incorrect, 429 si trop d'essais
-//   GET  /api/compte/session       (jeton)                   → { identifiant, admin }          401 si la session n'est plus valable
+//   POST /api/compte/connexion     { identifiant, secret }   → { …état, jeton }   401 si incorrect, 429 si trop d'essais
+//   POST /api/compte/code          { code }                  → { …état, jeton }   élève : code donné par son enseignant ; 401 si inconnu
+//   GET  /api/compte/session       (jeton)                   → { …état }          401 si la session n'est plus valable
 //   POST /api/compte/deconnexion   (jeton)                   → 204
 //   POST /api/compte/mot-de-passe  (jeton) { secret, nouveau } → { jeton }  les autres sessions du compte sont fermées
 //   POST /api/compte/suppression   (jeton) { secret }        → 204          efface le compte, ses sessions et son travail
+//                                                                              (enseignant : aussi ses classes et ses élèves)
 //
+// État d'un compte (serveur/classes.js, etatCompte) : { identifiant, admin, enseignant, eleve: { classe, enseignant } | null }.
+// Pour un élève, « identifiant » est le prénom choisi par l'enseignant. Un élève n'a pas de mot de passe : ni changement
+// ni suppression par lui-même (son enseignant s'en charge).
 // Le jeton voyage dans l'en-tête « Authorization: Bearer … » (voir serveur/comptes.js).
 
 import { sessionValide, texte, hex, sha256, base64url, hasard } from '../../../serveur/comptes.js';
+import { etatCompte, effacerCompte, FORME_CODE_ELEVE, normaliserCodeEleve, empreinteCode } from '../../../serveur/classes.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
@@ -123,7 +129,7 @@ async function connexion(request, env) {
   if (await limiteAtteinte(env, 'echecCompte', identifiant) || await limiteAtteinte(env, 'echecAdresse', ip)) {
     return erreur('trop d\'essais, réessaie dans un quart d\'heure', 429);
   }
-  const ligne = await env.DB.prepare('SELECT id, sel, empreinte, admin FROM comptes WHERE identifiant = ?').bind(identifiant).first();
+  const ligne = await env.DB.prepare('SELECT id, sel, empreinte FROM comptes WHERE identifiant = ?').bind(identifiant).first();
   if (!ligne || !(await secretCorrect(ligne, secret))) {
     await env.DB.batch([await compter(env, 'echecCompte', identifiant), await compter(env, 'echecAdresse', ip)]);
     return erreur('identifiant ou mot de passe incorrect', 401);
@@ -133,14 +139,33 @@ async function connexion(request, env) {
     ...requetes,
     env.DB.prepare('UPDATE comptes SET derniere = ? WHERE id = ?').bind(new Date().toISOString(), ligne.id),
   ]);
-  return json({ identifiant, jeton, admin: !!ligne.admin });
+  return json({ ...(await etatCompte(env, ligne.id)), jeton });
+}
+
+// Connexion d'un élève avec le code personnel donné par son enseignant (serveur/classes.js).
+async function code(request, env) {
+  const propre = normaliserCodeEleve((await lireCorps(request)).code);
+  const ip = adresse(request);
+  if (await limiteAtteinte(env, 'echecAdresse', ip)) return erreur('trop d\'essais, réessaie dans un quart d\'heure', 429);
+  const ligne = FORME_CODE_ELEVE.test(propre)
+    && await env.DB.prepare('SELECT id FROM comptes WHERE code_eleve = ?').bind(await empreinteCode(propre)).first();
+  if (!ligne) {
+    await (await compter(env, 'echecAdresse', ip)).run();
+    return erreur('code inconnu', 401);
+  }
+  const { jeton, requetes } = await nouvelleSession(env, ligne.id);
+  await env.DB.batch([
+    ...requetes,
+    env.DB.prepare('UPDATE comptes SET derniere = ? WHERE id = ?').bind(new Date().toISOString(), ligne.id),
+  ]);
+  return json({ ...(await etatCompte(env, ligne.id)), jeton });
 }
 
 // Actions qui demandent une session ouverte.
 const avecSession = {
   async session(request, env, s) {
-    const c = await env.DB.prepare('SELECT identifiant, admin FROM comptes WHERE id = ?').bind(s.compte).first();
-    return c ? json({ identifiant: c.identifiant, admin: !!c.admin }) : erreur('session expirée', 401);
+    const etat = await etatCompte(env, s.compte);
+    return etat ? json(etat) : erreur('session expirée', 401);
   },
 
   async deconnexion(request, env, s) {
@@ -170,11 +195,7 @@ const avecSession = {
     const ligne = await env.DB.prepare('SELECT sel, empreinte FROM comptes WHERE id = ?').bind(s.compte).first();
     if (!ligne) return erreur('session expirée', 401);
     if (!(await secretCorrect(ligne, secret))) return erreur('mot de passe incorrect', 403);
-    await env.DB.batch([
-      env.DB.prepare('DELETE FROM sauvegardes WHERE cle = ?').bind('compte:' + s.compte),
-      env.DB.prepare('DELETE FROM sessions WHERE compte = ?').bind(s.compte),
-      env.DB.prepare('DELETE FROM comptes WHERE id = ?').bind(s.compte),
-    ]);
+    await env.DB.batch(effacerCompte(env, s.compte));
     return rien();
   },
 };
@@ -182,10 +203,10 @@ const avecSession = {
 export async function onRequest({ request, env, params }) {
   if (request.method === 'OPTIONS') return rien();
   const action = params.action;
-  if (action !== 'inscription' && action !== 'connexion' && !Object.hasOwn(avecSession, action)) return erreur('action inconnue', 404);
+  const sansSession = { inscription, connexion, code };
+  if (!Object.hasOwn(sansSession, action) && !Object.hasOwn(avecSession, action)) return erreur('action inconnue', 404);
   if (request.method !== (action === 'session' ? 'GET' : 'POST')) return erreur('méthode non permise', 405);
-  if (action === 'inscription') return inscription(request, env);
-  if (action === 'connexion') return connexion(request, env);
+  if (Object.hasOwn(sansSession, action)) return sansSession[action](request, env);
   const s = await sessionValide(request, env);
   if (!s) return erreur('session expirée', 401);
   return avecSession[action](request, env, s);
