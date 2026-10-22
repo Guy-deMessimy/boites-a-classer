@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.12.0';
+  const VERSION = '3.13.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -75,6 +75,11 @@
   const estSite = (c) => collectionsSite.includes(c);
   // Seul un admin crée et modifie des collections (le serveur le vérifie aussi pour celles du site).
   const estAdmin = () => !!jetonCompte() && lire(CLE_ADMIN) === '1';
+  // Depuis la 3.13.0, un enseignant crée aussi des collections du site, et ne modifie que les siennes (modifiablesSite,
+  // donné par le serveur dans GET /api/collections).
+  const peutCreer = () => estAdmin() || (!!jetonCompte() && lire(CLE_ENSEIGNANT) === '1');
+  let modifiablesSite = new Set();
+  const modifiable = (c) => estSite(c) && (estAdmin() || modifiablesSite.has(c.id));
 
   const nomAttr = (id) => (attrParId.get(id) || { nom: id }).nom;
   const couleurBoite = (b) => (b.attr && attrParId.has(b.attr) ? attrParId.get(b.attr).couleur : GRIS);
@@ -958,7 +963,7 @@
         return;
       }
       // Un fichier de travail apporte sa collection ; un fichier de collection seule est réservé à l'admin.
-      if (lu.type === 'collection' && !estAdmin()) throw new Error('seul un administrateur peut ajouter une collection');
+      if (lu.type === 'collection' && !peutCreer()) throw new Error('seuls les enseignants et les administrateurs peuvent ajouter une collection');
       const c = integrerCollection(lu.collection);
       fermerFenetres();
       if (lu.type === 'travail') {
@@ -1134,6 +1139,7 @@
     };
 
     const admin = estAdmin();
+    const createur = peutCreer();
     const ligne = (c) => {
       const perso = estPerso(c);
       const site = estSite(c);
@@ -1153,9 +1159,9 @@
       if (c !== coll) {
         actions.appendChild(bouton('Utiliser', () => { fermerFenetres(); choisirCollection(c.id); }));
       }
-      if (admin && (perso || site)) {
+      if ((createur && perso) || modifiable(c)) {
         actions.appendChild(bouton('✎ Modifier', () => ouvrirEditeur(c, false)));
-      } else if (admin) {
+      } else if (createur) {
         actions.appendChild(bouton('Copier pour modifier', () => {
           const copie = copieCollection(c);
           copie.id = nouvelId('site-');
@@ -1163,7 +1169,7 @@
           ouvrirEditeur(copie, true);
         }));
       }
-      if (admin && perso) {
+      if (createur && perso) {
         actions.appendChild(bouton('☁️ Publier sur le site', async () => {
           const zone = fenCollections.querySelector('.message');
           try {
@@ -1195,7 +1201,7 @@
         suppr.innerHTML = '<span class="txt-normal">Supprimer</span><span class="txt-confirmer">Confirmer ?</span>';
         actions.appendChild(suppr);
       }
-      if (admin && site) {
+      if (modifiable(c)) {
         const retirer = bouton('', async () => {
           if (!retirer.classList.contains('confirmer')) {
             retirer.classList.add('attention', 'confirmer');
@@ -1235,10 +1241,12 @@
 
     $('#coll-aide').textContent = admin
       ? 'Administrateur : les collections que vous créez ou modifiez ici sont publiées sur le site et proposées à tout le monde. Les collections fournies ne se modifient pas : copiez-en une pour l\'adapter.'
-      : 'Choisissez la collection à classer. Seul un administrateur peut créer ou modifier des collections.';
-    $('#coll-nouvelle').hidden = !admin;
+      : createur
+        ? 'Enseignant : les collections que vous créez ici sont publiées sur le site (proposées à tout le monde, et à donner à vos classes) ; vous modifiez ou retirez les vôtres. Pour partir d\'une collection fournie : « Copier pour modifier ».'
+        : 'Choisissez la collection à classer. Les enseignants et les administrateurs peuvent créer des collections.';
+    $('#coll-nouvelle').hidden = !createur;
     const sections = [];
-    if (admin || collectionsSite.length) {
+    if (createur || collectionsSite.length) {
       sections.push(section('Collections du site', collectionsSite, 'Aucune pour l\'instant : créez-en une, ou copiez une collection fournie.'));
     }
     if (mesCollections.length) sections.push(section('Mes collections (dans ce navigateur)', mesCollections, ''));
@@ -2639,6 +2647,7 @@
     ecrire(CLE_IDENTIFIANT, identifiant);
     retenirDroits(etat);
     remplirSelect();
+    chargerCollectionsSite(); // droits de modification des collections du site
     etatEnLigne = { texte: '', erreur: false };
     majBoutonCompte();
   }
@@ -2706,16 +2715,23 @@
 
   async function chargerCollectionsSite() {
     try {
-      const rep = await fetch(RACINE_API + '/collections');
-      if (rep.ok) appliquerCollectionsSite(lireCollectionsSite(await rep.text()));
+      const jeton = jetonCompte();
+      const rep = await fetch(RACINE_API + '/collections', jeton ? { headers: { Authorization: 'Bearer ' + jeton } } : {});
+      if (!rep.ok) return;
+      const texte = await rep.text();
+      try {
+        modifiablesSite = new Set(JSON.parse(texte).filter((c) => c && c.modifiable).map((c) => c.id));
+      } catch (e) { modifiablesSite = new Set(); }
+      appliquerCollectionsSite(lireCollectionsSite(texte));
+      if (fenCollections.open) remplirListeCollections(); // les droits de modification ont pu changer
     } catch (e) { /* hors connexion : on garde la copie de l'appareil */ }
   }
 
-  async function appelAdmin(action, corps) {
-    const rep = await fetch(RACINE_API + '/admin/' + action, {
-      method: 'POST',
+  async function appelCollections(methode, corps, id) {
+    const rep = await fetch(RACINE_API + '/collections' + (id ? '?id=' + encodeURIComponent(id) : ''), {
+      method: methode,
       headers: { Authorization: 'Bearer ' + jetonCompte(), 'Content-Type': 'application/json' },
-      body: JSON.stringify(corps),
+      body: corps ? JSON.stringify(corps) : undefined,
     });
     if (rep.status === 401) { sessionExpiree(); throw new Error('session expirée, reconnecte-toi'); }
     if (rep.status !== 204) {
@@ -2727,13 +2743,14 @@
 
   async function publierCollection(c) {
     const propre = nettoyerCollection(c);
-    await appelAdmin('collection', { collection: propre });
+    await appelCollections('POST', { collection: propre });
+    modifiablesSite.add(propre.id);
     const existe = collectionsSite.some((x) => x.id === propre.id);
     appliquerCollectionsSite(existe ? collectionsSite.map((x) => (x.id === propre.id ? propre : x)) : [...collectionsSite, propre]);
   }
 
   async function retirerCollection(c) {
-    await appelAdmin('collection-suppression', { id: c.id });
+    await appelCollections('DELETE', null, c.id);
     appliquerCollectionsSite(collectionsSite.filter((x) => x.id !== c.id));
   }
 
@@ -3012,6 +3029,7 @@
     const jeton = jetonCompte();
     clearTimeout(minuterieEnvoi);
     for (const k of [...CLES_COMPTE, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+    modifiablesSite = new Set();
     appelCompte('deconnexion', {}, jeton).catch(() => { /* la session expirera d'elle-même */ });
     if (effacer) appliquerVersion({});
     etatEnLigne = { texte: '', erreur: false };
@@ -3062,6 +3080,7 @@
       if (statut !== 204) { svMessage.textContent = messageErreur(statut, r); return; }
       clearTimeout(minuterieEnvoi);
       for (const k of [...CLES_COMPTE, CLE_VERSION, CLE_DATE, CLE_ATTENTE]) oublier(k);
+      modifiablesSite = new Set();
       $('#sv-mdp-suppression').value = $('#sv-identifiant').value = '';
       ev.target.closest('details').open = false;
       majBoutonCompte();
