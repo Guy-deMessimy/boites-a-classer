@@ -108,7 +108,7 @@ Avant de publier cette version : `npx wrangler d1 migrations apply boites-a-clas
 
 ## Matières (depuis la 3.1.0)
 
-Les collections fournies sont rangées par matière (champ `matiere` dans `app/collections.js`, sciences par défaut) : sciences, français (nature des mots, familles de mots), maths (multiples, figures planes dessinées en SVG), histoire (grandes périodes) et anglais (`langue: 'en'` : noms lus en anglais). Même mécanique de boîtes et mêmes outils ; hors sciences, le logiciel parle d'« éléments » au lieu d'« êtres vivants ». L'accueil a une carte par matière, avec des liens `app/index.html#collection=<id>` qui ouvrent directement la collection. Règle à respecter pour une nouvelle collection : deux attributs ne doivent jamais se croiser (emboîtés ou séparés).
+Les collections fournies sont rangées par matière (champ `matiere` dans `app/collections.js`, sciences par défaut) : sciences, français (nature des mots, familles de mots), maths (multiples, figures planes dessinées en SVG), histoire (grandes périodes), géographie (villes du monde, depuis la 3.4.0) et anglais (deux collections, `langue: 'en'` : noms lus en anglais). Même mécanique de boîtes et mêmes outils ; hors sciences, le logiciel parle d'« éléments » au lieu d'« êtres vivants ». L'accueil a une carte par matière, avec des liens `app/index.html#collection=<id>` qui ouvrent directement la collection. Règle à respecter pour une nouvelle collection : deux attributs ne doivent jamais se croiser (emboîtés ou séparés).
 
 ## Outils (depuis la 3.0.0)
 
