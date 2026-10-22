@@ -108,6 +108,10 @@ Avant de publier cette version : `npx wrangler d1 migrations apply boites-a-clas
 
 Depuis la 3.9.0, l'enseignant coche aussi des **exercices** pour chaque classe (colonne `classes.exercices`, JSON d'identifiants, `migrations/0009_exercices.sql`, `POST /api/classe/exercices`) : l'état du compte d'un élève les renvoie (`eleve.exercices`) et le logiciel les met en tête de la liste, dans « 📌 Donnés par ton enseignant ».
 
+## Photo de profil (depuis la 3.29.1)
+
+Un admin donne à n'importe quel compte (élèves et admins compris) une photo de profil, qui est seulement un emoji : page `site/admin/`, « 🖼 Photo de profil » (20 emojis proposés, ou un autre, ou « Enlever la photo »). `POST /api/admin/avatar { identifiant, avatar | null }` n'accepte que des emojis (`FORME_AVATAR`), colonne `comptes.avatar` (`migrations/0012_avatar.sql`). L'état du compte la renvoie (`avatar`) : le logiciel la montre à la place de 👤 et dans la fenêtre du compte (relue à l'ouverture), et `nomAffiche` (`serveur/evenement.js`) la met devant le nom dans les classements et l'écran de victoire.
+
 ## Matières (depuis la 3.1.0)
 
 Les collections fournies (`app/collections.js`) sont rangées par matière : champ `matiere` (sciences par défaut), liste des matières dans `window.MATIERES` du même fichier — c'est là qu'on ajoute une matière, le logiciel, l'accueil et la page « Mes classes » la reprennent. Sept matières : sciences (êtres vivants, aliments, matériaux, système solaire, régimes alimentaires), français, maths (dont figures et solides dessinés en SVG), histoire, géographie, anglais (`langue: 'en'` : lecture à voix haute en anglais) et musique. Champ `elements` : ce qu'on classe, au masculin (`['aliment', 'aliments']`) ; sinon « êtres vivants » en sciences et « éléments » ailleurs.

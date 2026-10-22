@@ -1,13 +1,15 @@
 // API d'administration (page site/admin/), réservée aux comptes dont la colonne « admin » vaut 1 (migrations/0003_admin.sql).
 // Le jeton de session voyage comme pour les comptes, dans « Authorization: Bearer … ».
 //
-//   GET  /api/admin/comptes                   → { stats, comptes: [{ identifiant, admin, enseignant, nom, classe, de, cree, derniere, versions, date, taille }] }
+//   GET  /api/admin/comptes                   → { stats, comptes: [{ identifiant, admin, enseignant, nom, badges, avatar, classe, de, cree, derniere, versions, date, taille }] }
 //                                               (élève : nom = prénom, classe = nom de sa classe, de = identifiant de son enseignant)
 //   GET  /api/admin/travail?identifiant=…     dernière version du travail d'un compte (gzip, en-têtes X-Version et X-Date) ; 404 s'il n'y en a pas
 //   POST /api/admin/mot-de-passe { identifiant, secret }  nouveau mot de passe (secret dérivé par la page) ; ferme ses sessions → 204
 //   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail (enseignant : aussi
 //                                                         ses classes et ses élèves) → 204
 //   POST /api/admin/enseignant   { identifiant, actif }   donne (true) ou retire (false) le rôle enseignant → 204
+//   POST /api/admin/avatar       { identifiant, avatar }  photo de profil : un emoji, ou null pour l'enlever (aussi pour un
+//                                                         compte admin) → 204  (migrations/0012_avatar.sql)
 //   GET  /api/admin/collections               → { collections: [{ id, nom, auteur, date, elements }] }  collections du site et leur auteur
 //   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
 //   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
@@ -30,13 +32,15 @@
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
-import { EVENEMENTS, lireEtat, changerEvenement, classement, SEUIL_BOSS } from '../../../serveur/evenement.js';
+import { EVENEMENTS, lireEtat, changerEvenement, classement, oublierCache, SEUIL_BOSS } from '../../../serveur/evenement.js';
 import { effacerCompte } from '../../../serveur/classes.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
 const FORME_ID_COLLECTION = /^site-[A-Za-z0-9_-]{1,55}$/;
 const FORME_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// Un seul emoji (avec sa teinte de peau, ou fait de plusieurs joints comme 🧑‍🏫) : jamais de texte libre.
+const FORME_AVATAR = /^(?=.{1,24}$)\p{Extended_Pictographic}\ufe0f?\p{Emoji_Modifier}?(\u200d\p{Extended_Pictographic}\ufe0f?\p{Emoji_Modifier}?)*$/u;
 const TEXTE_MAX = 2000;
 const TAILLE_MAX_COLLECTION = 1900000; // une valeur D1 ne peut pas dépasser 2 Mo
 
@@ -84,7 +88,7 @@ const actions = {
         + '(SELECT count(*) FROM classes) AS classes, '
         + '(SELECT count(*) FROM comptes WHERE classe IS NOT NULL) AS eleves, '
         + '(SELECT COALESCE(sum(non_lus_admin), 0) FROM support_fils) AS support_non_lus'),
-      env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, c.badges, cl.nom AS classe, p.identifiant AS de, '
+      env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, c.badges, c.avatar, cl.nom AS classe, p.identifiant AS de, '
         + 'c.cree, c.derniere, count(s.version) AS versions, max(s.date) AS date, '
         + '(SELECT length(donnees) FROM sauvegardes WHERE cle = \'compte:\' || c.id ORDER BY version DESC LIMIT 1) AS taille '
         + 'FROM comptes c LEFT JOIN sauvegardes s ON s.cle = \'compte:\' || c.id '
@@ -135,6 +139,16 @@ const actions = {
     if (c instanceof Response) return c;
     if (c.classe) return erreur('un compte d\'élève ne peut pas devenir enseignant', 400);
     await env.DB.prepare('UPDATE comptes SET est_enseignant = ? WHERE id = ?').bind(actif ? 1 : 0, c.id).run();
+    return rien();
+  },
+
+  async avatar(request, env) {
+    const { identifiant, avatar } = await lireCorps(request);
+    if (avatar !== null && !FORME_AVATAR.test(avatar || '')) return erreur('la photo de profil doit être un emoji', 400);
+    const c = await compteVise(env, identifiant, false);
+    if (c instanceof Response) return c;
+    await env.DB.prepare('UPDATE comptes SET avatar = ? WHERE id = ?').bind(avatar, c.id).run();
+    oublierCache(); // classements et gagnant du boss
     return rien();
   },
 
@@ -268,7 +282,7 @@ const actions = {
 };
 
 const METHODES = {
-  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'],
+  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'], avatar: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'],
   evenement: ['GET', 'POST'], classement: ['GET'],

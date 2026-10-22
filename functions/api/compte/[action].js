@@ -13,7 +13,7 @@
 //   POST /api/compte/suppression   (jeton) { secret }        → 204          efface le compte, ses sessions et son travail
 //                                                                              (enseignant : aussi ses classes et ses élèves)
 //
-// État d'un compte (serveur/classes.js, etatCompte) : { identifiant, admin, enseignant, eleve: { classe, enseignant } | null }.
+// État d'un compte (serveur/classes.js, etatCompte) : { identifiant, admin, enseignant, eleve: { classe, enseignant } | null, badges, avatar }.
 // Pour un élève, « identifiant » est le prénom choisi par l'enseignant. Un élève n'a pas de mot de passe : ni changement
 // ni suppression par lui-même (son enseignant s'en charge).
 // Le jeton voyage dans l'en-tête « Authorization: Bearer … » (voir serveur/comptes.js).

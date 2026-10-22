@@ -115,6 +115,10 @@
     td.date { min-width: 9em; }
     .badge { display: inline-block; margin: 2px 0 2px 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent-doux); color: var(--accent); font-size: .78rem; font-weight: 600; white-space: nowrap; }
     .resultat td { background: var(--accent-doux); }
+    .choix-avatar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .choix-avatar .emoji { min-width: 2.4em; padding: 4px; font-size: 1.3rem; line-height: 1; }
+    .choix-avatar .emoji.actuel { outline: 2px solid var(--accent); }
+    .choix-avatar input { width: 7em; padding: 6px 8px; font: inherit; font-size: 1.1rem; }
     .resultat code { padding: 2px 8px; border-radius: 6px; background: var(--carte); font-size: 1.05rem; font-weight: 700; user-select: all; }
     .message { min-height: 1.5em; margin: 12px 0 0; font-weight: 600; }
     .message.erreur { color: var(--faux); }
@@ -252,6 +256,8 @@
       var $ = function (s) { return document.querySelector(s); };
       var comptes = [];
       var resultats = {}; // identifiant → nouveau mot de passe à afficher sous sa ligne
+      var choixAvatar = null; // identifiant dont on choisit la photo de profil (ligne sous la sienne)
+      var AVATARS = ['🎃', '👻', '🦊', '🐱', '🐶', '🐼', '🦁', '🐸', '🦉', '🐢', '🦄', '🐙', '🌻', '⭐', '🚀', '⚽', '🎨', '🎸', '🧑‍🏫', '🧑‍🔬'];
 
       // Mots pour fabriquer un mot de passe facile à dicter à un élève (3 mots + 2 chiffres, environ 30 bits).
       var MOTS = ('abeille agneau aigle baleine bison castor chameau cheval chevre cigale cigogne crabe criquet cygne dauphin '
@@ -521,7 +527,7 @@
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
           // Un élève (créé par son enseignant) est montré par son prénom, avec sa classe.
-          nom.textContent = c.classe ? c.nom + ' ' : c.identifiant;
+          nom.textContent = (c.avatar ? c.avatar + ' ' : '') + (c.classe ? c.nom + ' ' : c.identifiant);
           var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
           // Badges gagnés pendant les événements (boss d'Halloween).
           var gagnes = [];
@@ -562,6 +568,7 @@
           voir.href = '../app/index.html#consulter=' + encodeURIComponent(c.identifiant);
           if (!c.versions) voir.setAttribute('aria-disabled', 'true');
           actions.appendChild(voir);
+          actions.append(' ', bouton('🖼 Photo de profil', function () { choixAvatar = choixAvatar === c.identifiant ? null : c.identifiant; afficher(); }));
           if (!c.admin && !c.classe) {
             actions.append(' ', bouton('🔑 Nouveau mot de passe', function (ev) { nouveauMotDePasse(c.identifiant, ev.currentTarget); }),
               ' ', bouton(c.enseignant ? 'Retirer le rôle enseignant' : '🎓 Rendre enseignant', function (ev) { changerEnseignant(c, ev.currentTarget); }));
@@ -572,6 +579,7 @@
           tr.appendChild(actions);
           lignes.push(tr);
 
+          if (choixAvatar === c.identifiant) lignes.push(ligneAvatar(c));
           if (resultats[c.identifiant]) {
             var res = document.createElement('tr');
             res.className = 'resultat';
@@ -607,6 +615,45 @@
           resultats[id] = mdp;
           message('');
           afficher();
+        }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
+      }
+
+      // Photo de profil : un emoji (montré à la place de 👤 dans le logiciel et devant le nom dans les classements).
+      function ligneAvatar(c) {
+        var tr = document.createElement('tr');
+        tr.className = 'resultat';
+        var td = document.createElement('td');
+        td.colSpan = 6;
+        var boite = document.createElement('div');
+        boite.className = 'choix-avatar';
+        boite.append('Photo de profil de ' + (c.nom || c.identifiant) + ' : ');
+        AVATARS.forEach(function (a) {
+          var b = bouton(a, function (ev) { changerAvatar(c, a, ev.currentTarget); }, 'emoji' + (c.avatar === a ? ' actuel' : ''));
+          b.title = 'Choisir ' + a;
+          boite.appendChild(b);
+        });
+        var autre = document.createElement('input');
+        autre.placeholder = 'autre emoji';
+        autre.setAttribute('aria-label', 'Autre emoji');
+        autre.value = c.avatar && AVATARS.indexOf(c.avatar) < 0 ? c.avatar : '';
+        autre.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') changerAvatar(c, autre.value.trim(), autre); });
+        boite.append(autre, bouton('OK', function (ev) { changerAvatar(c, autre.value.trim(), ev.currentTarget); }));
+        if (c.avatar) boite.append(bouton('Enlever la photo', function (ev) { changerAvatar(c, null, ev.currentTarget); }));
+        boite.append(bouton('Fermer', function () { choixAvatar = null; afficher(); }));
+        td.appendChild(boite);
+        tr.appendChild(td);
+        return tr;
+      }
+
+      function changerAvatar(c, avatar, b) {
+        if (avatar === '') return;
+        b.disabled = true;
+        appel('avatar', { identifiant: c.identifiant, avatar: avatar }).then(function (x) {
+          if (x.statut !== 204) { b.disabled = false; message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
+          choixAvatar = null;
+          message(avatar ? 'Photo de profil de ' + (c.nom || c.identifiant) + ' : ' + avatar + ' (visible à sa prochaine ouverture du logiciel).'
+            : 'Photo de profil de ' + (c.nom || c.identifiant) + ' enlevée.');
+          charger();
         }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
       }
 

@@ -2622,7 +2622,8 @@
   const CLE_ENSEIGNANT = 'boites-a-classer-compte:enseignant'; // « 1 » : lien vers la page « Mes classes » (le serveur vérifie)
   const CLE_ELEVE = 'boites-a-classer-compte:eleve'; // élève : { classe, enseignant } en JSON (connecté avec un code)
   const CLE_BADGES = 'boites-a-classer-compte:badges'; // badges gagnés pendant les événements, en JSON (serveur/evenement.js)
-  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES];
+  const CLE_AVATAR = 'boites-a-classer-compte:avatar'; // photo de profil (un emoji choisi par un admin), à la place de 👤
+  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES, CLE_AVATAR];
   const SITE = RACINE_API.slice(0, -'/api'.length); // pages du site (« Mes classes »)
   const FORME_CODE_ELEVE = /^[A-HJKMNP-Z2-9]{8}$/; // code de connexion d'un élève (serveur/classes.js)
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
@@ -2830,6 +2831,7 @@
   const boutonCompte = $('#compte');
   function majBoutonCompte() {
     const nom = jetonCompte() && lire(CLE_IDENTIFIANT);
+    $('#compte-avatar').textContent = (nom && lire(CLE_AVATAR)) || '👤';
     $('#compte-nom').textContent = ' ' + (nom || 'Se connecter');
     if (nom) ajouterBadges($('#compte-nom'));
     boutonCompte.title = nom ? `Compte ${nom} : sauvegarde en ligne` : 'Se connecter pour sauvegarder son travail en ligne';
@@ -2856,6 +2858,7 @@
     if (etat && etat.enseignant) ecrire(CLE_ENSEIGNANT, '1'); else oublier(CLE_ENSEIGNANT);
     if (etat && etat.eleve) ecrire(CLE_ELEVE, JSON.stringify(etat.eleve)); else oublier(CLE_ELEVE);
     if (etat && Array.isArray(etat.badges) && etat.badges.length) ecrire(CLE_BADGES, JSON.stringify(etat.badges)); else oublier(CLE_BADGES);
+    if (etat && typeof etat.avatar === 'string' && etat.avatar) ecrire(CLE_AVATAR, etat.avatar); else oublier(CLE_AVATAR);
   }
 
   // Badges du compte, à côté de son nom (site/evenement.js) : « vérifié par le site » ✔, boss d'Halloween 🎃 ou de Noël 🎅,
@@ -3112,7 +3115,7 @@
     if (!$('#sv-identifiant').value) $('#sv-identifiant').value = lire(CLE_IDENTIFIANT) || '';
     for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
     if (compte) {
-      $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
+      $('#sv-identifiant-affiche').textContent = (lire(CLE_AVATAR) ? lire(CLE_AVATAR) + ' ' : '') + (lire(CLE_IDENTIFIANT) || '');
       ajouterBadges($('#sv-identifiant-affiche'));
     }
     $('#sv-badges').hidden = !compte || !badgesCompte().length;
