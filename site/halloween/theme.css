@@ -1,0 +1,78 @@
+/* Thème d'Halloween de la page d'accueil (classe « theme-halloween » sur <html>, feuille chargée après le style de la
+   page) : nuit violette, lune, motif fond-halloween.svg, silhouettes scene-halloween.svg, titres en Creepster.
+   Pour revenir au thème sciences après Halloween : retirer la classe et le <link> de site/index.html.
+   Pendant l'événement (site/halloween/hanter.js), le fond s'anime en plus. */
+
+/* Police Creepster (SIL Open Font License, voir polices/OFL-creepster.txt), hébergée avec le site. */
+@font-face {
+  font-family: "Creepster";
+  font-display: swap;
+  src: url(../polices/creepster-latin.woff2) format("woff2");
+}
+
+:root.theme-halloween {
+  color-scheme: dark;
+  --fond: #120b1f;
+  --carte: rgb(31 20 48 / .95);
+  --encre: #f4eefc;
+  --doux: #cbbfdf;
+  --ligne: #46325f;
+  --accent: #ff8c1a;
+  --accent-encre: #1b0f02;
+  --accent-doux: rgb(255 140 26 / .16);
+  --code: #2d2143;
+  --voile: rgb(25 15 40 / .88);
+  --ombre: 0 8px 24px rgb(0 0 0 / .5);
+  --motif-opacite: .38;
+  --titre: "Creepster", "Space Grotesk", system-ui, sans-serif;
+}
+
+.theme-halloween body {
+  background:
+    radial-gradient(circle at 86% 11%, #fff6d8 0 46px, rgb(255 232 160 / .35) 48px 70px, rgb(255 220 140 / .1) 72px 150px, transparent 260px) fixed,
+    linear-gradient(180deg, #0a0614 0%, #190e2c 45%, #2a1438 100%) fixed;
+}
+.theme-halloween body::before {
+  background: url(fond-halloween.svg) 0 0 / 320px 320px;
+}
+/* Silhouettes en bas de l'écran, derrière le contenu. */
+.theme-halloween body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(34vh, 300px);
+  z-index: -1;
+  background: url(scene-halloween.svg) center bottom / auto 100% repeat-x;
+  pointer-events: none;
+}
+
+.theme-halloween h1,
+.theme-halloween h2,
+.theme-halloween .carte h3,
+.theme-halloween .annonce p {
+  font-family: var(--titre);
+  font-weight: 400;
+  letter-spacing: .04em;
+}
+.theme-halloween h1 { color: #ff9a2e; text-shadow: 0 0 18px rgb(255 120 0 / .45); }
+.theme-halloween h2 { color: #ffb35c; font-size: 1.9rem; text-shadow: 0 2px 10px rgb(0 0 0 / .8); }
+.theme-halloween .carte h3 { color: #ffd2a1; font-size: 1.45rem; }
+.theme-halloween .auteur { color: #ffb35c; }
+
+.theme-halloween .annonce p {
+  background: linear-gradient(90deg, #ff8c1a, #b14bff);
+  color: #fff;
+  font-size: 1.35rem;
+  text-shadow: 0 1px 3px rgb(0 0 0 / .45);
+  box-shadow: 0 0 22px rgb(255 140 26 / .35), var(--ombre);
+}
+.theme-halloween .annonce a {
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: .95rem;
+  letter-spacing: 0;
+}
+.theme-halloween .fonctions li::before { background: var(--accent); }
+.theme-halloween footer { margin-bottom: 120px; } /* au-dessus de la maison hantée */

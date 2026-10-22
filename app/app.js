@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.24.0';
+  const VERSION = '3.25.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2046,6 +2046,8 @@
         entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
         titre('Aide'),
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
+        // Événement d'Halloween en cours (site/halloween/hanter.js) : les fantômes peuvent gêner une séance de travail.
+        ...(window.hanter && window.hanter.actif() ? [entreeMenu(window.hanter.calme() ? '👻 Rappeler les fantômes' : '👻 Chasser les fantômes', () => window.hanter.calme(!window.hanter.calme()))] : []),
       );
       if (voixPossible) m.appendChild(entreeMenu(voixActive() ? '🔇 Ne plus lire à voix haute' : '🔊 Lire les noms à voix haute', basculerVoix));
     });
@@ -3534,11 +3536,26 @@
   // Site arrêté par un admin (serveur/maintenance.js) : la page se recharge d'elle-même et devient « revient dans peu de
   // temps » (même chose que site/arret.js). Le travail reste dans le navigateur ; ce qui n'était pas encore envoyé
   // partira à la réouverture. L'application de bureau, elle, continue de marcher.
+  // Même réponse : l'événement en cours (serveur/evenement.js), dont les effets viennent du site (site/halloween/hanter.js).
   if (location.protocol === 'https:' || location.port === '8788') {
+    let hanterCharge = false;
+    const suivreEvenement = (e) => {
+      if (window.hanter) { if (e) window.hanter.demarrer(e); else window.hanter.arreter(); return; }
+      if (!e || hanterCharge || document.body.classList.contains('consultation')) return;
+      hanterCharge = true;
+      const s = document.createElement('script');
+      s.src = SITE + '/halloween/hanter.js';
+      s.onload = () => { if (window.hanter) window.hanter.demarrer(e); };
+      document.head.appendChild(s);
+    };
     const siteArrete = () => {
       if (document.visibilityState !== 'visible') return;
-      fetch(RACINE_API + '/etat', { cache: 'no-store' }).then((rep) => { if (rep.status === 503) location.reload(); }).catch(() => { /* hors connexion */ });
+      fetch(RACINE_API + '/etat', { cache: 'no-store' }).then((rep) => {
+        if (rep.status === 503) location.reload();
+        else if (rep.ok) return rep.json().then((r) => suivreEvenement(r && r.evenement));
+      }).catch(() => { /* hors connexion */ });
     };
+    siteArrete();
     setInterval(siteArrete, 20000);
     document.addEventListener('visibilitychange', siteArrete);
   }

@@ -19,11 +19,14 @@
 //   POST /api/admin/support-suppression { id }  efface la conversation → 204
 //   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
 //   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
+//   GET  /api/admin/evenement                             → { evenement: { nom, depuis } | null }  (serveur/evenement.js)
+//   POST /api/admin/evenement    { nom }                  déclenche l'événement (« halloween ») ou l'arrête (null)
 //
 // Un compte admin ne peut pas être modifié ni supprimé par cette API (y compris le sien) : réglages du compte dans le logiciel.
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
+import { EVENEMENTS, evenementEnCours, changerEvenement } from '../../../serveur/evenement.js';
 import { effacerCompte } from '../../../serveur/classes.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
@@ -236,12 +239,22 @@ const actions = {
     }
     return json({ active: await maintenanceActive(env) });
   },
+
+  async evenement(request, env) {
+    if (request.method === 'POST') {
+      const { nom } = await lireCorps(request);
+      if (nom !== null && !EVENEMENTS.includes(nom)) return erreur('« nom » doit valoir ' + EVENEMENTS.join(', ') + ' ou null', 400);
+      return json({ evenement: await changerEvenement(env, nom) });
+    }
+    return json({ evenement: await evenementEnCours(env) });
+  },
 };
 
 const METHODES = {
   comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'],
+  evenement: ['GET', 'POST'],
 };
 
 export async function onRequest({ request, env, params }) {

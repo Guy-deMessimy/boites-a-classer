@@ -88,6 +88,10 @@
     .etat-site .bouton { padding: .55rem 1.1rem; font-size: 1rem; font-weight: 600; }
     .bouton.arreter { background: var(--faux); border-color: var(--faux); color: #fff; }
     .bouton.rouvrir { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .etat-site.evenement { border-color: var(--ligne); }
+    .etat-site.evenement.en-cours { border-color: #e8741c; }
+    .etat-site.evenement.en-cours strong { color: #e8741c; }
+    .bouton.declencher { background: #e8741c; border-color: #e8741c; color: #fff; }
     .chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 24px; padding: 0; list-style: none; }
     .chiffres li { padding: 14px 16px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
     .chiffres strong { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
@@ -161,6 +165,13 @@
           <span id="etat-detail"></span>
         </div>
         <button type="button" class="bouton" id="basculer-site" disabled></button>
+      </section>
+      <section class="etat-site evenement" id="etat-evenement">
+        <div>
+          <strong id="evenement-texte">🎃 Événement d'Halloween…</strong>
+          <span id="evenement-detail"></span>
+        </div>
+        <button type="button" class="bouton" id="basculer-evenement" disabled></button>
       </section>
       <ul class="chiffres" id="chiffres"></ul>
       <section class="support" id="support">
@@ -344,6 +355,34 @@
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEtat(siteArrete); });
       });
 
+      /* Événement d'Halloween (serveur/evenement.js) : fond animé, fantômes et clip d'intro sur les pages ouvertes
+         (site/halloween/hanter.js), au plus 20 secondes après le déclenchement. */
+      var evenement = null;
+      function afficherEvenement(e) {
+        evenement = e;
+        var b = $('#basculer-evenement');
+        b.disabled = false;
+        $('#etat-evenement').classList.toggle('en-cours', !!e);
+        $('#evenement-texte').textContent = e ? '🎃 L\'événement d\'Halloween est en cours' : '🎃 Événement d\'Halloween : pas encore déclenché';
+        $('#evenement-detail').textContent = e
+          ? 'Depuis le ' + date(e.depuis) + ' : fond animé, fantômes sur tout le site, clip d\'intro sur l\'accueil.'
+          : 'L\'accueil annonce « Événement d\'Halloween prochainement ». Le déclencher anime le fond, lâche les fantômes et montre le clip d\'intro.';
+        b.className = 'bouton ' + (e ? '' : 'declencher');
+        b.textContent = e ? 'Arrêter l\'événement' : '🎃 Déclencher l\'événement';
+      }
+      function chargerEvenement() {
+        appel('evenement').then(function (x) { if (x.statut === 200) afficherEvenement(x.r.evenement); });
+      }
+      $('#basculer-evenement').addEventListener('click', function () {
+        var b = $('#basculer-evenement');
+        b.disabled = true;
+        appel('evenement', { nom: evenement ? null : 'halloween' }).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); afficherEvenement(evenement); return; }
+          afficherEvenement(x.r.evenement);
+          message(x.r.evenement ? 'Événement déclenché : les pages ouvertes le verront dans les 20 secondes.' : 'Événement arrêté.');
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEvenement(evenement); });
+      });
+
       function message(texte, erreur) {
         $('#message').textContent = texte;
         $('#message').classList.toggle('erreur', !!erreur);
@@ -364,6 +403,7 @@
           $('#contenu').hidden = false;
           $('#deconnecter').hidden = false;
           chargerEtat();
+          chargerEvenement();
           $('#moi').textContent = 'Compte : ' + identifiant;
           var s = x.r.stats;
           $('#chiffres').replaceChildren.apply($('#chiffres'), [

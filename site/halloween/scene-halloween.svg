@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <!-- Silhouettes au bas de l'accueil (site/halloween/theme.css) : arbre mort, cimetière, colline et maison hantée.
+       Répétée en largeur : les deux bords sont à la même hauteur. Dessin fait pour Boîtes à classer (GPL-3.0). -->
+  <defs>
+    <radialGradient id="lueur" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffcf5a" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffcf5a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- colline du fond -->
+  <path d="M0 250C150 236 260 214 380 224S600 246 700 222 900 150 980 168 1120 236 1200 250V300H0z" fill="#1a0f2a"/>
+  <!-- arbre mort -->
+  <g fill="none" stroke="#0b0612" stroke-linecap="round">
+    <path d="M190 262c4-40 2-80-6-118" stroke-width="12"/>
+    <path d="M186 190c-20-14-34-30-40-52M146 138c-8-6-12-14-12-24M146 138c-14 0-26-6-34-16" stroke-width="6"/>
+    <path d="M185 168c20-18 42-26 64-26M249 142c10-8 16-18 18-30M249 142c12 2 22 0 32-6" stroke-width="5"/>
+    <path d="M184 146c-2-22 4-40 16-54M200 92c-2-12 0-22 6-30M200 92c10-4 16-10 20-20" stroke-width="4"/>
+  </g>
+  <!-- cimetière -->
+  <g fill="#0b0612">
+    <path d="M380 262v-34a14 14 0 0 1 28 0v34z"/>
+    <path d="M430 262v-26a11 11 0 0 1 22 0v26z"/>
+    <path d="M472 262v-44h-10v-8h10v-10h8v10h10v8h-10v44z"/>
+    <path d="M520 262v-30a13 13 0 0 1 26 0v30z"/>
+    <path d="M566 262v-36h-8v-7h8v-9h7v9h8v7h-8v36z"/>
+  </g>
+  <!-- maison hantée sur la colline -->
+  <g fill="#0b0612">
+    <path d="M860 180h120v80H860z"/>
+    <path d="M850 182l70-52 70 52z"/>
+    <path d="M940 176V96h34v80z"/>
+    <path d="M934 98l23-46 23 46z"/>
+    <path d="M876 150h28v32h-28z"/>
+    <path d="M868 154l22-22 22 22z"/>
+    <path d="M988 200l26-10v70h-26z"/>
+    <path d="M958 52l-1-14"/>
+  </g>
+  <g fill="#ffcf5a">
+    <rect x="884" y="160" width="12" height="14" rx="1"/>
+    <rect x="950" y="112" width="14" height="18" rx="7"/>
+    <rect x="874" y="204" width="16" height="20"/>
+    <rect x="944" y="204" width="16" height="20"/>
+    <rect x="910" y="226" width="20" height="34" fill="#ff8c1a"/>
+  </g>
+  <circle cx="957" cy="121" r="26" fill="url(#lueur)"/>
+  <circle cx="890" cy="167" r="20" fill="url(#lueur)"/>
+  <!-- premier plan -->
+  <path d="M0 270C120 258 240 262 360 268S600 256 760 262 1000 276 1200 270V300H0z" fill="#07040d"/>
+  <!-- barrière -->
+  <g stroke="#07040d" stroke-width="4">
+    <path d="M620 264v-26M640 264v-30M660 264v-26M680 264v-30M700 264v-26M614 246h92"/>
+  </g>
+</svg>
