@@ -356,7 +356,7 @@
       });
 
       /* Événement d'Halloween (serveur/evenement.js) : fond animé, fantômes et clip d'intro sur les pages ouvertes
-         (site/halloween/hanter.js), au plus 20 secondes après le déclenchement. */
+         (site/halloween/hanter.js), quelques secondes après le déclenchement, sans recharger (functions/api/etat.js). */
       var evenement = null;
       function afficherEvenement(e) {
         evenement = e;
@@ -379,7 +379,7 @@
         appel('evenement', { nom: evenement ? null : 'halloween' }).then(function (x) {
           if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); afficherEvenement(evenement); return; }
           afficherEvenement(x.r.evenement);
-          message(x.r.evenement ? 'Événement déclenché : les pages ouvertes le verront dans les 20 secondes.' : 'Événement arrêté.');
+          message(x.r.evenement ? 'Événement déclenché : les pages ouvertes le voient en quelques secondes, sans recharger.' : 'Événement arrêté.');
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEvenement(evenement); });
       });
 

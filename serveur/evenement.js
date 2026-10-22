@@ -4,8 +4,9 @@
 
 export const EVENEMENTS = ['halloween'];
 
-// Même cache que serveur/maintenance.js : /api/etat est demandé toutes les 20 s par chaque page ouverte.
-const DUREE_CACHE = 5000;
+// Chaque instance du serveur garde la valeur 2,5 s : les pages en attente sur /api/etat (functions/api/etat.js), qui
+// relisent toutes les 3 s, partagent une seule lecture de la base par instance.
+const DUREE_CACHE = 2500;
 let cache = { valeur: null, lu: 0 };
 
 export async function evenementEnCours(env) {

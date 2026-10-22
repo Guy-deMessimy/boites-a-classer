@@ -113,9 +113,10 @@ export const PAGE_MAINTENANCE = `<!doctype html>
   </main>
   <script>
     // Dès que l'admin rouvre le site, /api/etat ne répond plus 503 : on recharge, et la vraie page revient.
+    // (« attendre » d'une valeur qui ne correspond à aucun état : réponse immédiate, voir functions/api/etat.js.)
     setInterval(function () {
-      fetch('/api/etat', { cache: 'no-store' }).then(function (rep) { if (rep.ok) location.reload(); }).catch(function () {});
-    }, 20000);
+      fetch('/api/etat?attendre=arret', { cache: 'no-store' }).then(function (rep) { if (rep.ok) location.reload(); }).catch(function () {});
+    }, 10000);
   </script>
 </body>
 </html>

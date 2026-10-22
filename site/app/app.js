@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.25.1';
+  const VERSION = '3.25.2';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -3537,8 +3537,12 @@
   // temps » (même chose que site/arret.js). Le travail reste dans le navigateur ; ce qui n'était pas encore envoyé
   // partira à la réouverture. L'application de bureau, elle, continue de marcher.
   // Même réponse : l'événement en cours (serveur/evenement.js), dont les effets viennent du site (site/halloween/hanter.js).
+  // Le serveur garde la question jusqu'à ce que l'état change (24 s au plus, functions/api/etat.js) : tout arrive en
+  // quelques secondes, sans recharger.
   if (location.protocol === 'https:' || location.port === '8788') {
     let hanterCharge = false;
+    let connu = '?';
+    let enCours = false;
     const suivreEvenement = (e) => {
       if (window.hanter) { if (e) window.hanter.demarrer(e); else window.hanter.arreter(); return; }
       if (!e || hanterCharge || document.body.classList.contains('consultation')) return;
@@ -3548,16 +3552,25 @@
       s.onload = () => { if (window.hanter) window.hanter.demarrer(e); };
       document.head.appendChild(s);
     };
-    const siteArrete = () => {
-      if (document.visibilityState !== 'visible') return;
-      fetch(RACINE_API + '/etat', { cache: 'no-store' }).then((rep) => {
-        if (rep.status === 503) location.reload();
-        else if (rep.ok) return rep.json().then((r) => suivreEvenement(r && r.evenement));
-      }).catch(() => { /* hors connexion */ });
+    const ecouterSite = async () => {
+      if (enCours || document.visibilityState !== 'visible') return;
+      enCours = true;
+      try {
+        const rep = await fetch(RACINE_API + '/etat?attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
+        if (rep.status === 503) { location.reload(); return; }
+        if (!rep.ok) throw new Error('serveur ' + rep.status);
+        const e = (await rep.json()).evenement || null;
+        connu = e ? e.nom + '@' + e.depuis : '-';
+        suivreEvenement(e);
+        enCours = false;
+        ecouterSite();
+      } catch (e) {
+        enCours = false; // hors connexion : on réessaie dans 20 s
+        setTimeout(ecouterSite, 20000);
+      }
     };
-    siteArrete();
-    setInterval(siteArrete, 20000);
-    document.addEventListener('visibilitychange', siteArrete);
+    ecouterSite();
+    document.addEventListener('visibilitychange', ecouterSite);
   }
 
   // Service client (page site/aide/) : une pastille sur 👤 quand l'admin a répondu et que la réponse n'a pas été lue.
