@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.19.0';
+  const VERSION = '3.19.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2749,9 +2749,18 @@
       if (r.identifiant) ecrire(CLE_IDENTIFIANT, r.identifiant);
       retenirDroits(r);
       remplirSelect(); // exercices donnés par l'enseignant
+      annoncerExercices();
       majBoutonCompte();
       if (fenSauvegarde.open) rendreSauvegarde();
     } catch (e) { /* hors connexion */ }
+  }
+
+  // Élève : rappelle les exercices donnés par l'enseignant qui ne sont pas encore réussis.
+  function annoncerExercices() {
+    const eleve = jetonCompte() && eleveConnecte();
+    if (!eleve || !Array.isArray(eleve.exercices) || info.textContent !== infoDefaut) return;
+    const restent = eleve.exercices.map((id) => toutes().find((c) => c.id === id)).filter((c) => c && !reussie(c));
+    if (restent.length) info.textContent = `📌 Ton enseignant t'a donné ${pluriel(restent.length, 'exercice', 'exercices')} à faire : en haut de la liste (${restent.map((c) => c.nom).join(', ')}).`;
   }
 
   function eleveConnecte() {
@@ -3028,6 +3037,9 @@
       appliquerVersion(v.donnees, v.version, v.date);
       fermerFenetres();
       info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
+      if (r.eleve && Array.isArray(r.eleve.exercices) && r.eleve.exercices.length) {
+        info.textContent += ` 📌 ${pluriel(r.eleve.exercices.length, 'exercice', 'exercices')} de ton enseignant en haut de la liste.`;
+      }
     } else {
       ecrire(CLE_ATTENTE, '1');
       envoyer();
