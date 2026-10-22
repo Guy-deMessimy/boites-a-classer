@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.21.1';
+  const VERSION = '3.21.2';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2951,6 +2951,9 @@
       $('#sv-classe-enseignant').textContent = eleve.enseignant || '';
     }
     $('#sv-details-mdp').hidden = $('#sv-details-suppression').hidden = !!eleve; // un élève n'a pas de mot de passe
+    // Élève (souvent sur un ordinateur de classe partagé) : en se déconnectant, son travail quitte ce navigateur par défaut
+    // (il reste sur son compte).
+    if (eleve && !$('#sv-effacer').dataset.touche) $('#sv-effacer').checked = true;
     $('#sv-suppression-classes').hidden = !lire(CLE_ENSEIGNANT);
     if (code) $('#sv-code-affiche').textContent = code;
     if (compte || code) {
@@ -3151,6 +3154,7 @@
 
   /* Compte connecté */
 
+  $('#sv-effacer').addEventListener('change', () => { $('#sv-effacer').dataset.touche = '1'; });
   $('#sv-deconnecter').addEventListener('click', async (ev) => {
     const bouton = ev.currentTarget;
     const effacer = $('#sv-effacer').checked;
@@ -3175,6 +3179,7 @@
     etatEnLigne = { texte: '', erreur: false };
     $('#sv-identifiant').value = '';
     $('#sv-effacer').checked = false;
+    delete $('#sv-effacer').dataset.touche;
     majBoutonCompte();
     rendreSauvegarde();
     svMessage.textContent = effacer
@@ -3398,6 +3403,7 @@
 
   // Service client (page site/aide/) : une pastille sur 👤 quand l'admin a répondu et que la réponse n'a pas été lue.
   $('#sv-lien-aide').href = SITE + '/aide/';
+  $('#sv-lien-confidentialite').href = SITE + '/confidentialite/';
   async function reponsesSupport() {
     if (!enLignePossible || document.body.classList.contains('consultation')) return;
     const jeton = jetonCompte();
