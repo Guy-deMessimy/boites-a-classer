@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.21.0';
+  const VERSION = '3.21.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -172,6 +172,7 @@
     infoDefaut = `Touche ou survole un ${elements()[0]} pour voir ses caractéristiques.`;
     if (info.textContent === ancienInfo) info.textContent = infoDefaut;
     plateau.dataset.vide = `Tous les ${elements()[1]} sont placés.`;
+    document.title = `${coll.nom} · Boîtes à classer`; // onglets et favoris
     ecrire('boites-a-classer:collection', coll.id);
     fermerBilan();
     rendre();
