@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.16.0';
+  const VERSION = '3.17.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -347,7 +347,39 @@
       if (ev.pointerType === 'mouse') info.textContent = infoDefaut;
     });
     el.addEventListener('pointerdown', (ev) => glisserEtre(ev, el, e));
+    // Clavier : Tab pour choisir une carte, Entrée pour la poser sur le plan (ou la remettre en bas), flèches pour la
+    // déplacer (Maj + flèche : plus vite).
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', `${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`);
+    el.addEventListener('focus', () => montrerInfo(e));
+    el.addEventListener('keydown', (ev) => deplacerAuClavier(ev, e));
     return el;
+  }
+
+  function deplacerAuClavier(ev, e) {
+    const pas = ev.shiftKey ? 40 : 8;
+    const fleches = { ArrowLeft: [-pas, 0], ArrowRight: [pas, 0], ArrowUp: [0, -pas], ArrowDown: [0, pas] };
+    const p = etat.positions[e.id];
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      if (p) delete etat.positions[e.id];
+      else {
+        // Au milieu de la partie visible du plan de travail.
+        const r = espace.getBoundingClientRect();
+        const c = versCalque(r.left + r.width / 2, r.top + r.height / 2);
+        etat.positions[e.id] = borner({ x: c.x - ETRE.l / 2, y: c.y - ETRE.h / 2 });
+      }
+    } else if (fleches[ev.key] && p) {
+      ev.preventDefault();
+      const [dx, dy] = fleches[ev.key];
+      etat.positions[e.id] = borner({ x: p.x + dx, y: p.y + dy });
+    } else return;
+    oublierVerification();
+    sauver();
+    rendre();
+    const el = elEtres.get(e.id);
+    if (el) el.focus({ preventScroll: !etat.positions[e.id] });
   }
 
   function montrerInfo(e) {
