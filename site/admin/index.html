@@ -110,7 +110,7 @@
     td.actions { min-width: 220px; }
     td.actions .bouton { margin: 2px 0; }
     td.date { min-width: 9em; }
-    .badge { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent-doux); color: var(--accent); font-size: .78rem; font-weight: 600; }
+    .badge { display: inline-block; margin: 2px 0 2px 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent-doux); color: var(--accent); font-size: .78rem; font-weight: 600; white-space: nowrap; }
     .resultat td { background: var(--accent-doux); }
     .resultat code { padding: 2px 8px; border-radius: 6px; background: var(--carte); font-size: 1.05rem; font-weight: 700; user-select: all; }
     .message { min-height: 1.5em; margin: 12px 0 0; font-weight: 600; }
@@ -503,7 +503,7 @@
           nom.textContent = c.classe ? c.nom + ' ' : c.identifiant;
           var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
           // Badges gagnés pendant les événements (boss d'Halloween).
-          try { JSON.parse(c.badges || '[]').forEach(function (b) { badges.push(b === 'verifie' ? '✔ vérifié' : b === 'halloween' ? '🎃 Halloween' : b === 'participation-halloween' ? '🧛 participation Halloween' : b); }); } catch (e) { /* illisible */ }
+          try { JSON.parse(c.badges || '[]').forEach(function (b) { badges.push(b === 'verifie' ? '✔ vérifié' : b === 'halloween' ? '🎃 Halloween' : b === 'participation-halloween' ? '🧛 participation' : b); }); } catch (e) { /* illisible */ }
           badges.forEach(function (t) {
             var badge = document.createElement('span');
             badge.className = 'badge';

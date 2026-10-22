@@ -287,7 +287,7 @@
   // Nom et badges (« vérifié par le site » ✔, « Halloween » 🎃, participation 🧛). Les noms viennent des comptes :
   // toujours en textContent.
   var BADGES = { verifie: ['✔', 'Vérifié par le site', 'hanter-verifie'], halloween: ['🎃', 'Badge Halloween', 'hanter-badge'],
-    'participation-halloween': ['🧛', 'Participation Halloween', 'hanter-badge'] };
+    'participation-halloween': ['🧛', 'Participation', 'hanter-badge'] };
   function nomBadges(cible, nom, badges) {
     cible.textContent = nom;
     Object.keys(BADGES).forEach(function (b) { // toujours dans le même ordre : ✔, 🎃, 🧛
