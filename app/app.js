@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.21.2';
+  const VERSION = '3.22.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2332,6 +2332,19 @@
     rendreJeu();
   }
   $('#jeu-nouvelle').addEventListener('click', nouvellePartie);
+
+  // Conseil : la question qui partage le mieux ce qui reste possible (le plus près de la moitié « oui », moitié « non »).
+  $('#jeu-conseil').addEventListener('click', () => {
+    if (!jeu || jeu.fini) return;
+    const restants = coll.etres.filter(compatible);
+    const utiles = [...attrParId.values()].filter((a) => !jeu.reponses.has(a.id)).map((a) => {
+      const oui = restants.filter((e) => e.attributs.includes(a.id)).length;
+      return { a, oui, ecart: Math.abs(restants.length / 2 - oui) };
+    }).filter((x) => x.oui > 0 && x.oui < restants.length).sort((x, y) => x.ecart - y.ecart);
+    if (restants.length === 1) etatJeu('Il ne reste qu\'une possibilité : appuie dessus !');
+    else if (!utiles.length) etatJeu('Plus aucune question ne les sépare : il faut deviner parmi ceux qui restent !');
+    else etatJeu(`💡 Essaie « ${utiles[0].a.nom} » : ${pluriel(utiles[0].oui, 'possibilité dit', 'possibilités disent')} oui, ${restants.length - utiles[0].oui} non. Une bonne question partage les possibilités en deux.`);
+  });
 
   /* Solution (enseignants et admin) : les boîtes emboîtées correctes, dessinées toutes seules. ↩ annule. */
 
