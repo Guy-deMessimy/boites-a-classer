@@ -10,7 +10,7 @@
 //   requête toutes les 24 s par page. « attendre » vaut le « sig » de la réponse précédente (événement et PV du boss :
 //   pendant le combat, chaque coup est vu par tous en 3 s au plus) ; toute autre valeur répond tout de suite.
 // GET /api/etat  (pages d'avant la 3.25.2, qui ne savent pas attendre et, avant la 3.25.0, ignorent les événements)
-// GET /api/etat?attendre=…  sans « v=3 » (pages 3.25.2 à 3.26.1, sans les points, le classement ou le boss)
+// GET /api/etat?attendre=…  sans « v=4 » (pages 3.25.2 à 3.28, sans les points, le classement, le boss ou Noël)
 //   Pendant un événement : 503, qui les fait se recharger une fois et prendre le nouveau code. Changer VERSION_PAGES
 //   (et le « v= » de site/arret.js, app/app.js et serveur/maintenance.js) quand le code des pages change pendant un
 //   événement.
@@ -19,7 +19,7 @@ import { lireEtat, SEUIL_BOSS } from '../../serveur/evenement.js';
 import { maintenanceActive } from '../../serveur/maintenance.js';
 
 const ATTENTE = 24000;
-const VERSION_PAGES = '3';
+const VERSION_PAGES = '4';
 const PAS = 3000;
 const ENTETES = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
 

@@ -1,0 +1,78 @@
+/* Thème de Noël de la page d'accueil (classe « theme-noel » sur <html>, feuille chargée après le style de la page) :
+   nuit d'hiver bleue, lune, motif fond-noel.svg, village enneigé scene-noel.svg, titres en Mountains of Christmas.
+   Pour revenir au thème sciences après Noël : retirer la classe et le <link> de site/index.html.
+   Pendant l'événement (site/evenement.js, fiche « noel »), le fond s'anime en plus (neige, guirlande, traîneau). */
+
+/* Police Mountains of Christmas (licence Apache 2.0, voir polices/LICENSE-mountains-of-christmas.txt), hébergée avec le site. */
+@font-face {
+  font-family: "Mountains of Christmas";
+  font-weight: 700;
+  font-display: swap;
+  src: url(../polices/mountains-of-christmas-latin.woff2) format("woff2");
+}
+
+:root.theme-noel {
+  color-scheme: dark;
+  --fond: #0b1730;
+  --carte: rgb(16 32 62 / .95);
+  --encre: #f1f6ff;
+  --doux: #bccbe4;
+  --ligne: #2c4670;
+  --accent: #e8364f;
+  --accent-encre: #ffffff;
+  --accent-doux: rgb(232 54 79 / .16);
+  --code: #1b2f54;
+  --voile: rgb(13 27 54 / .88);
+  --ombre: 0 8px 24px rgb(0 0 0 / .45);
+  --motif-opacite: .32;
+  --titre: "Mountains of Christmas", "Space Grotesk", system-ui, serif;
+}
+
+.theme-noel body {
+  background:
+    radial-gradient(circle at 86% 11%, #f6f9ff 0 44px, rgb(220 235 255 / .35) 46px 68px, rgb(200 220 255 / .1) 70px 150px, transparent 260px) fixed,
+    linear-gradient(180deg, #050d1f 0%, #0d1e40 50%, #1a3463 100%) fixed;
+}
+.theme-noel body::before {
+  background: url(fond-noel.svg) 0 0 / 320px 320px;
+}
+/* Village enneigé en bas de l'écran, derrière le contenu. */
+.theme-noel body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(34vh, 300px);
+  z-index: -1;
+  background: url(scene-noel.svg) center bottom / auto 100% repeat-x;
+  pointer-events: none;
+}
+
+.theme-noel h1,
+.theme-noel h2,
+.theme-noel .carte h3,
+.theme-noel .annonce p {
+  font-family: var(--titre);
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.theme-noel h1 { color: #fff; text-shadow: 0 0 16px rgb(255 255 255 / .35), 0 3px 0 #b3203a; }
+.theme-noel h2 { color: #ffd9de; font-size: 2rem; text-shadow: 0 2px 10px rgb(0 0 0 / .8); }
+.theme-noel .carte h3 { color: #ffe08a; font-size: 1.5rem; }
+.theme-noel .auteur { color: #ffd34d; }
+
+.theme-noel .annonce p {
+  background: linear-gradient(90deg, #c8243c, #1f8a4c);
+  color: #fff;
+  font-size: 1.35rem;
+  text-shadow: 0 1px 3px rgb(0 0 0 / .45);
+  box-shadow: 0 0 22px rgb(255 255 255 / .2), var(--ombre);
+}
+.theme-noel .annonce a {
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: .95rem;
+}
+.theme-noel .fonctions li::before { background: var(--accent); }
+.theme-noel footer { margin-bottom: 120px; } /* au-dessus du village */

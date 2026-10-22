@@ -1,7 +1,7 @@
 /* Thème d'Halloween de la page d'accueil (classe « theme-halloween » sur <html>, feuille chargée après le style de la
    page) : nuit violette, lune, motif fond-halloween.svg, silhouettes scene-halloween.svg, titres en Creepster.
    Pour revenir au thème sciences après Halloween : retirer la classe et le <link> de site/index.html.
-   Pendant l'événement (site/halloween/hanter.js), le fond s'anime en plus. */
+   Pendant l'événement (site/evenement.js), le fond s'anime en plus. */
 
 /* Police Creepster (SIL Open Font License, voir polices/OFL-creepster.txt), hébergée avec le site. */
 @font-face {

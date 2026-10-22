@@ -9,7 +9,7 @@
   <meta property="og:image" content="https://boites-a-classer.pages.dev/icone.png">
   <link rel="icon" href="../icone.png">
   <style>
-    /* Clip d'intro de l'événement d'Halloween (environ 18 s), montré en plein écran par site/halloween/hanter.js quand
+    /* Clip d'intro de l'événement d'Halloween (environ 18 s), montré en plein écran par site/evenement.js quand
        un admin déclenche l'événement (?integre=1 : démarre seul, sans le son, et prévient la page à la fin), ou ouvert
        directement (bouton « Lancer », avec le son). Tout est dessiné en HTML et CSS ; le son est fabriqué avec Web Audio.
        La classification montrée est juste : « vole » contient « a des ailes » ; la citrouille n'a aucun des attributs. */
@@ -464,7 +464,7 @@
       function finir() {
         if (integre) {
           scene.classList.add('fin');
-          minuteurs.push(setTimeout(function () { window.parent.postMessage({ halloween: 'fin' }, '*'); }, 800));
+          minuteurs.push(setTimeout(function () { window.parent.postMessage({ evenement: 'fin' }, '*'); }, 800));
           return;
         }
         $('#rejouer').hidden = false;
@@ -498,7 +498,7 @@
 
       $('#rejouer').addEventListener('click', lancer);
       document.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Escape' && integre) window.parent.postMessage({ halloween: 'fin' }, '*');
+        if (ev.key === 'Escape' && integre) window.parent.postMessage({ evenement: 'fin' }, '*');
       });
 
       if (integre) {

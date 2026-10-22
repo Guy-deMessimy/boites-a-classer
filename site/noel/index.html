@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Noël · Boîtes à classer</title>
+  <meta name="description" content="Le clip d'intro de l'événement de Noël de Boîtes à classer : même à Noël, on range dans des boîtes… jusqu'à ce que les lutins s'échappent !">
+  <meta property="og:title" content="L'événement de Noël de Boîtes à classer">
+  <meta property="og:image" content="https://boites-a-classer.pages.dev/icone.png">
+  <link rel="icon" href="../icone.png">
+  <style>
+    /* Clip d'intro de l'événement de Noël (environ 18 s), montré en plein écran par site/evenement.js quand un admin
+       déclenche l'événement (?integre=1 : démarre seul, sans le son, et prévient la page à la fin), ou ouvert
+       directement (bouton « Lancer », avec le son). Tout est dessiné en HTML et CSS ; le son est fabriqué avec Web Audio
+       (air de « Jingle Bells », J. Pierpont, 1857, domaine public). Même déroulé que site/halloween/index.html.
+       La classification montrée est juste : « a des bois » est dans « est vivant » ; le cadeau n'a aucun des attributs. */
+    @font-face {
+      font-family: "Mountains of Christmas";
+      font-weight: 700;
+      font-display: swap;
+      src: url(../polices/mountains-of-christmas-latin.woff2) format("woff2");
+    }
+    @font-face {
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
+      font-display: swap;
+      src: url(../polices/space-grotesk-latin.woff2) format("woff2");
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #fff; font-family: "Space Grotesk", system-ui, sans-serif; }
+    #scene { position: fixed; inset: 0; overflow: hidden; background: #000; }
+
+    #ciel { position: absolute; inset: 0; background: linear-gradient(180deg, #030a1a 0%, #0d1e40 55%, #1d3a6c 100%); opacity: 0; transition: opacity 1.2s; }
+    .etoiles { position: absolute; inset: 0 0 35% 0; opacity: 0; transition: opacity 2s; animation: scintille 2.4s ease-in-out infinite alternate; }
+    .etoiles.b { animation-delay: -1.2s; }
+    @keyframes scintille { from { filter: brightness(.5); } to { filter: brightness(1.2); } }
+    .nuit #ciel, .nuit .etoiles { opacity: 1; }
+
+    #lune {
+      position: absolute; right: 10%; top: 8%; width: 20vmin; height: 20vmin; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ffffff, #e6eeff 55%, #c3d3f0);
+      box-shadow: 0 0 6vmin 2vmin rgb(220 235 255 / .45), 0 0 18vmin 6vmin rgb(200 220 255 / .15);
+      transform: translateY(85vh); transition: transform 2.8s cubic-bezier(.2, .7, .2, 1);
+    }
+    #lune::before, #lune::after { content: ""; position: absolute; border-radius: 50%; background: rgb(160 180 215 / .35); }
+    #lune::before { width: 22%; height: 22%; left: 56%; top: 24%; }
+    #lune::after { width: 14%; height: 14%; left: 28%; top: 60%; }
+    .leve #lune { transform: none; }
+
+    /* Neige : flocons tirés au hasard (script), qui tombent en continu. */
+    #neige { position: absolute; inset: 0; opacity: 0; transition: opacity 2s; }
+    .nuit #neige { opacity: 1; }
+    .flocon { position: absolute; top: 0; left: var(--x); width: var(--t); height: var(--t); border-radius: 50%; background: #fff; opacity: var(--o); animation: tombe var(--d) linear var(--r) infinite; }
+    @keyframes tombe { from { transform: translate(0, -6vh); } to { transform: translate(var(--dx), 106vh); } }
+
+    #colline {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 38vh;
+      background: url(scene-noel.svg) 72% 100% / auto 100% repeat-x;
+      transform: translateY(100%); transition: transform 1.3s cubic-bezier(.2, .8, .2, 1);
+    }
+    .colline #colline { transform: none; }
+
+    /* Le traîneau passe devant la lune. */
+    #traineau { position: absolute; top: 12%; left: 0; width: min(40vmin, 300px); opacity: 0; }
+    .envol #traineau { animation: traineau 4s cubic-bezier(.4, .1, .6, 1) forwards; }
+    @keyframes traineau { 0% { opacity: 1; transform: translate(-110%, 12vh) rotate(-4deg); } 100% { opacity: 1; transform: translate(105vw, -6vh) rotate(-8deg); } }
+    #traineau svg { display: block; width: 100%; filter: drop-shadow(0 0 1vmin rgb(255 255 255 / .35)); }
+
+    /* Étoile filante (à la place des éclairs d'Halloween). */
+    #filante { position: absolute; left: 20%; top: 14%; width: 22vmin; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, #fff); opacity: 0; transform: rotate(-18deg); }
+    #filante.passe { animation: filante 1.1s ease-out; }
+    @keyframes filante { 0% { opacity: 0; transform: translate(0, 0) rotate(-18deg); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(40vmin, 14vmin) rotate(-18deg); } }
+
+    #texte {
+      position: absolute; left: 4%; right: 4%; top: 42%; margin: 0; text-align: center;
+      font: 700 7vmin/1.15 "Mountains of Christmas", serif; color: #fff;
+      text-shadow: 0 0 2vmin rgb(255 255 255 / .45), 0 .4vmin 0 #b3203a;
+      opacity: 0; transform: translateY(2vmin); transition: opacity .55s, transform .55s;
+    }
+    #texte[data-place="haut"] { top: 6%; right: 30%; font-size: 6vmin; } /* à gauche de la lune */
+    #texte.visible { opacity: 1; transform: none; }
+
+    /* La classification, comme dans le logiciel. */
+    #table { position: absolute; left: 50%; top: 48%; width: min(90vw, 100vmin); aspect-ratio: 100 / 55; transform: translate(-50%, -50%); }
+    .boite {
+      position: absolute; border: .55vmin solid var(--c); border-radius: 1.8vmin; background: var(--f);
+      opacity: 0; transform: scale(.6); transition: transform .45s cubic-bezier(.3, 1.6, .5, 1), opacity .3s;
+    }
+    .boite b {
+      position: absolute; left: 1.4vmin; top: -2.4vmin; padding: .35vmin 1.3vmin; border-radius: 1vmin;
+      background: var(--c); color: #fff; font-size: 2.3vmin; font-weight: 700; white-space: nowrap;
+    }
+    .boite.montree { opacity: 1; transform: none; }
+    #b-vivant { left: 2%; top: 8%; width: 56%; height: 84%; --c: #e8364f; --f: rgb(232 54 79 / .14); }
+    #b-bois { left: 30%; top: 35%; width: 25%; height: 49%; --c: #2fa05a; --f: rgb(47 160 90 / .18); }
+    #b-neige { left: 63%; top: 22%; width: 35%; height: 60%; --c: #3b8fd8; --f: rgb(59 143 216 / .15); }
+    .tremble { animation: tremble .12s linear 6 alternate; }
+    @keyframes tremble { from { transform: translate(-.6vmin, .3vmin) rotate(-1deg); } to { transform: translate(.6vmin, -.3vmin) rotate(1deg); } }
+    .carte {
+      position: absolute; left: var(--x); top: var(--y); width: 11vmin; height: 11vmin; margin: -5.5vmin 0 0 -5.5vmin;
+      display: grid; place-content: center; justify-items: center; gap: .2vmin;
+      border-radius: 1.8vmin; background: #fffdf7; color: #14284d; font-size: 1.8vmin; font-weight: 600; text-align: center; line-height: 1.15;
+      box-shadow: 0 1vmin 2vmin rgb(0 0 0 / .45); opacity: 0;
+      transition: left .7s cubic-bezier(.4, 0, .2, 1), top .7s cubic-bezier(.4, 0, .2, 1), opacity .4s, transform .3s;
+    }
+    .carte span { font-size: 5.4vmin; line-height: 1.1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+    .sans-transition, .sans-transition * { transition: none !important; }
+    .table .carte { opacity: 1; }
+    .hesite { animation: hesite .5s ease-in-out 2; }
+    @keyframes hesite { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+    #verdict {
+      position: absolute; left: 50%; bottom: -24%; transform: translateX(-50%) scale(.6); opacity: 0;
+      padding: .8vmin 2.4vmin; border-radius: 99vmin; background: #1f8a4c; color: #fff; font-size: 3vmin; font-weight: 700; white-space: nowrap;
+      transition: opacity .3s, transform .4s cubic-bezier(.3, 1.6, .5, 1);
+    }
+    #verdict.visible { opacity: 1; transform: translateX(-50%); }
+    .efface .boite, .efface .carte, .efface #verdict { opacity: 0 !important; transition: opacity .6s; }
+
+    .lutin { position: absolute; left: 30%; top: 52%; width: 11vmin; margin: -7vmin 0 0 -5.5vmin; opacity: 0; }
+    .evasion .lutin { animation: evasion 2.4s cubic-bezier(.3, .1, .4, 1) var(--r) forwards; }
+    @keyframes evasion {
+      0% { opacity: 0; transform: translate(0, 0) scale(.2); }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { opacity: 0; transform: translate(calc(var(--dx) * 1vmin), calc(var(--dy) * 1vmin)) scale(var(--s)) rotate(var(--a)); }
+    }
+    .lutin svg { display: block; width: 100%; filter: drop-shadow(0 0 2vmin rgb(255 255 255 / .5)); }
+
+    #titre { position: absolute; inset: 0; display: grid; place-content: center; gap: 2.2vmin; padding: 5vmin; text-align: center; pointer-events: none; }
+    #titre h1 {
+      margin: 0; font: 700 12vmin/1 "Mountains of Christmas", serif; letter-spacing: .02em; color: #fff;
+      text-shadow: 0 0 3vmin rgb(255 255 255 / .5), 0 .8vmin 0 #b3203a;
+      opacity: 0; transform: scale(.5); transition: opacity .8s, transform 1.1s cubic-bezier(.2, 1.5, .4, 1);
+    }
+    #titre p { margin: 0; opacity: 0; transform: translateY(2vmin); transition: opacity .7s, transform .7s; }
+    #titre .sous { font: 700 6vmin/1.1 "Mountains of Christmas", serif; color: #ffd34d; text-shadow: 0 0 2vmin rgb(255 210 80 / .5); }
+    #titre .petit { font-size: 3vmin; color: #eef4ff; }
+    .titre #titre h1 { opacity: 1; transform: none; }
+    .sous-titre #titre .sous, .petit #titre .petit { opacity: 1; transform: none; }
+    .titre .astre { opacity: 1; }
+    .astre { position: absolute; width: 4vmin; opacity: 0; transition: opacity 1s; animation: tourne 6s linear infinite; color: #ffe08a; font-size: 4vmin; line-height: 1; }
+    .astre:nth-of-type(2) { animation-duration: 7.5s; animation-direction: reverse; }
+    @keyframes tourne { from { transform: rotate(0) translateX(30vmin) rotate(0); } to { transform: rotate(360deg) translateX(30vmin) rotate(-360deg); } }
+    #astres { position: absolute; left: 50%; top: 45%; }
+
+    #noir { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }
+    .fin #noir { opacity: 1; }
+
+    .commandes { position: absolute; left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 8px; z-index: 2; }
+    .commandes button, .commandes a {
+      padding: .5rem .95rem; border: 1px solid rgb(255 255 255 / .45); border-radius: 999px; background: rgb(0 0 0 / .55);
+      color: #fff; font: 600 15px/1.2 system-ui, sans-serif; text-decoration: none; cursor: pointer;
+    }
+    .commandes [hidden] { display: none; }
+    button:focus-visible, a:focus-visible { outline: 3px solid #e8364f; outline-offset: 2px; }
+
+    #depart { position: absolute; inset: 0; z-index: 3; display: grid; place-content: center; gap: 24px; padding: 24px; text-align: center; background: radial-gradient(circle at 50% 40%, #1d3a6c, #030a1a 70%); }
+    #depart h1 { margin: 0; font: 700 clamp(44px, 10vmin, 96px)/1 "Mountains of Christmas", serif; color: #fff; text-shadow: 0 4px 0 #b3203a, 0 0 24px rgb(255 255 255 / .4); }
+    #depart p { margin: 0; color: #dbe6ff; }
+    #depart button { justify-self: center; padding: .8rem 1.6rem; border: 0; border-radius: 999px; background: #e8364f; color: #fff; font: 700 20px/1.2 system-ui, sans-serif; cursor: pointer; }
+    #depart[hidden] { display: none; }
+
+    @media (orientation: portrait) {
+      #lune { top: 4%; width: 16vmin; height: 16vmin; }
+      #texte[data-place="haut"] { top: 20%; right: 4%; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene" aria-live="polite">
+    <div id="ciel"></div>
+    <div class="etoiles"></div>
+    <div class="etoiles b"></div>
+    <div id="lune"></div>
+    <div id="filante"></div>
+    <div id="traineau" aria-hidden="true"></div>
+    <div id="neige" aria-hidden="true"></div>
+    <div id="colline"></div>
+    <div id="table">
+      <div class="boite" id="b-vivant"><b>est vivant</b></div>
+      <div class="boite" id="b-bois"><b>a des bois</b></div>
+      <div class="boite" id="b-neige"><b>est fait de neige</b></div>
+      <div class="carte" data-nom="renne" style="--x: 20%; --y: 112%" data-cx="42.5%" data-cy="62%"><span>🦌</span>renne</div>
+      <div class="carte" data-nom="lutin" style="--x: 40%; --y: 112%" data-cx="16%" data-cy="58%"><span>🧝</span>lutin</div>
+      <div class="carte" data-nom="bonhomme" style="--x: 60%; --y: 112%" data-cx="80.5%" data-cy="55%"><span>⛄</span>bonhomme de neige</div>
+      <div class="carte" data-nom="cadeau" style="--x: 80%; --y: 112%"><span>🎁</span>cadeau</div>
+      <div id="verdict">✔ Bravo ! Classification correcte</div>
+      <div id="lutins" aria-hidden="true"></div>
+    </div>
+    <p id="texte"></p>
+    <div id="titre">
+      <div id="astres" aria-hidden="true"><span class="astre">★</span><span class="astre">✦</span></div>
+      <h1>Boîtes à classer</h1>
+      <p class="sous">L'événement de Noël commence !</p>
+      <p class="petit">Les lutins se cachent partout sur le site… Attrape-les ! 🧝</p>
+    </div>
+    <div id="noir"></div>
+  </div>
+
+  <div class="commandes">
+    <button type="button" id="son">🔇 Activer le son</button>
+    <button type="button" id="rejouer" hidden>↻ Revoir</button>
+    <a href="/" id="retour" hidden>← Retour au site</a>
+  </div>
+
+  <div id="depart" hidden>
+    <h1>🎄 Noël</h1>
+    <p>Le clip d'intro de l'événement de Noël de Boîtes à classer (18 secondes).</p>
+    <button type="button" id="lancer">▶ Lancer le clip</button>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+      var $ = function (s) { return document.querySelector(s); };
+      var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+      var integre = /[?&]integre=1/.test(location.search) && window.parent !== window;
+      var scene = $('#scene');
+      var minuteurs = [];
+      var debut = 0;
+      var hasard = function (a, b) { return a + Math.random() * (b - a); };
+
+      var LUTIN = '<svg viewBox="0 0 100 124"><path d="M24 46C28 18 56 2 88 8c-12 4-20 12-24 22l-8 16z" fill="#2fa05a"/><circle cx="89" cy="9" r="7" fill="#fff"/><path d="M22 60l-15-12 6 20zM78 60l15-12-6 20z" fill="#f6c9a4"/><path d="M26 88h48l9 32H17z" fill="#2fa05a"/><path d="M30 88l8 8 6-8 6 8 6-8 6 8 8-8z" fill="#e8364f"/><rect x="21" y="102" width="58" height="7" fill="#3a2418"/><rect x="45" y="100" width="10" height="11" rx="1" fill="#ffd34d"/><ellipse cx="50" cy="66" rx="30" ry="23" fill="#fbd7b5"/><rect x="18" y="38" width="64" height="13" rx="6.5" fill="#e8364f"/><ellipse cx="40" cy="64" rx="3.6" ry="4.6" fill="#2a1840"/><ellipse cx="60" cy="64" rx="3.6" ry="4.6" fill="#2a1840"/><circle cx="31" cy="74" r="5" fill="#ff9aa8" opacity=".7"/><circle cx="69" cy="74" r="5" fill="#ff9aa8" opacity=".7"/><circle cx="50" cy="70" r="3.2" fill="#f2a98a"/><path d="M42 77q8 7 16 0" stroke="#7a3b2e" stroke-width="3" fill="none" stroke-linecap="round"/></svg>';
+      var TRAINEAU = '<svg viewBox="0 0 230 60"><g fill="#0b1426"><path d="M150 28h52q8 0 9-8l1-6h6l-1 8q-2 16-16 16h-51z"/><path d="M146 42h68q5 0 5 4v2h-73z"/><circle cx="178" cy="16" r="7"/><path d="M170 22h16l2 10h-20z"/><path d="M172 12l8-10 6 9z"/><path d="M88 34q2-9 12-9h14q5 0 7-5l3-7 2 1-2 7 6-5 1 2-7 6q-2 7-9 8l2 14h-4l-3-12h-12l-4 12h-4l2-14q-5 0-6 2z"/><path d="M28 34q2-9 12-9h14q5 0 7-5l3-7 2 1-2 7 6-5 1 2-7 6q-2 7-9 8l2 14h-4l-3-12h-12l-4 12h-4l2-14q-5 0-6 2z"/></g><path d="M66 26l36 2M124 22l26 8" stroke="#0b1426" stroke-width="1.6" fill="none"/></svg>';
+
+      // Décor tiré au hasard : étoiles, flocons, lutins qui sortent de la boîte.
+      $$('.etoiles').forEach(function (e) {
+        var g = [];
+        for (var i = 0; i < 70; i++) {
+          var r = Math.random() < .2 ? 2.2 : 1.3;
+          g.push('radial-gradient(' + r + 'px ' + r + 'px at ' + hasard(0, 100).toFixed(1) + '% ' + hasard(0, 100).toFixed(1) + '%, #fff 50%, transparent 51%)');
+        }
+        e.style.backgroundImage = g.join(',');
+      });
+      $('#traineau').innerHTML = TRAINEAU;
+      for (var i = 0; i < 90; i++) {
+        var f = document.createElement('div'), d = hasard(6, 14);
+        f.className = 'flocon';
+        f.style.setProperty('--x', hasard(0, 100).toFixed(1) + 'vw');
+        f.style.setProperty('--t', hasard(2, 7).toFixed(1) + 'px');
+        f.style.setProperty('--o', hasard(.5, .95).toFixed(2));
+        f.style.setProperty('--dx', hasard(-8, 8).toFixed(1) + 'vw');
+        f.style.setProperty('--d', d.toFixed(1) + 's');
+        f.style.setProperty('--r', (-hasard(0, d)).toFixed(1) + 's');
+        $('#neige').appendChild(f);
+      }
+      for (var j = 0; j < 7; j++) {
+        var l = document.createElement('div');
+        l.className = 'lutin';
+        l.innerHTML = LUTIN;
+        var angle = (j / 7) * Math.PI * 2 + hasard(-.3, .3);
+        l.style.setProperty('--dx', (Math.cos(angle) * hasard(70, 110)).toFixed(1));
+        l.style.setProperty('--dy', (Math.sin(angle) * hasard(50, 80) - 15).toFixed(1));
+        l.style.setProperty('--s', hasard(2.5, 4.5).toFixed(2));
+        l.style.setProperty('--a', hasard(-30, 30).toFixed(0) + 'deg');
+        l.style.setProperty('--r', hasard(0, .6).toFixed(2) + 's');
+        $('#lutins').appendChild(l);
+      }
+
+      function carte(nom) { return $('.carte[data-nom="' + nom + '"]'); }
+      function dire(t, place) { var e = $('#texte'); e.textContent = t; e.dataset.place = place; e.classList.add('visible'); }
+      function taire() { $('#texte').classList.remove('visible'); }
+      function filante() { var e = $('#filante'); e.classList.remove('passe'); void e.offsetWidth; e.classList.add('passe'); }
+      function boite(id) { $('#b-' + id).classList.add('montree'); }
+      function ranger(nom) {
+        var c = carte(nom);
+        c.style.setProperty('--x', c.dataset.cx);
+        c.style.setProperty('--y', c.dataset.cy);
+      }
+
+      /* Son (Web Audio) : vent léger, cloches de « Jingle Bells », grelots du traîneau, lutins qui s'envolent. */
+      var son = (function () {
+        var ctx = null, sortie = null, actif = false;
+        function contexte() {
+          if (ctx) return ctx;
+          var C = window.AudioContext || window.webkitAudioContext;
+          if (!C) return null;
+          ctx = new C();
+          sortie = ctx.createGain();
+          sortie.gain.value = .8;
+          sortie.connect(ctx.destination);
+          return ctx;
+        }
+        function relier() { for (var i = 0; i < arguments.length - 1; i++) arguments[i].connect(arguments[i + 1]); }
+        function bruit(duree, blanc) {
+          var n = Math.floor(ctx.sampleRate * duree), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0), x = 0;
+          for (var i = 0; i < n; i++) { var w = Math.random() * 2 - 1; x = blanc ? w : (x + .02 * w) / 1.02; d[i] = blanc ? w : x * 3.5; }
+          return b;
+        }
+        // Cloche : un son pur et une harmonique inharmonique (2,76 ×), qui s'éteignent vite.
+        function cloche(t, f, volume, duree) {
+          [[1, volume], [2.76, volume * .35], [5.4, volume * .12]].forEach(function (p) {
+            var o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.value = f * p[0];
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(p[1], t + .005);
+            g.gain.exponentialRampToValueAtTime(.0001, t + (duree || 1.2) / p[0] * 1.4);
+            relier(o, g, sortie);
+            o.start(t);
+            o.stop(t + 2);
+          });
+        }
+        function bip(type, f, t, duree, volume, vers) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = type;
+          o.frequency.setValueAtTime(f, t);
+          if (vers) o.frequency.exponentialRampToValueAtTime(vers, t + duree);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(volume, t + .02);
+          g.gain.exponentialRampToValueAtTime(.0001, t + duree);
+          relier(o, g, sortie);
+          o.start(t);
+          o.stop(t + duree + .05);
+        }
+        // Grelots : de petits bruits très aigus, secoués en rythme.
+        function grelots(t, duree) {
+          var buf = bruit(.2, true);
+          for (var x = 0; x < duree; x += .14) {
+            var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), u = t + x + Math.random() * .02;
+            s.buffer = buf;
+            f.type = 'highpass';
+            f.frequency.value = 6500;
+            g.gain.setValueAtTime(0, u);
+            g.gain.linearRampToValueAtTime(.22, u + .005);
+            g.gain.exponentialRampToValueAtTime(.001, u + .12);
+            relier(s, f, g, sortie);
+            s.start(u);
+            s.stop(u + .15);
+          }
+        }
+        function vent(t, duree) {
+          var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+          s.buffer = bruit(2);
+          s.loop = true;
+          f.type = 'bandpass';
+          f.frequency.value = 500;
+          f.Q.value = .5;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(.18, t + 1.5);
+          g.gain.setValueAtTime(.18, t + Math.max(1.5, duree - 1));
+          g.gain.linearRampToValueAtTime(0, t + duree);
+          relier(s, f, g, sortie);
+          s.start(t);
+          s.stop(t + duree);
+        }
+        // Air de « Jingle Bells » (refrain) : [note, durée en temps], un temps = pas secondes.
+        var C5 = 523.25, D5 = 587.33, E5 = 659.25, F5 = 698.46, G5 = 783.99;
+        var REFRAIN = [[E5, 1], [E5, 1], [E5, 2], [E5, 1], [E5, 1], [E5, 2], [E5, 1], [G5, 1], [C5, 1.5], [D5, .5], [E5, 4]];
+        var SUITE = [[F5, 1], [F5, 1], [F5, 1.5], [F5, .5], [F5, 1], [E5, 1], [E5, 1], [E5, .5], [E5, .5], [E5, 1], [D5, 1], [D5, 1], [E5, 1], [D5, 2], [G5, 2]];
+        function air(t, notes, pas) {
+          notes.forEach(function (n) { cloche(t, n[0], .16, n[1] * pas + .5); t += n[1] * pas; });
+        }
+        var pop = function (t) { bip('sine', 520, t, .14, .18, 900); };
+        var range = function (t) { bip('triangle', 700, t, .12, .14, 420); };
+        var SONS = [
+          [900, function (t) { air(t, REFRAIN, .24); }],
+          [4500, function (t) { grelots(t, 3.6); }],
+          [5300, function (t) { bip('sine', 1800, t, .6, .06, 600); }], // étoile filante
+          [6200, pop], [6550, pop], [6900, pop],
+          [7400, range], [8000, range], [8600, range],
+          [9900, function (t) { cloche(t, E5, .16); cloche(t + .12, 830.6, .16); cloche(t + .24, 987.8, .2, 1.6); }],
+          [11700, function (t) { for (var i = 0; i < 5; i++) bip('sine', 400 + i * 90, t + i * .1, .5, .08, 1400 + i * 200); }],
+          [13400, function (t) { [C5 / 2, E5 / 2, G5 / 2, C5].forEach(function (f) { cloche(t, f, .1, 3); }); air(t + .5, SUITE, .22); }],
+        ];
+        var FIN = 18000;
+        return {
+          actif: function () { return actif; },
+          // ecoule : temps déjà passé dans le clip (ms) ; seuls les sons à venir sont programmés.
+          allumer: function (ecoule) {
+            if (!contexte()) return false;
+            actif = true;
+            if (ctx.resume) ctx.resume();
+            var t0 = ctx.currentTime + .05;
+            if (FIN - ecoule > 1500) vent(t0, (FIN - ecoule) / 1000);
+            SONS.forEach(function (s) { if (s[0] >= ecoule) s[1](t0 + (s[0] - ecoule) / 1000); });
+            return true;
+          },
+          couper: function () {
+            if (ctx) ctx.close();
+            ctx = null;
+          },
+          eteindre: function () { actif = false; this.couper(); },
+          vouloir: function () { actif = true; }, // le prochain lancer() démarre avec le son
+        };
+      })();
+
+      function majSon() { $('#son').textContent = son.actif() ? '🔊 Son' : '🔇 Activer le son'; }
+      $('#son').addEventListener('click', function () {
+        if (son.actif()) son.eteindre();
+        else if (debut) son.allumer(Math.max(0, performance.now() - debut));
+        majSon();
+      });
+
+      var deroule = [
+        [0, function () { scene.classList.add('nuit'); }],
+        [400, function () { scene.classList.add('leve'); }],
+        [1000, function () { dire('Cette nuit de Noël, à Boîtes à classer…', 'milieu'); }],
+        [3100, taire],
+        [3300, function () { scene.classList.add('colline'); }],
+        [4500, function () { scene.classList.add('envol'); }],
+        [5300, filante],
+        [5800, function () { dire('Même à Noël, on range dans des boîtes…', 'haut'); scene.classList.add('table'); }],
+        [6200, function () { boite('vivant'); }],
+        [6550, function () { boite('bois'); }],
+        [6900, function () { boite('neige'); }],
+        [7400, function () { ranger('renne'); }],
+        [8000, function () { ranger('lutin'); }],
+        [8600, function () { ranger('bonhomme'); }],
+        [9200, function () { carte('cadeau').classList.add('hesite'); }],
+        [9900, function () { $('#verdict').classList.add('visible'); }],
+        [10700, function () { taire(); $('#verdict').classList.remove('visible'); }],
+        [11000, function () { dire('Oh non… les lutins s\'échappent !', 'haut'); $('#b-vivant').classList.add('tremble'); }],
+        [11700, function () { scene.classList.add('evasion'); }],
+        [12300, function () { scene.classList.add('efface'); }],
+        [13000, function () { taire(); filante(); }],
+        [13400, function () { scene.classList.add('titre'); }],
+        [14600, function () { scene.classList.add('sous-titre'); }],
+        [15500, function () { scene.classList.add('petit'); }],
+        [17800, finir],
+      ];
+
+      function finir() {
+        if (integre) {
+          scene.classList.add('fin');
+          minuteurs.push(setTimeout(function () { window.parent.postMessage({ evenement: 'fin' }, '*'); }, 800));
+          return;
+        }
+        $('#rejouer').hidden = false;
+        $('#rejouer').focus();
+      }
+
+      function remettre() {
+        minuteurs.forEach(clearTimeout);
+        minuteurs = [];
+        son.couper();
+        scene.className = 'sans-transition';
+        taire();
+        $('#verdict').classList.remove('visible');
+        $$('.boite').forEach(function (b) { b.classList.remove('montree', 'tremble'); });
+        $$('.carte').forEach(function (c, i) {
+          c.classList.remove('hesite');
+          c.style.setProperty('--x', (20 + i * 20) + '%');
+          c.style.setProperty('--y', '112%');
+        });
+        void scene.offsetWidth;
+        scene.className = '';
+      }
+
+      function lancer() {
+        remettre();
+        $('#rejouer').hidden = true;
+        debut = performance.now();
+        deroule.forEach(function (d) { minuteurs.push(setTimeout(d[1], d[0])); });
+        if (son.actif()) son.allumer(0);
+      }
+
+      $('#rejouer').addEventListener('click', lancer);
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && integre) window.parent.postMessage({ evenement: 'fin' }, '*');
+      });
+
+      if (integre) {
+        lancer(); // sans le son : le navigateur le refuse tant qu'on n'a pas touché la page
+      } else {
+        $('#depart').hidden = false;
+        $('#retour').hidden = false;
+        $('#lancer').focus();
+        $('#lancer').addEventListener('click', function () {
+          $('#depart').hidden = true;
+          son.vouloir();
+          lancer(); // dans le clic : le navigateur accepte le son
+          majSon();
+        });
+      }
+      majSon();
+    })();
+  </script>
+</body>
+</html>

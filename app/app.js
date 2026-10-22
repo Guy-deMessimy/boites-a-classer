@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.28.0';
+  const VERSION = '3.29.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2046,8 +2046,8 @@
         entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
         titre('Aide'),
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
-        // Événement d'Halloween en cours (site/halloween/hanter.js) : les fantômes peuvent gêner une séance de travail.
-        ...(window.hanter && window.hanter.actif() ? [entreeMenu((window.hanter.calme() ? '👻 Rappeler les fantômes' : '👻 Chasser les fantômes')
+        // Événement en cours (site/evenement.js) : fantômes ou lutins peuvent gêner une séance de travail.
+        ...(window.hanter && window.hanter.actif() ? [entreeMenu(window.hanter.libelleCalme()
           + (window.hanter.points() ? ` (${pluriel(window.hanter.points(), 'attrapé', 'attrapés')})` : ''), () => window.hanter.calme(!window.hanter.calme()))] : []),
       );
       if (voixPossible) m.appendChild(entreeMenu(voixActive() ? '🔇 Ne plus lire à voix haute' : '🔊 Lire les noms à voix haute', basculerVoix));
@@ -2858,15 +2858,17 @@
     if (etat && Array.isArray(etat.badges) && etat.badges.length) ecrire(CLE_BADGES, JSON.stringify(etat.badges)); else oublier(CLE_BADGES);
   }
 
-  // Badges du compte, à côté de son nom : « vérifié par le site » ✔ et « Halloween » 🎃 (gagnés contre le boss),
-  // participation à l'événement d'Halloween 🧛.
+  // Badges du compte, à côté de son nom (site/evenement.js) : « vérifié par le site » ✔, boss d'Halloween 🎃 ou de Noël 🎅,
+  // participation à Halloween 🧛 ou à Noël ⛄. Toujours dans cet ordre.
   const BADGES = {
     verifie: ['✔', 'Vérifié par le site', 'badge-verifie'],
     halloween: ['🎃', 'Badge Halloween', 'badge'],
-    'participation-halloween': ['🧛', 'Participation', 'badge'],
+    'participation-halloween': ['🧛', 'Participation à Halloween', 'badge'],
+    noel: ['🎅', 'Badge Noël', 'badge'],
+    'participation-noel': ['⛄', 'Participation à Noël', 'badge'],
   };
   function badgesCompte() {
-    // Toujours dans le même ordre : ✔, 🎃, 🧛.
+    // Toujours dans le même ordre : celui de BADGES.
     try { const l = JSON.parse(lire(CLE_BADGES)) || []; return Object.keys(BADGES).filter((b) => l.includes(b)); } catch (e) { return []; }
   }
   function ajouterBadges(cible) {
@@ -2876,7 +2878,7 @@
       cible.appendChild(s);
     }
   }
-  // Le compte vient de gagner des badges (site/halloween/hanter.js, victoire contre le boss).
+  // Le compte vient de gagner des badges (site/evenement.js, victoire contre le boss).
   window.addEventListener('hanter:badges', () => rafraichirCompte());
 
   // Relit l'état du compte au démarrage : un rôle donné ou retiré entre-temps, un prénom changé par l'enseignant.
@@ -3566,7 +3568,7 @@
   // Site arrêté par un admin (serveur/maintenance.js) : la page se recharge d'elle-même et devient « revient dans peu de
   // temps » (même chose que site/arret.js). Le travail reste dans le navigateur ; ce qui n'était pas encore envoyé
   // partira à la réouverture. L'application de bureau, elle, continue de marcher.
-  // Même réponse : l'événement en cours (serveur/evenement.js), dont les effets viennent du site (site/halloween/hanter.js).
+  // Même réponse : l'événement en cours (serveur/evenement.js), dont les effets viennent du site (site/evenement.js).
   // Le serveur garde la question jusqu'à ce que l'état change (24 s au plus, functions/api/etat.js) : tout arrive en
   // quelques secondes, sans recharger.
   if (location.protocol === 'https:' || location.port === '8788') {
@@ -3578,7 +3580,7 @@
       if (!e || hanterCharge || document.body.classList.contains('consultation')) return;
       hanterCharge = true;
       const s = document.createElement('script');
-      s.src = SITE + '/halloween/hanter.js';
+      s.src = SITE + '/evenement.js';
       s.onload = () => { if (window.hanter) window.hanter.suivre(e, fini, r); };
       document.head.appendChild(s);
     };
@@ -3586,7 +3588,7 @@
       if (enCours || document.visibilityState !== 'visible') return;
       enCours = true;
       try {
-        const rep = await fetch(RACINE_API + '/etat?v=3&attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
+        const rep = await fetch(RACINE_API + '/etat?v=4&attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
         if (rep.status === 503) { location.reload(); return; }
         if (!rep.ok) throw new Error('serveur ' + rep.status);
         const r = await rep.json();

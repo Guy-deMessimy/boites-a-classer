@@ -92,6 +92,9 @@
     .etat-site.evenement.en-cours { border-color: #e8741c; }
     .etat-site.evenement.en-cours strong { color: #e8741c; }
     .bouton.declencher { background: #e8741c; border-color: #e8741c; color: #fff; }
+    .evenement-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .evenement-actions select { padding: .5rem .7rem; border: 1px solid var(--ligne); border-radius: 10px; background: var(--carte); color: inherit; font: inherit; }
+    .evenement-actions select[hidden] { display: none; }
     .classement-liste { margin: 0 0 12px; padding-left: 1.6em; }
     .classement-liste li { padding: 2px 0; }
     .classement-liste small { color: var(--doux); }
@@ -172,11 +175,17 @@
       </section>
       <section class="etat-site evenement" id="etat-evenement">
         <div>
-          <strong id="evenement-texte">🎃 Événement d'Halloween…</strong>
+          <strong id="evenement-texte">Événement…</strong>
           <span id="evenement-detail"></span>
           <span id="evenement-boss"></span>
         </div>
-        <button type="button" class="bouton" id="basculer-evenement" disabled></button>
+        <div class="evenement-actions">
+          <select id="evenement-choix" aria-label="Événement à déclencher">
+            <option value="noel" selected>🎄 Noël</option>
+            <option value="halloween">🎃 Halloween</option>
+          </select>
+          <button type="button" class="bouton" id="basculer-evenement" disabled></button>
+        </div>
       </section>
       <section class="support" id="classement-evenement" hidden>
         <h2 id="classement-titre">🏆 Classement</h2>
@@ -366,27 +375,39 @@
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEtat(siteArrete); });
       });
 
-      /* Événement d'Halloween (serveur/evenement.js) : fond animé, fantômes et clip d'intro sur les pages ouvertes
-         (site/halloween/hanter.js), quelques secondes après le déclenchement, sans recharger (functions/api/etat.js). */
+      /* Événements (serveur/evenement.js : Noël, Halloween) : fond animé, personnages à attraper, boss et clip d'intro sur
+         les pages ouvertes (site/evenement.js), quelques secondes après le déclenchement, sans recharger
+         (functions/api/etat.js). Le choix de l'événement se fait dans la liste à côté du bouton. */
+      var EVENEMENTS = {
+        noel: { emoji: '🎄', de: 'de Noël', petits: 'lutins', petit: 'lutin', icone: '🧝', boss: '🎅 Père Noël', vaincu: 'attrapé', badge: '🎅 Noël' },
+        halloween: { emoji: '🎃', de: 'd\'Halloween', petits: 'fantômes', petit: 'fantôme', icone: '👻', boss: '👑 Roi des fantômes', vaincu: 'vaincu', badge: '🎃 Halloween' },
+      };
       var evenement = null, dernierFini = null;
+      var fiche = function () { var x = evenement || dernierFini; return EVENEMENTS[x ? x.nom : $('#evenement-choix').value] || EVENEMENTS.noel; };
       function afficherEvenement(e, fini) {
         evenement = e;
         dernierFini = fini;
-        var b = $('#basculer-evenement');
+        var b = $('#basculer-evenement'), choix = $('#evenement-choix');
+        if (e) choix.value = e.nom;
+        var f = EVENEMENTS[e ? e.nom : choix.value] || EVENEMENTS.noel, d = fini && EVENEMENTS[fini.nom];
         b.disabled = false;
+        choix.hidden = !!e;
         $('#etat-evenement').classList.toggle('en-cours', !!e);
-        $('#evenement-texte').textContent = e ? '🎃 L\'événement d\'Halloween est en cours' : '🎃 Événement d\'Halloween : pas encore déclenché';
+        $('#evenement-texte').textContent = e ? f.emoji + ' L\'événement ' + f.de + ' est en cours'
+          : d ? d.emoji + ' Dernier événement : ' + fini.nom.replace('noel', 'Noël').replace('halloween', 'Halloween') + ' (terminé)'
+          : 'Aucun événement en cours';
         $('#evenement-detail').textContent = e
-          ? 'Depuis le ' + date(e.depuis) + ' : fond animé, fantômes à attraper sur tout le site, clip d\'intro sur l\'accueil. À l\'arrêt, le classement est montré à tous.'
-          : fini
-            ? 'Arrêté le ' + date(fini.fin) + ' : le classement est montré à tous. Le déclencher à nouveau remet le classement à zéro.'
-            : 'L\'accueil annonce « Événement d\'Halloween prochainement ». Le déclencher anime le fond, lâche les fantômes et montre le clip d\'intro.';
+          ? 'Depuis le ' + date(e.depuis) + ' : fond animé, ' + f.petits + ' à attraper sur tout le site, clip d\'intro sur l\'accueil. À l\'arrêt, le classement est montré à tous.'
+          : (fini ? 'Arrêté le ' + date(fini.fin) + ' : son classement est montré à tous. ' : '')
+            + 'Déclencher : choisir l\'événement dans la liste (l\'accueil doit porter son thème pour le fond animé, le clip et le bandeau)'
+            + (fini ? ' ; cela remet le classement à zéro.' : '.');
         $('#classement-evenement').hidden = !(e || fini);
         $('#classement-titre').textContent = e ? '🏆 Classement (en direct)' : '🏆 Classement final';
         if (e || fini) chargerClassement();
         b.className = 'bouton ' + (e ? '' : 'declencher');
-        b.textContent = e ? 'Arrêter l\'événement' : '🎃 Déclencher l\'événement';
+        b.textContent = e ? 'Arrêter l\'événement' : '✨ Déclencher l\'événement';
       }
+      $('#evenement-choix').addEventListener('change', function () { afficherEvenement(evenement, dernierFini); });
       function chargerEvenement() {
         appel('evenement').then(function (x) {
           if (x.statut !== 200) return;
@@ -394,13 +415,13 @@
           afficherBoss(x.r);
         });
       }
-      // Le boss : en attente des fantômes attrapés par tous, en combat, ou vaincu (et par qui).
+      // Le boss : en attente des personnages attrapés par tous, en combat, ou vaincu (et par qui).
       function afficherBoss(r) {
-        var b = r.boss;
+        var b = r.boss, f = EVENEMENTS[(r.evenement || r.fini || {}).nom] || fiche();
         $('#evenement-boss').textContent = !(r.evenement || r.fini) ? ''
-          : !b ? '👑 Boss : ' + Math.min(r.total || 0, r.seuil) + ' / ' + r.seuil + ' fantômes attrapés par tous avant son arrivée.'
-          : !b.vaincu ? '👑 Boss en combat : ' + b.pv.toLocaleString('fr-FR') + ' / ' + b.max.toLocaleString('fr-FR') + ' PV, ' + b.chasseurs + ' chasseur' + (b.chasseurs > 1 ? 's' : '') + '.'
-          : '👑 Boss vaincu le ' + date(b.vaincu) + (b.gagnant ? ' : ' + b.gagnant.nom + ' a gagné les badges ✔ vérifié et 🎃 Halloween.' : '.');
+          : !b ? 'Boss (' + f.boss + ') : ' + Math.min(r.total || 0, r.seuil) + ' / ' + r.seuil + ' ' + f.petits + ' attrapés par tous avant son arrivée.'
+          : !b.vaincu ? f.boss + ' en jeu : ' + b.pv.toLocaleString('fr-FR') + ' / ' + b.max.toLocaleString('fr-FR') + ' PV, ' + b.chasseurs + ' chasseur' + (b.chasseurs > 1 ? 's' : '') + '.'
+          : f.boss + ' ' + f.vaincu + ' le ' + date(b.vaincu) + (b.gagnant ? ' : ' + b.gagnant.nom + ' a gagné les badges ✔ vérifié et ' + f.badge + '.' : '.');
       }
       // Les noms viennent des comptes : toujours en textContent.
       function chargerClassement() {
@@ -409,7 +430,7 @@
           var top = x.r.top || [];
           $('#classement-liste').replaceChildren.apply($('#classement-liste'), top.map(function (t) {
             var li = document.createElement('li');
-            li.textContent = t.nom + ' — ' + t.points + ' 👻 ';
+            li.textContent = t.nom + ' — ' + t.points + ' ' + fiche().icone + ' ';
             var detail = document.createElement('small');
             detail.textContent = t.eleve ? '(élève, ' + t.identifiant + ')' : '';
             li.appendChild(detail);
@@ -417,7 +438,7 @@
           }));
           $('#classement-detail').textContent = top.length
             ? x.r.participants + ' participant' + (x.r.participants > 1 ? 's' : '') + ' (comptes connectés ; les visiteurs sans compte ne comptent pas). Les visiteurs voient les 10 premiers ; un élève apparaît sous son prénom.'
-            : 'Personne n\'a encore attrapé de fantôme.';
+            : 'Personne n\'a encore attrapé de ' + fiche().petit + '.';
         });
       }
       $('#classement-actualiser').addEventListener('click', function () { chargerClassement(); chargerEvenement(); });
@@ -431,7 +452,7 @@
           return;
         }
         b.disabled = true;
-        appel('evenement', { nom: evenement ? null : 'halloween' }).then(function (x) {
+        appel('evenement', { nom: evenement ? null : $('#evenement-choix').value }).then(function (x) {
           if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); chargerEvenement(); return; }
           afficherEvenement(x.r.evenement, x.r.fini);
           afficherBoss(x.r);
@@ -503,13 +524,25 @@
           nom.textContent = c.classe ? c.nom + ' ' : c.identifiant;
           var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
           // Badges gagnés pendant les événements (boss d'Halloween).
-          try { JSON.parse(c.badges || '[]').forEach(function (b) { badges.push(b === 'verifie' ? '✔ vérifié' : b === 'halloween' ? '🎃 Halloween' : b === 'participation-halloween' ? '🧛 participation' : b); }); } catch (e) { /* illisible */ }
+          var gagnes = [];
+          try { gagnes = JSON.parse(c.badges || '[]'); } catch (e) { /* illisible */ }
           badges.forEach(function (t) {
             var badge = document.createElement('span');
             badge.className = 'badge';
             badge.textContent = t;
             nom.appendChild(badge);
           });
+          // Badges gagnés pendant les événements : une pastille d'emojis, le nom de chacun au survol.
+          var LIBELLES = { verifie: ['✔', 'vérifié par le site'], halloween: ['🎃', 'Halloween (boss)'], 'participation-halloween': ['🧛', 'participation à Halloween'],
+            noel: ['🎅', 'Noël (boss)'], 'participation-noel': ['⛄', 'participation à Noël'] };
+          var connus = Object.keys(LIBELLES).filter(function (b) { return gagnes.indexOf(b) >= 0; });
+          if (connus.length) {
+            var pastille = document.createElement('span');
+            pastille.className = 'badge';
+            pastille.textContent = connus.map(function (b) { return LIBELLES[b][0]; }).join(' ');
+            pastille.title = 'Badges : ' + connus.map(function (b) { return LIBELLES[b][1]; }).join(', ');
+            nom.appendChild(pastille);
+          }
           tr.appendChild(nom);
           [date(c.cree), date(c.derniere), c.versions ? date(c.date) + ' (' + c.versions + ' v.)' : 'aucune'].forEach(function (t) {
             var td = document.createElement('td');

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <!-- Silhouettes au bas de l'accueil (site/noel/theme.css) : collines enneigées, sapins, village et son église, grand
+       sapin décoré. Répétée en largeur : les deux bords sont à la même hauteur. Dessin fait pour Boîtes à classer (GPL-3.0). -->
+  <defs>
+    <radialGradient id="lueur" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
+    </radialGradient>
+    <g id="pin">
+      <path d="M0 0l16 24h-8l14 20h-9l17 24H-30l17-24h-9l14-20h-8z" fill="#0c1b2e"/>
+      <path d="M0 0l7 10-7-3-7 3zM-8 24l8 5 8-5zM-13 44l13 6 13-6z" fill="#e6f0fb"/>
+    </g>
+  </defs>
+  <!-- colline du fond, enneigée -->
+  <path d="M0 236C140 214 250 200 380 210S610 236 720 214 920 170 1010 182 1130 226 1200 236V300H0z" fill="#1a2b47"/>
+  <path d="M0 236C140 214 250 200 380 210S610 236 720 214 920 170 1010 182 1130 226 1200 236" stroke="#dbe8f7" stroke-width="5" fill="none" opacity=".75"/>
+  <!-- sapins du fond -->
+  <use href="#pin" x="90" y="178"/><use href="#pin" x="140" y="190"/><use href="#pin" x="300" y="170"/>
+  <use href="#pin" x="1060" y="150"/><use href="#pin" x="1120" y="176"/>
+  <!-- village -->
+  <g fill="#0d1729">
+    <path d="M820 178l30-26 30 26v52h-60z"/>
+    <path d="M884 192l22-20 22 20v38h-44z"/>
+    <path d="M930 150h22v80h-22z"/><path d="M928 152l13-30 13 30z"/>
+    <path d="M760 196l24-22 24 22v34h-48z"/>
+    <rect x="862" y="140" width="8" height="18"/><rect x="788" y="170" width="7" height="14"/>
+  </g>
+  <g fill="#ffd27a">
+    <rect x="836" y="190" width="10" height="12" rx="1"/><rect x="856" y="190" width="10" height="12" rx="1"/>
+    <rect x="898" y="200" width="9" height="11" rx="1"/><rect x="938" y="166" width="7" height="12" rx="3"/>
+    <rect x="776" y="206" width="9" height="10" rx="1"/><rect x="845" y="212" width="12" height="18" fill="#ffb347"/>
+  </g>
+  <path d="M818 180l32-28 32 28M882 194l24-22 24 22M758 198l26-24 26 24M926 154l15-34 15 34" stroke="#e6f0fb" stroke-width="4" fill="none" stroke-linejoin="round"/>
+  <circle cx="851" cy="196" r="22" fill="url(#lueur)"/><circle cx="941" cy="172" r="16" fill="url(#lueur)"/>
+  <!-- grand sapin décoré -->
+  <g transform="translate(560 128)">
+    <path d="M0 0l26 36h-12l22 30h-13l26 38h-98l26-38h-13l22-30h-12z" fill="#123826"/>
+    <path d="M0 -14l4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1z" fill="#ffe08a"/>
+    <g fill="#ff5d6c"><circle cx="-8" cy="30" r="3"/><circle cx="14" cy="60" r="3"/><circle cx="-20" cy="88" r="3"/></g>
+    <g fill="#ffd34d"><circle cx="8" cy="40" r="3"/><circle cx="-14" cy="66" r="3"/><circle cx="22" cy="90" r="3"/></g>
+    <g fill="#6fc3ff"><circle cx="-2" cy="52" r="3"/><circle cx="2" cy="82" r="3"/></g>
+    <rect x="-7" y="104" width="14" height="12" fill="#3a2418"/>
+  </g>
+  <!-- premier plan : neige -->
+  <path d="M0 262C120 250 240 254 360 260S600 248 760 254 1000 268 1200 262V300H0z" fill="#e8f0fa"/>
+  <path d="M0 278C160 270 330 276 500 280S860 270 1200 278V300H0z" fill="#d3e1f2"/>
+  <use href="#pin" x="40" y="214" transform="scale(1)"/><use href="#pin" x="700" y="200"/><use href="#pin" x="1170" y="214"/>
+</svg>

@@ -1,19 +1,19 @@
-// Événement du site (Halloween…), déclenché puis arrêté par un admin (page site/admin/, POST /api/admin/evenement).
+// Événement du site (Halloween, Noël), déclenché puis arrêté par un admin (page site/admin/, POST /api/admin/evenement).
 // Les pages le lisent dans GET /api/etat (site/arret.js, app/app.js) et chargent alors ses effets
-// (site/halloween/hanter.js). Pendant l'événement, chaque fantôme attrapé par un compte rapporte un point
+// (site/evenement.js). Pendant l'événement, chaque personnage attrapé (fantôme, lutin) par un compte rapporte un point
 // (functions/api/evenement/[action].js, table scores_evenement) ; à l'arrêt, le classement est montré à tous.
-// Quand tous les comptes ensemble ont attrapé SEUIL_BOSS fantômes, le boss apparaît chez tout le monde (table
-// boss_evenement) : chaque coup lui retire DEGATS PV ; celui qui a porté le plus de coups (coups_boss) gagne les
-// badges BADGES_BOSS (colonne comptes.badges). Tout compte qui participe (un fantôme attrapé ou un coup au boss)
-// gagne le badge de participation (« participation-halloween », un vampire 🧛).
+// Quand tous les comptes ensemble en ont attrapé SEUIL_BOSS, le boss (Roi des fantômes, Père Noël) apparaît chez tout
+// le monde (table boss_evenement) : chaque clic lui retire DEGATS PV ; celui qui a cliqué le plus (coups_boss) gagne les
+// badges badgesBoss(nom) (colonne comptes.badges). Tout compte qui participe (un personnage attrapé ou un clic sur le
+// boss) gagne le badge de participation (« participation-<nom> » : vampire 🧛, bonhomme de neige ⛄).
 // Rangé dans la table reglages (migrations/0005_reglages.sql), clé « evenement » : { nom, depuis } pendant l'événement,
 // { nom, depuis, fin } une fois arrêté (son classement reste consultable), ou vide.
 
-export const EVENEMENTS = ['halloween'];
+export const EVENEMENTS = ['halloween', 'noel'];
 export const SEUIL_BOSS = 30;
 export const PV_BOSS = 100000;
 export const DEGATS = 1000;
-export const BADGES_BOSS = ['verifie', 'halloween'];
+export const badgesBoss = (nom) => ['verifie', nom]; // « halloween » 🎃, « noel » 🎅
 export const badgeParticipation = (nom) => 'participation-' + nom;
 
 // Ajoute un badge aux comptes choisis par « ou » (condition SQL sur comptes.id, avec ses paramètres à partir de ?2),
@@ -133,13 +133,13 @@ export async function chasseursBoss(env, evenement, combien) {
   return results.map((r) => ({ compte: r.compte, nom: nomAffiche(r), coups: r.coups, badges: lireBadges(r.badges) }));
 }
 
-// Le boss vient de tomber : le gagnant reçoit ses badges (sans doublon, gardés après l'événement).
-export async function recompenser(env, evenement) {
-  const [premier] = await chasseursBoss(env, evenement, 1);
+// Le boss vient de tomber : le gagnant reçoit ses badges (sans doublon, gardés après l'événement). e : { nom, depuis }.
+export async function recompenser(env, e) {
+  const [premier] = await chasseursBoss(env, e.depuis, 1);
   if (!premier) return null;
-  const badges = [...new Set([...premier.badges, ...BADGES_BOSS])];
+  const badges = [...new Set([...premier.badges, ...badgesBoss(e.nom)])];
   await env.DB.batch([
-    env.DB.prepare('UPDATE boss_evenement SET gagnant = ? WHERE evenement = ?').bind(premier.compte, evenement),
+    env.DB.prepare('UPDATE boss_evenement SET gagnant = ? WHERE evenement = ?').bind(premier.compte, e.depuis),
     env.DB.prepare('UPDATE comptes SET badges = ? WHERE id = ?').bind(JSON.stringify(badges), premier.compte),
   ]);
   oublierCache();

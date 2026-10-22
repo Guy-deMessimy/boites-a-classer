@@ -1,6 +1,6 @@
-// Jeu de l'événement (serveur/evenement.js) : chaque fantôme attrapé (site/halloween/hanter.js) rapporte un point au
+// Jeu de l'événement (serveur/evenement.js) : chaque personnage attrapé (site/evenement.js) rapporte un point au
 // compte connecté. Quand tous les comptes ensemble en ont attrapé SEUIL_BOSS, le boss apparaît : chaque coup lui retire
-// DEGATS PV, et celui qui a porté le plus de coups gagne les badges BADGES_BOSS. Le classement n'est montré qu'à la fin.
+// DEGATS PV, et celui qui a cliqué le plus gagne les badges badgesBoss(nom). Le classement n'est montré qu'à la fin.
 //
 //   POST /api/evenement/attrape     (Authorization: Bearer …) → { points, compte, total, badge? }   un point de plus, au plus
 //                                    un toutes les 2,5 s (« compte » : false s'il est arrivé trop tôt) ; 409 sans événement.
@@ -108,7 +108,7 @@ const actions = {
     }
     const res = { boss: etatBoss(b), compte: true, coups: coup.coups };
     if (coup.coups === 1) await participer(env, e, s.compte, res);
-    if (b.vaincu === vaincu) res.gagnant = await recompenser(env, e.depuis); // ce coup l'a achevé
+    if (b.vaincu === vaincu) res.gagnant = await recompenser(env, e); // ce coup l'a achevé
     return json(res);
   },
 };
