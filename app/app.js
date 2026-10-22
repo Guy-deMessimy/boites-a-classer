@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.26.0';
+  const VERSION = '3.26.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -3557,7 +3557,7 @@
       if (enCours || document.visibilityState !== 'visible') return;
       enCours = true;
       try {
-        const rep = await fetch(RACINE_API + '/etat?attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
+        const rep = await fetch(RACINE_API + '/etat?v=2&attendre=' + encodeURIComponent(connu), { cache: 'no-store' });
         if (rep.status === 503) { location.reload(); return; }
         if (!rep.ok) throw new Error('serveur ' + rep.status);
         const r = await rep.json();

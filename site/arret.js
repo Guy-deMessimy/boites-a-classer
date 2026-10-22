@@ -22,7 +22,7 @@
   function ecouter() {
     if (enCours || document.visibilityState !== 'visible') return;
     enCours = true;
-    fetch('/api/etat?attendre=' + encodeURIComponent(connu), { cache: 'no-store' }).then(function (rep) {
+    fetch('/api/etat?v=2&attendre=' + encodeURIComponent(connu), { cache: 'no-store' }).then(function (rep) {
       if (rep.status === 503) { location.reload(); return false; }
       if (!rep.ok) throw new Error('serveur ' + rep.status);
       return rep.json().then(function (r) {

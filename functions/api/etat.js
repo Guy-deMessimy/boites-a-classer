@@ -8,12 +8,16 @@
 //   pages ouvertes voient l'événement 3 à 5 s après le clic de l'admin, sans qu'on les recharge, avec une seule
 //   requête toutes les 24 s par page. « attendre » vaut signature(evenement) ; toute autre valeur répond tout de suite.
 // GET /api/etat  (pages d'avant la 3.25.2, qui ne savent pas attendre et, avant la 3.25.0, ignorent les événements)
-//   Pendant un événement : 503, qui les fait se recharger une fois et prendre le nouveau code.
+// GET /api/etat?attendre=…  sans « v=2 » (pages 3.25.2 à 3.26.0, sans les points ni le classement à jour)
+//   Pendant un événement : 503, qui les fait se recharger une fois et prendre le nouveau code. Changer VERSION_PAGES
+//   (et le « v= » de site/arret.js, app/app.js et serveur/maintenance.js) quand le code des pages change pendant un
+//   événement.
 
 import { lireEvenement } from '../../serveur/evenement.js';
 import { maintenanceActive } from '../../serveur/maintenance.js';
 
 const ATTENTE = 24000;
+const VERSION_PAGES = '2';
 const PAS = 3000;
 const ENTETES = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
 
@@ -24,9 +28,10 @@ const etat = (v) => ({ evenement: enCours(v), fini: v && v.fin ? v : null });
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function onRequest({ request, env }) {
-  const attendre = new URL(request.url).searchParams.get('attendre');
+  const params = new URL(request.url).searchParams;
+  const attendre = params.get('attendre');
   let v = await lireEvenement(env);
-  if (attendre === null) return enCours(v) ? reponse({ erreur: 'à recharger' }, 503) : reponse(etat(v));
+  if (attendre === null || params.get('v') !== VERSION_PAGES) return enCours(v) ? reponse({ erreur: 'à recharger' }, 503) : reponse(etat(v));
   const fin = Date.now() + ATTENTE;
   while (signature(enCours(v)) === attendre && Date.now() + PAS <= fin) {
     await pause(PAS);
