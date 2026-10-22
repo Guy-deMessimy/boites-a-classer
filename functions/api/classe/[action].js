@@ -11,6 +11,7 @@
 //   POST /api/classe/nouveau-code  { eleve }     → { id, nom, code }   l'ancien code ne marche plus, ses appareils sont déconnectés
 //   POST /api/classe/nouveaux-codes { classe }   → { eleves: [{ id, nom, code }] }   la même chose pour toute la classe
 //   POST /api/classe/nom-eleve     { eleve, nom } → 204
+//   POST /api/classe/deplacer      { eleve, classe } l'élève passe dans une autre de ses classes (code et travail gardés) → 204
 //   POST /api/classe/retirer       { eleve }     efface le compte de l'élève et son travail → 204
 //   GET  /api/classe/travail?eleve=…             dernière version du travail (gzip, en-têtes X-Version, X-Date, X-Nom) ; 404 s'il n'y en a pas
 
@@ -195,6 +196,18 @@ const actions = {
     const nom = nomPropre(corps.nom);
     if (!nom) return erreur('écris un prénom', 400);
     await env.DB.prepare('UPDATE comptes SET nom = ? WHERE id = ?').bind(nom, e.id).run();
+    return rien();
+  },
+
+  async deplacer(request, env, moi) {
+    const corps = await lireCorps(request);
+    const e = await monEleve(env, moi, corps.eleve);
+    if (e instanceof Response) return e;
+    const c = await maClasse(env, moi, corps.classe);
+    if (c instanceof Response) return c;
+    const { n } = await env.DB.prepare('SELECT count(*) AS n FROM comptes WHERE classe = ?').bind(c.id).first();
+    if (c.id !== e.classe && n >= ELEVES_MAX) return erreur(`la classe « ${c.nom} » a déjà ${ELEVES_MAX} élèves`, 409);
+    await env.DB.prepare('UPDATE comptes SET classe = ? WHERE id = ?').bind(c.id, e.id).run();
     return rien();
   },
 

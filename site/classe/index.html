@@ -534,8 +534,19 @@
           if (!e.versions) voir.setAttribute('aria-disabled', 'true');
           actions.append(voir, ' ',
             bouton('🔑 Nouveau code', function () { nouveauCode(e); }), ' ',
-            bouton('✎ Prénom', function () { renommerEleve(e); }), ' ',
-            bouton('Retirer', function (ev) { retirer(e, ev.currentTarget); }, 'danger'));
+            bouton('✎ Prénom', function () { renommerEleve(e); }), ' ');
+          // Changer de classe (si l'enseignant en a plusieurs) : l'élève garde son code et son travail.
+          var autres = classes.filter(function (c) { return c.id !== choisie; });
+          if (autres.length) {
+            var choix = document.createElement('select');
+            choix.className = 'bouton';
+            choix.setAttribute('aria-label', 'Changer ' + e.nom + ' de classe');
+            choix.add(new Option('↪ Autre classe…', ''));
+            autres.forEach(function (c) { choix.add(new Option(c.nom, c.id)); });
+            choix.addEventListener('change', function () { if (choix.value) deplacer(e, choix.value); });
+            actions.append(choix, ' ');
+          }
+          actions.append(bouton('Retirer', function (ev) { retirer(e, ev.currentTarget); }, 'danger'));
           tr.appendChild(actions);
           return tr;
         });
@@ -612,6 +623,15 @@
           if (x.statut !== 204) { echec(x); return; }
           message('');
           chargerEleves();
+        }).catch(horsLigne);
+      }
+
+      function deplacer(e, classe) {
+        var vers = classes.filter(function (c) { return c.id === classe; })[0];
+        appel('deplacer', { eleve: e.id, classe: classe }).then(function (x) {
+          if (x.statut !== 204) { echec(x); return; }
+          message(e.nom + ' est maintenant dans la classe « ' + (vers ? vers.nom : '?') + ' » (même code, même travail).');
+          charger();
         }).catch(horsLigne);
       }
 
