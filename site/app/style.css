@@ -633,6 +633,20 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 .tableau-caracteres td.oui { color: var(--c); font-weight: 700; font-size: 1.1rem; }
 .tableau-caracteres tbody tr:hover td, .tableau-caracteres tbody tr:hover th { background: var(--survol); }
 .impression-titre { display: none; }
+.impression-cartes { display: none; }
+@media print {
+  body.imprime-cartes > *:not(#impression-cartes) { display: none !important; }
+  body.imprime-cartes { display: block; overflow: visible; height: auto; background: #fff; color: #000; }
+  body.imprime-cartes #impression-cartes { display: block; }
+  .impression-cartes h1 { margin: 0 0 8px; font-size: 16pt; }
+  .impression-cartes h2 { margin: 14px 0 6px; font-size: 13pt; break-after: avoid; }
+  .cartes-papier { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .carte-papier { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 3.6cm; border: 1px dashed #777; font-size: 12pt; text-align: center; break-inside: avoid; }
+  .carte-papier-ico { font-size: 34pt; line-height: 1; }
+  .carte-papier-ico img { width: 2cm; height: 2cm; object-fit: contain; }
+  .etiquettes-papier { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .etiquette-papier { padding: 8px 10px; border: 3px solid var(--c); border-radius: 8px; font-size: 12pt; font-weight: 700; text-align: center; break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 /* Impression du tableau des caractères seul (fiche à remplir ou corrigé). */
 @media print {
   body.imprime-tableau > *:not(#fen-tableau) { display: none !important; }

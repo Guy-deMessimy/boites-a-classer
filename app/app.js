@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.22.0';
+  const VERSION = '3.23.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2026,6 +2026,7 @@
         entreeMenu('📊 Tableau des caractères', ouvrirTableau),
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
         entreeMenu('💡 Un indice', donnerIndice),
+        entreeMenu('🖨 Cartes à découper (activité sur papier)', imprimerCartes),
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
         entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
         document.createElement('hr'),
@@ -2383,6 +2384,43 @@
     rendre();
     toutVoir();
     info.textContent = '🧑‍🏫 Voici la solution. « ↩ Annuler » ramène le travail d\'avant.';
+  }
+
+  /* Cartes à découper : les éléments de la collection et ses attributs, pour classer sur papier. */
+
+  function imprimerCartes() {
+    fermerMenu();
+    const zone = $('#impression-cartes');
+    const titre = document.createElement('h1');
+    titre.textContent = `Boîtes à classer · ${coll.nom}`;
+    const cartes = document.createElement('div');
+    cartes.className = 'cartes-papier';
+    for (const e of coll.etres) {
+      const c = document.createElement('div');
+      c.className = 'carte-papier';
+      const ico = document.createElement('div');
+      ico.className = 'carte-papier-ico';
+      if (e.image) { const img = document.createElement('img'); img.src = e.image; img.alt = ''; ico.appendChild(img); } else ico.textContent = e.emoji || '❓';
+      const nom = document.createElement('div');
+      nom.textContent = e.nom;
+      c.append(ico, nom);
+      cartes.appendChild(c);
+    }
+    const sous = document.createElement('h2');
+    sous.textContent = 'Étiquettes des boîtes';
+    const etiquettes = document.createElement('div');
+    etiquettes.className = 'etiquettes-papier';
+    for (const a of attrParId.values()) {
+      const t = document.createElement('div');
+      t.className = 'etiquette-papier';
+      t.style.setProperty('--c', a.couleur);
+      t.textContent = a.nom;
+      etiquettes.appendChild(t);
+    }
+    zone.replaceChildren(titre, cartes, sous, etiquettes);
+    document.body.classList.add('imprime-cartes');
+    window.addEventListener('afterprint', () => { document.body.classList.remove('imprime-cartes'); zone.replaceChildren(); }, { once: true });
+    window.print();
   }
 
   /* Indice : une piste, sans donner toute la solution. */
