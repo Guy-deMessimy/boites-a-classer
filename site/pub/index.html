@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Découvrir Boîtes à classer</title>
+  <meta name="description" content="En 20 secondes : un logiciel gratuit pour apprendre à classer les êtres vivants dans des boîtes emboîtées.">
+  <meta property="og:title" content="Boîtes à classer">
+  <meta property="og:description" content="Un logiciel gratuit pour apprendre à classer les êtres vivants dans des boîtes emboîtées. Ordinateur, tablette, téléphone.">
+  <meta property="og:image" content="https://boites-a-classer.pages.dev/icone.png">
+  <meta property="og:url" content="https://boites-a-classer.pages.dev/pub/">
+  <link rel="icon" href="../icone.png">
+  <style>
+    /* Publicité animée du site (environ 22 s) : la question, une classification des vertébrés faite pas à pas comme
+       dans le logiciel (boîtes, êtres vivants, vérification), ce que permet le logiciel, puis l'invitation à l'essayer.
+       Les classements montrés suivent la collection « Les vertébrés » (app/collections.js). */
+    @font-face {
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
+      font-display: swap;
+      src: url(../polices/space-grotesk-latin.woff2) format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
+      font-display: swap;
+      src: url(../polices/space-grotesk-latin-ext.woff2) format("woff2");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+    :root {
+      --fond: #f6f4ef;
+      --carte: #ffffff;
+      --encre: #1f2430;
+      --doux: #5f6675;
+      --ligne: #e2ddd2;
+      --accent: #2f6fde;
+      --accent-encre: #ffffff;
+      --faux: #c0392b;
+      --ok: #1f8a4c;
+      --degrade: linear-gradient(160deg, #eaf6f4 0%, #eef3fc 50%, #f3effb 100%);
+      --grille: rgb(58 123 213 / .07);
+      --grille-forte: rgb(58 123 213 / .14);
+      --ombre: 0 6px 18px rgb(58 110 170 / .14);
+      --emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fond: #15171c;
+        --carte: #1e2128;
+        --encre: #ecedf0;
+        --doux: #a3a8b4;
+        --ligne: #30343d;
+        --accent: #5b8ff0;
+        --accent-encre: #0d1220;
+        --faux: #ef6b5b;
+        --ok: #4cc685;
+        --degrade: linear-gradient(160deg, #0f1f22 0%, #131b2c 50%, #1a1730 100%);
+        --grille: rgb(120 165 235 / .06);
+        --grille-forte: rgb(120 165 235 / .12);
+        --ombre: 0 6px 18px rgb(0 0 0 / .35);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      background:
+        linear-gradient(var(--grille-forte) 1px, transparent 1px) 0 0 / 120px 120px fixed,
+        linear-gradient(90deg, var(--grille-forte) 1px, transparent 1px) 0 0 / 120px 120px fixed,
+        linear-gradient(var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed,
+        linear-gradient(90deg, var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed,
+        var(--fond) var(--degrade) fixed;
+      color: var(--encre);
+      font: 17px/1.5 "Space Grotesk", system-ui, sans-serif;
+    }
+    a { color: var(--accent); }
+
+    #scene { position: relative; min-height: 100vh; min-height: 100svh; overflow: hidden; }
+    .tableau {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 48px 16px 80px;
+      text-align: center;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px);
+      transition: opacity .6s, transform .6s, visibility .6s;
+    }
+    .tableau.visible { opacity: 1; visibility: visible; transform: none; }
+    h1, h2, p { margin: 0; }
+    .petit { color: var(--doux); font-size: clamp(1rem, 2.6vw, 1.3rem); }
+    .grand { font-size: clamp(2.2rem, 8vw, 4.6rem); line-height: 1.05; letter-spacing: -.02em; }
+    .moyen { font-size: clamp(1.5rem, 5vw, 2.6rem); line-height: 1.15; }
+
+    /* Les êtres vivants : un calque au-dessus des tableaux, pour voler d'un endroit à l'autre. */
+    #etres { position: absolute; inset: 0; pointer-events: none; transition: opacity .5s; }
+    #etres.cache { opacity: 0; }
+    .etre {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font: 3.4rem/1 var(--emoji);
+      transition: left .8s cubic-bezier(.5, 0, .2, 1.25), top .8s cubic-bezier(.5, 0, .2, 1.25), font-size .8s;
+      filter: drop-shadow(0 4px 6px rgb(0 0 0 / .15));
+    }
+    .etre.flotte { animation: flotte 3s ease-in-out infinite alternate; }
+    .etre:nth-child(2n).flotte { animation-duration: 2.4s; animation-delay: -.8s; }
+    .etre.range { font-size: clamp(1.7rem, 4.6vw, 2.4rem); }
+    .etre.sans-transition { transition: none; }
+    @keyframes flotte { to { transform: translate(-50%, calc(-50% - 14px)) rotate(6deg); } }
+
+    /* Les boîtes, dessinées comme dans le logiciel : bord et bandeau de la couleur de l'attribut. */
+    .legende { min-height: 3em; font-size: clamp(1.1rem, 3.4vw, 1.6rem); font-weight: 600; }
+    .legende span { display: inline-block; animation: entre .45s both; }
+    @keyframes entre { from { opacity: 0; transform: translateY(8px); } }
+    .plan { display: flex; justify-content: center; max-width: 100%; }
+    .boite {
+      display: inline-flex;
+      flex-direction: column;
+      border: 3px solid var(--c);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--c) 9%, var(--carte));
+      box-shadow: var(--ombre);
+      opacity: 0;
+      transform: scale(.6);
+      transition: opacity .45s, transform .45s cubic-bezier(.3, 1.4, .5, 1);
+    }
+    .boite.montree { opacity: 1; transform: none; }
+    .tete {
+      padding: 4px 6px;
+      background: var(--c);
+      border-radius: 6px 6px 0 0;
+    }
+    .tete span {
+      display: block;
+      padding: 1px 8px;
+      border-radius: 4px;
+      background: rgb(255 255 255 / .92);
+      color: #1f2430;
+      font-size: clamp(.78rem, 2.2vw, .95rem);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .contenu {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: center;
+      gap: clamp(6px, 1.6vw, 14px);
+      padding: clamp(6px, 1.6vw, 14px);
+    }
+    .place { display: inline-block; width: clamp(2.2rem, 6vw, 3rem); height: clamp(2.2rem, 6vw, 3rem); }
+    .place[hidden] { display: none; }
+    .verdict {
+      min-height: 2.6em;
+      padding: .5em 1.1em;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: clamp(1rem, 3vw, 1.3rem);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .verdict.faux { opacity: 1; background: color-mix(in srgb, var(--faux) 14%, var(--carte)); color: var(--faux); animation: secoue .4s; }
+    .verdict.ok { opacity: 1; background: color-mix(in srgb, var(--ok) 14%, var(--carte)); color: var(--ok); }
+    @keyframes secoue { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+    .atouts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+      gap: 12px;
+      width: min(100%, 760px);
+    }
+    .atout {
+      padding: 14px 16px;
+      border: 1px solid var(--ligne);
+      border-radius: 18px;
+      background: var(--carte);
+      box-shadow: var(--ombre);
+      text-align: left;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity .4s, transform .4s;
+    }
+    .atout.montree { opacity: 1; transform: none; }
+    .atout b { display: block; font-size: 1.05rem; }
+    .atout i { font-style: normal; font-family: var(--emoji); }
+    .atout small { color: var(--doux); font-size: .9rem; }
+
+    .logo { font: clamp(4rem, 14vw, 6.5rem)/1 var(--emoji); animation: entre .6s both; }
+    .boutons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    .bouton {
+      display: inline-block;
+      padding: .75rem 1.3rem;
+      border: 2px solid var(--accent);
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--accent-encre);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .bouton.secondaire { background: transparent; color: var(--accent); }
+    .adresse { font-weight: 700; font-size: clamp(1.1rem, 3.4vw, 1.4rem); }
+    .qr { display: flex; align-items: center; gap: 12px; color: var(--doux); font-size: .9rem; text-align: left; }
+    .qr img { width: 84px; height: 84px; padding: 6px; border-radius: 10px; background: #fff; }
+
+    .commandes {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px 14px;
+    }
+    .barre { flex: 1; height: 4px; border-radius: 4px; background: var(--ligne); overflow: hidden; }
+    .barre i { display: block; height: 100%; width: 0; background: var(--accent); }
+    .barre i.court { animation: avance var(--duree) linear forwards; }
+    @keyframes avance { to { width: 100%; } }
+    .commandes button {
+      padding: .4rem .9rem;
+      border: 1px solid var(--ligne);
+      border-radius: 999px;
+      background: var(--carte);
+      color: var(--encre);
+      font: inherit;
+      font-size: .9rem;
+      cursor: pointer;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0s !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main id="scene" aria-label="Publicité animée pour Boîtes à classer">
+    <section class="tableau" id="t-question">
+      <p class="petit">Requin, truite, grenouille, pigeon, chat, souris…</p>
+      <h1 class="grand">Comment les classer ?</h1>
+    </section>
+
+    <section class="tableau" id="t-classement">
+      <p class="legende" id="legende" aria-live="polite"></p>
+      <div class="plan">
+        <div class="boite" data-n="1" style="--c: #2f7ed8">
+          <div class="tete"><span>squelette interne</span></div>
+          <div class="contenu">
+            <span class="place" data-place="requin"></span>
+            <div class="boite" data-n="2" style="--c: #17a2b8">
+              <div class="tete"><span>nageoires rayonnées</span></div>
+              <div class="contenu"><span class="place" data-place="truite"></span></div>
+            </div>
+            <div class="boite" data-n="3" style="--c: #8e5bd0">
+              <div class="tete"><span>4 membres</span></div>
+              <div class="contenu">
+                <span class="place" data-place="grenouille"></span>
+                <div class="boite" data-n="4" style="--c: #e8a10c">
+                  <div class="tete"><span>plumes</span></div>
+                  <div class="contenu"><span class="place" data-place="pigeon"></span></div>
+                </div>
+                <div class="boite" data-n="5" style="--c: #d6457b">
+                  <div class="tete"><span>poils</span></div>
+                  <div class="contenu">
+                    <span class="place" data-place="pigeon-faux" hidden></span>
+                    <span class="place" data-place="chat"></span>
+                    <span class="place" data-place="souris"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="verdict" id="verdict" aria-live="polite"></p>
+    </section>
+
+    <section class="tableau" id="t-atouts">
+      <h2 class="moyen">Gratuit, libre, et partout</h2>
+      <div class="atouts">
+        <p class="atout"><b><i>🆓</i> Gratuit, sans publicité</b><small>Logiciel libre, sans inscription</small></p>
+        <p class="atout"><b><i>💻</i> Windows, macOS, Linux</b><small>ou directement dans le navigateur</small></p>
+        <p class="atout"><b><i>📱</i> Tablette et téléphone</b><small>au doigt, même sans connexion</small></p>
+        <p class="atout"><b><i>✅</i> Vérification</b><small>les erreurs sont signalées une par une</small></p>
+        <p class="atout"><b><i>📄</i> PDF et impression</b><small>pour rendre son travail</small></p>
+        <p class="atout"><b><i>🌿</i> Six collections</b><small>jardin, vertébrés, plantes, mer…</small></p>
+      </div>
+    </section>
+
+    <section class="tableau" id="t-fin">
+      <div class="logo" aria-hidden="true">📦</div>
+      <h2 class="grand">Boîtes à classer</h2>
+      <p class="petit">Pour apprendre à classer les êtres vivants dans des boîtes emboîtées, en classe ou à la maison.</p>
+      <div class="boutons">
+        <a class="bouton" href="../app/index.html">Essayer gratuitement →</a>
+        <a class="bouton secondaire" href="../">Télécharger</a>
+      </div>
+      <p class="adresse">boites-a-classer.pages.dev</p>
+      <div class="qr"><img src="../qr-mobile.svg" alt="QR code vers le logiciel en ligne"><span>Sur téléphone :<br>scannez ce code.</span></div>
+    </section>
+
+    <div id="etres" aria-hidden="true">
+      <span class="etre" data-etre="requin" data-x="12" data-y="22">🦈</span>
+      <span class="etre" data-etre="truite" data-x="86" data-y="18">🐟</span>
+      <span class="etre" data-etre="grenouille" data-x="18" data-y="76">🐸</span>
+      <span class="etre" data-etre="pigeon" data-x="80" data-y="80">🕊️</span>
+      <span class="etre" data-etre="chat" data-x="50" data-y="14">🐈</span>
+      <span class="etre" data-etre="souris" data-x="48" data-y="86">🐁</span>
+    </div>
+  </main>
+
+  <div class="commandes">
+    <div class="barre"><i id="barre"></i></div>
+    <button type="button" id="revoir">↻ Revoir</button>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+      var $ = function (s) { return document.querySelector(s); };
+      var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+      var scene = $('#scene');
+      var etres = $$('.etre');
+      var DUREE = 22500;
+      var minuteurs = [];
+
+      function etre(nom) { return $('[data-etre="' + nom + '"]'); }
+      function montrer(id) { $$('.tableau').forEach(function (t) { t.classList.toggle('visible', t.id === id); }); }
+      function legende(texte) { $('#legende').innerHTML = '<span></span>'; $('#legende span').textContent = texte; }
+      function verdict(texte, sorte) {
+        var v = $('#verdict');
+        v.className = 'verdict';
+        void v.offsetWidth; // relance l'animation
+        v.textContent = texte || '';
+        if (sorte) v.classList.add(sorte);
+      }
+
+      // Chaque être vivant rangé suit sa place dans les boîtes (après une animation, un déplacement ou un redimensionnement).
+      function replacer() {
+        var cadre = scene.getBoundingClientRect();
+        etres.forEach(function (e) {
+          if (!e.dataset.place) return;
+          var r = $('[data-place="' + e.dataset.place + '"]').getBoundingClientRect();
+          e.style.left = (r.left - cadre.left + r.width / 2) + 'px';
+          e.style.top = (r.top - cadre.top + r.height / 2) + 'px';
+        });
+      }
+      function ranger(nom, place) {
+        var e = etre(nom);
+        e.dataset.place = place || nom;
+        e.classList.remove('flotte');
+        e.classList.add('range');
+        replacer();
+      }
+
+      function remettre() {
+        minuteurs.forEach(clearTimeout);
+        minuteurs = [];
+        $$('.boite, .atout').forEach(function (b) { b.classList.remove('montree'); });
+        $('[data-place="pigeon-faux"]').hidden = true;
+        $('#etres').classList.remove('cache');
+        $('#legende').textContent = '';
+        verdict('');
+        etres.forEach(function (e) {
+          delete e.dataset.place;
+          e.classList.add('sans-transition', 'flotte');
+          e.classList.remove('range');
+          e.style.left = e.dataset.x + '%';
+          e.style.top = e.dataset.y + '%';
+          void e.offsetWidth;
+          e.classList.remove('sans-transition');
+        });
+        var barre = $('#barre');
+        barre.classList.remove('court');
+        void barre.offsetWidth;
+        barre.style.setProperty('--duree', DUREE + 'ms');
+        barre.classList.add('court');
+      }
+
+      var deroule = [
+        [0, function () { montrer('t-question'); }],
+        [3600, function () { montrer('t-classement'); legende('① Créez des boîtes, nommez-les avec un attribut'); }],
+        [4100, function () { $('[data-n="1"]').classList.add('montree'); }],
+        [4550, function () { $('[data-n="2"]').classList.add('montree'); }],
+        [5000, function () { $('[data-n="3"]').classList.add('montree'); }],
+        [5450, function () { $('[data-n="4"]').classList.add('montree'); }],
+        [5900, function () { $('[data-n="5"]').classList.add('montree'); }],
+        [6700, function () { legende('② Glissez-y les êtres vivants'); replacer(); }],
+        [7100, function () { ranger('requin'); }],
+        [7650, function () { ranger('truite'); }],
+        [8200, function () { ranger('grenouille'); }],
+        [8750, function () { $('[data-place="pigeon-faux"]').hidden = false; ranger('pigeon', 'pigeon-faux'); }],
+        [9300, function () { ranger('chat'); }],
+        [9850, function () { ranger('souris'); }],
+        [10700, function () { legende('③ Vérifiez : les erreurs sont signalées'); verdict('✗ Le pigeon n’a pas de poils !', 'faux'); }],
+        [12500, function () { verdict(''); etre('pigeon').dataset.place = 'pigeon'; $('[data-place="pigeon-faux"]').hidden = true; replacer(); }],
+        [13500, function () { verdict('✓ Bravo, tout est bien classé !', 'ok'); }],
+        [15600, function () { montrer('t-atouts'); $('#etres').classList.add('cache'); }],
+      ].concat($$('.atout').map(function (a, i) {
+        return [16000 + i * 380, function () { a.classList.add('montree'); }];
+      })).concat([
+        [21600, function () { montrer('t-fin'); }],
+      ]);
+
+      function jouer() {
+        remettre();
+        deroule.forEach(function (etape) { minuteurs.push(setTimeout(etape[1], etape[0])); });
+      }
+
+      $('#revoir').addEventListener('click', jouer);
+      window.addEventListener('resize', replacer);
+      $$('.boite').forEach(function (b) { b.addEventListener('transitionend', replacer); });
+      jouer();
+    })();
+  </script>
+</body>
+</html>
