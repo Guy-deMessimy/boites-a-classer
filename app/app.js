@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.0.0';
+  const VERSION = '3.1.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -26,7 +26,7 @@
   const boutonFichier = $('#fichier');
   const boutonOutils = $('#outils');
   const niveauZoom = $('#zoom-niveau');
-  const infoDefaut = info.textContent;
+  let infoDefaut = info.textContent; // dépend de la matière (voir choisirCollection)
   const petitEcran = window.matchMedia('(max-width: 700px)');
   const tactile = window.matchMedia('(pointer: coarse)');
 
@@ -61,6 +61,11 @@
   const borner = (p) => ({ x: borne(Math.round(p.x), 0, MAX_XY), y: borne(Math.round(p.y), 0, MAX_XY) });
   const nouvelId = (prefixe) => prefixe + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const toutes = () => [...FOURNIES, ...collectionsSite, ...mesCollections];
+  // Matières des collections fournies (champ « matiere », sciences par défaut) : une partie par matière dans les listes.
+  const MATIERES = [['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'], ['anglais', '🌍 Anglais']];
+  const matiere = (c) => (c && c.matiere) || 'sciences';
+  // Ce qu'on classe : des êtres vivants en sciences, des « éléments » (mots, nombres, figures…) ailleurs.
+  const elements = (c = coll) => (matiere(c) === 'sciences' ? ['être vivant', 'êtres vivants'] : ['élément', 'éléments']);
   const estPerso = (c) => mesCollections.includes(c);
   const estSite = (c) => collectionsSite.includes(c);
   // Seul un admin crée et modifie des collections (le serveur le vérifie aussi pour celles du site).
@@ -153,6 +158,10 @@
     histoire.actuel = JSON.stringify(etat);
     majBoutonsHistoire();
     if (defi && defi.collection !== coll.id) arreterDefi();
+    const ancienInfo = infoDefaut;
+    infoDefaut = `Touche ou survole un ${elements()[0]} pour voir ses caractéristiques.`;
+    if (info.textContent === ancienInfo) info.textContent = infoDefaut;
+    plateau.dataset.vide = `Tous les ${elements()[1]} sont placés.`;
     ecrire('boites-a-classer:collection', coll.id);
     fermerBilan();
     rendre();
@@ -333,7 +342,7 @@
 
   function montrerInfo(e) {
     info.textContent = `${e.emoji || ''} ${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`.trim();
-    dire(`${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`);
+    dire(`${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`, coll.langue);
   }
 
   /* ---------- Glisser-déposer ---------- */
@@ -1082,7 +1091,7 @@
       for (const c of liste) g.appendChild(new Option(c.nom, c.id));
       selColl.appendChild(g);
     };
-    groupe('Collections fournies', FOURNIES);
+    for (const [m, titre] of MATIERES) groupe(titre, FOURNIES.filter((c) => matiere(c) === m));
     if (collectionsSite.length) groupe('Collections du site', collectionsSite);
     if (mesCollections.length) groupe('Mes collections', mesCollections);
     if (coll) selColl.value = coll.id;
@@ -1126,7 +1135,7 @@
       const titre = document.createElement('strong');
       titre.textContent = c.nom;
       const detail = document.createElement('small');
-      detail.textContent = `${pluriel(c.etres.length, 'être vivant', 'êtres vivants')} · ${pluriel(c.attributs.length, 'attribut', 'attributs')}`
+      detail.textContent = `${pluriel(c.etres.length, ...elements(c))} · ${pluriel(c.attributs.length, 'attribut', 'attributs')}`
         + (c === coll ? ' · en cours' : '');
       infos.append(titre, detail);
 
@@ -1224,7 +1233,7 @@
       sections.push(section('Collections du site', collectionsSite, 'Aucune pour l\'instant : créez-en une, ou copiez une collection fournie.'));
     }
     if (mesCollections.length) sections.push(section('Mes collections (dans ce navigateur)', mesCollections, ''));
-    sections.push(section('Collections fournies', FOURNIES, ''));
+    for (const [m, titre] of MATIERES) sections.push(section(titre, FOURNIES.filter((c) => matiere(c) === m), ''));
     listeCollections.replaceChildren(...sections);
   }
 
@@ -1817,9 +1826,7 @@
 
     const restants = coll.etres.length - places.length;
     if (restants > 0) {
-      lignes.push(['info', restants === 1
-        ? 'Il reste 1 être vivant à placer.'
-        : `Il reste ${restants} êtres vivants à placer.`]);
+      lignes.push(['info', `Il reste ${pluriel(restants, ...elements())} à placer.`]);
     }
 
     const erreurs = lignes.some(([t]) => t === 'erreur' || t === 'manque');
@@ -1905,7 +1912,7 @@
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
         entreeMenu('💡 Un indice', donnerIndice),
         document.createElement('hr'),
-        entreeMenu('↺ Tout ranger (êtres vivants en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
+        entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
       );
       if (voixPossible) m.appendChild(entreeMenu(voixActive() ? '🔇 Ne plus lire à voix haute' : '🔊 Lire les noms à voix haute', basculerVoix));
@@ -2025,17 +2032,20 @@
       svg.appendChild(el('text', { x: f.x, y: MARGE + 70, 'text-anchor': 'middle', 'font-size': 13, fill: '#1f2430' }, e.nom.length > 13 ? e.nom.slice(0, 12) + '…' : e.nom));
     }
 
+    const des = elements()[1];
+    $('#arbre-aide').textContent = `Chaque boîte devient une branche : les ${des} au-dessus d'une branche partagent l'attribut écrit dessus.`
+      + (matiere(coll) === 'sciences' ? ' Plus deux êtres vivants partagent de boîtes, plus ils sont proches : c\'est un arbre de parenté.' : '');
     const zone = $('#arbre');
     if (!feuilles.length) {
       const p = document.createElement('p');
       p.className = 'aide';
-      p.textContent = 'Place d\'abord des êtres vivants dans des boîtes : l\'arbre se dessinera ici.';
+      p.textContent = `Place d'abord des ${des} dans des boîtes : l'arbre se dessinera ici.`;
       zone.replaceChildren(p);
     } else zone.replaceChildren(svg);
     const notes = [];
     if (nonPlaces.length) notes.push(`Pas encore placés : ${nonPlaces.map((e) => e.nom).join(', ')}.`);
     if (vides.length) notes.push(`Boîtes vides, laissées de côté : ${vides.map((b) => `« ${b.texte || '?'} »`).join(', ')}.`);
-    if (racine.enfants.some((f) => f.etre)) notes.push('Les êtres vivants posés hors de toute boîte partent directement du tronc.');
+    if (racine.enfants.some((f) => f.etre)) notes.push(`Les ${des} posés hors de toute boîte partent directement du tronc.`);
     $('#arbre-notes').replaceChildren(...notes.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
     $('#fen-arbre').showModal();
   }
@@ -2044,6 +2054,8 @@
 
   function ouvrirTableau() {
     fermerMenu();
+    const [un, des] = elements();
+    $('#tableau-aide').textContent = `Une coche quand l'${un} possède l'attribut. Les ${des} qui partagent un attribut vont dans la même boîte.`;
     const t = $('#tableau');
     const tete = document.createElement('tr');
     tete.appendChild(document.createElement('th'));
@@ -2091,7 +2103,8 @@
   function nouvellePartie() {
     jeu = { secret: coll.etres[Math.floor(Math.random() * coll.etres.length)], reponses: new Map(), essais: new Set(), questions: 0, fini: false };
     const record = parseInt(lire(CLE_RECORD_JEU()), 10);
-    $('#jeu-consigne').textContent = `J'ai choisi en secret un être vivant de la collection « ${coll.nom} ». Pose des questions sur ses attributs pour le trouver, en le moins de questions possible.`
+    $('#jeu-proposer').textContent = `(appuie sur un ${elements()[0]} pour proposer ta réponse)`;
+    $('#jeu-consigne').textContent = `J'ai choisi en secret un ${elements()[0]} de la collection « ${coll.nom} ». Pose des questions sur ses attributs pour le trouver, en le moins de questions possible.`
       + (record ? ` Ton record : ${pluriel(record, 'question', 'questions')}.` : '');
     $('#jeu-etat').textContent = '';
     $('#jeu-etat').className = 'jeu-etat';
@@ -2111,7 +2124,7 @@
         b.classList.add(jeu.reponses.get(a.id) ? 'oui' : 'non');
         b.textContent = `${a.nom} : ${jeu.reponses.get(a.id) ? 'oui ✓' : 'non ✗'}`;
       } else {
-        b.textContent = `A-t-il : ${a.nom} ?`;
+        b.textContent = `« ${a.nom} » ?`;
         b.disabled = jeu.fini;
         b.addEventListener('click', () => {
           const oui = jeu.secret.attributs.includes(a.id);
@@ -2216,7 +2229,7 @@
     clearInterval(minuterieDefi);
     minuterieDefi = setInterval(tic, 1000);
     const record = parseInt(lire(CLE_RECORD_DEFI()), 10);
-    info.textContent = `⏱ C'est parti ! Classe tous les êtres vivants, puis appuie sur « ✔ Vérifier ».${record ? ' Ton record : ' + duree(record) + '.' : ''} (↶ pour retrouver ton travail d'avant.)`;
+    info.textContent = `⏱ C'est parti ! Classe tous les ${elements()[1]}, puis appuie sur « ✔ Vérifier ».${record ? ' Ton record : ' + duree(record) + '.' : ''} (↶ pour retrouver ton travail d'avant.)`;
   }
 
   function arreterDefi() {
@@ -2243,18 +2256,18 @@
   const voixPossible = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance === 'function';
   const CLE_VOIX = 'boites-a-classer-voix';
   const voixActive = () => voixPossible && lire(CLE_VOIX) === '1';
-  function dire(texte) {
+  function dire(texte, langue) {
     if (!voixActive()) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(texte);
-    u.lang = 'fr-FR';
+    u.lang = langue === 'en' ? 'en-GB' : 'fr-FR'; // collection d'anglais : noms lus en anglais
     u.rate = 0.95;
     speechSynthesis.speak(u);
   }
   function basculerVoix() {
     if (voixActive()) { speechSynthesis.cancel(); ecrire(CLE_VOIX, '0'); info.textContent = '🔇 Lecture à voix haute arrêtée.'; return; }
     ecrire(CLE_VOIX, '1');
-    info.textContent = '🔊 Lecture à voix haute : touche ou survole un être vivant pour l\'entendre.';
+    info.textContent = `🔊 Lecture à voix haute : touche ou survole un ${elements()[0]} pour l'entendre.`;
     dire('Lecture à voix haute activée.');
   }
 
@@ -3131,6 +3144,11 @@
     choisirCollection(lire('boites-a-classer:collection'));
     majBoutonCompte();
     if (!document.body.classList.contains('consultation')) rafraichirCompte();
+    if (location.hash.startsWith('#collection=')) { // lien d'une matière de la page d'accueil
+      const id = decodeURIComponent(location.hash.slice('#collection='.length));
+      history.replaceState(null, '', location.pathname + location.search);
+      if (toutes().some((c) => c.id === id)) choisirCollection(id);
+    }
     if (location.hash === '#compte') { // lien « Se connecter » de la page d'accueil
       history.replaceState(null, '', location.pathname + location.search);
       ouvrirSauvegarde();

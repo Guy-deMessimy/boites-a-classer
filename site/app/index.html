@@ -216,7 +216,7 @@
       <button type="button" class="fermer" aria-label="Fermer">×</button>
     </div>
     <div class="fenetre-corps">
-      <p class="aide">Chaque boîte devient une branche : les êtres vivants au-dessus d'une branche partagent l'attribut écrit dessus. Plus deux êtres vivants partagent de boîtes, plus ils sont proches.</p>
+      <p class="aide" id="arbre-aide"></p>
       <div id="arbre" class="arbre"></div>
       <ul id="arbre-notes" class="arbre-notes"></ul>
     </div>
@@ -228,7 +228,7 @@
       <button type="button" class="fermer" aria-label="Fermer">×</button>
     </div>
     <div class="fenetre-corps">
-      <p class="aide">Une coche quand l'être vivant possède l'attribut. Les êtres vivants qui partagent un attribut vont dans la même boîte.</p>
+      <p class="aide" id="tableau-aide"></p>
       <div class="tableau-defile"><table id="tableau" class="tableau-caracteres"></table></div>
     </div>
   </dialog>
@@ -243,7 +243,7 @@
       <p class="jeu-etat" id="jeu-etat" role="status"></p>
       <h3>Pose une question</h3>
       <div class="jeu-questions" id="jeu-questions"></div>
-      <h3>Ceux qui restent possibles <span class="aide">(appuie sur un être vivant pour proposer ta réponse)</span></h3>
+      <h3>Ceux qui restent possibles <span class="aide" id="jeu-proposer"></span></h3>
       <div class="jeu-candidats" id="jeu-candidats"></div>
     </div>
     <div class="fenetre-pied">

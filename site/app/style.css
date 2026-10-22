@@ -244,7 +244,7 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
   border-top: 1px solid var(--ligne);
 }
 #plateau:empty::before {
-  content: "Tous les êtres vivants sont placés.";
+  content: attr(data-vide);
   color: var(--doux);
   font-size: .9rem;
 }

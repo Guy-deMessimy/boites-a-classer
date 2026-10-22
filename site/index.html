@@ -136,6 +136,9 @@
       box-shadow: var(--ombre);
     }
     .carte.detecte { border: 2px solid var(--accent); }
+    .matieres { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; }
+    .matiere h3 { margin: 0; font-size: 1.25rem; }
+    .matiere .liens { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
     .carte h3 { margin: 0; font-size: 1.3rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
     .carte .pour-vous { font-size: .75rem; font-weight: 600; color: var(--accent); display: none; }
     .carte.detecte .pour-vous { display: inline; }
@@ -187,7 +190,7 @@
 </head>
 <body>
   <main>
-    <aside class="annonce" aria-label="Annonce"><p>🎉 Nouveau dans la version 3.0 : arbre, jeu « Qui suis-je ? », indice, défi chronométré, annuler…</p></aside>
+    <aside class="annonce" aria-label="Annonce"><p>🎉 Nouveau dans la version 3.1 : une partie Français, Maths, Histoire et Anglais !</p></aside>
 
     <header class="panneau">
       <img src="icone.png" alt="">
@@ -205,6 +208,41 @@
     <section class="pub">
       <iframe src="pub/" title="Boîtes à classer en 20 secondes (publicité animée)" loading="lazy"></iframe>
     </section>
+
+    <h2>Une partie par matière</h2>
+    <div class="matieres">
+      <article class="carte matiere">
+        <h3>🔬 Sciences</h3>
+        <p>Classer les êtres vivants : jardin et mare, vertébrés, plantes, animaux marins, petites bêtes, ferme.</p>
+        <div class="liens"><a class="bouton" href="app/index.html#collection=jardin">Les êtres vivants</a></div>
+      </article>
+      <article class="carte matiere">
+        <h3>📝 Français</h3>
+        <p>Ranger les mots selon leur nature (nom, verbe, adjectif, déterminant) ou leur famille.</p>
+        <div class="liens">
+          <a class="bouton" href="app/index.html#collection=francais-nature">La nature des mots</a>
+          <a class="bouton secondaire" href="app/index.html#collection=francais-familles">Les familles de mots</a>
+        </div>
+      </article>
+      <article class="carte matiere">
+        <h3>➗ Maths</h3>
+        <p>Emboîter les multiples (de 2, 4, 8, de 3, 9, de 5) et classer les figures planes.</p>
+        <div class="liens">
+          <a class="bouton" href="app/index.html#collection=maths-multiples">Les multiples</a>
+          <a class="bouton secondaire" href="app/index.html#collection=maths-figures">Les figures planes</a>
+        </div>
+      </article>
+      <article class="carte matiere">
+        <h3>🏛 Histoire</h3>
+        <p>Placer de grands événements dans les périodes : Préhistoire, Antiquité, Moyen Âge, Temps modernes, Époque contemporaine.</p>
+        <div class="liens"><a class="bouton" href="app/index.html#collection=histoire-periodes">Les grandes périodes</a></div>
+      </article>
+      <article class="carte matiere">
+        <h3>🌍 Anglais</h3>
+        <p>Trier le vocabulaire : animals, food, colours… avec la lecture à voix haute en anglais 🔊.</p>
+        <div class="liens"><a class="bouton" href="app/index.html#collection=anglais-mots">Animals, food and colours</a></div>
+      </article>
+    </div>
 
     <section class="en-ligne">
       <p><strong>Sans rien installer :</strong> le logiciel fonctionne directement dans le navigateur, sur ordinateur ou tablette.</p>
@@ -273,7 +311,7 @@
       <li>Défi chronométré ⏱ avec record, et lecture des noms à voix haute 🔊 pour les jeunes lecteurs.</li>
       <li>Enregistrer son travail dans un fichier, le rouvrir plus tard ou le rendre à l'enseignant.</li>
       <li>Enregistrer son travail en PDF ou en image, pour l'imprimer ou l'envoyer.</li>
-      <li>Six collections : jardin et mare, vertébrés, plantes, animaux marins, petites bêtes, animaux de la ferme.</li>
+      <li>Douze collections, rangées par matière : sciences (jardin et mare, vertébrés, plantes, animaux marins, petites bêtes, ferme), français (nature des mots, familles de mots), maths (multiples, figures planes), histoire (grandes périodes) et anglais (animals, food and colours).</li>
       <li>De nouvelles collections (êtres vivants, photos, attributs) ajoutées au fil du temps par l'administrateur du site.</li>
       <li>Fonctionne sur ordinateur, tablette et téléphone, à la souris ou au doigt, avec un zoom.</li>
       <li>S'installe sur l'écran d'accueil d'un téléphone et marche sans connexion.</li>
@@ -282,7 +320,7 @@
     </ul>
 
     <footer class="panneau">
-      Version <span id="version">3.0.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="aide/">Service client</a>
+      Version <span id="version">3.1.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="aide/">Service client</a>
     </footer>
   </main>
 
