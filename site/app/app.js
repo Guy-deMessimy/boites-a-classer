@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.6.0';
+  const VERSION = '3.6.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2226,7 +2226,8 @@
     } else if (etat.boites.some((b) => !b.attr)) texte = 'Une boîte n\'a pas encore d\'attribut : choisis-le avec le petit menu ▾ de la boîte.';
     else if (lignes.some(([t, l]) => t === 'erreur' && /se chevauchent/.test(l))) texte = 'Deux boîtes se chevauchent : une boîte doit être entièrement dans une autre, ou à côté.';
     else if (fautifs.size) {
-      const e = coll.etres.find((x) => x.id === tirer([...fautifs]));
+      const choisi = tirer([...fautifs]); // tiré une seule fois (pas à chaque essai de find)
+      const e = coll.etres.find((x) => x.id === choisi);
       texte = `Regarde bien ${e.nom} : est-il dans toutes les bonnes boîtes, et seulement celles-là ? Survole-le pour revoir ses attributs.`;
       const carte = elEtres.get(e.id);
       carte.classList.remove('indice');
