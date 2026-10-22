@@ -110,7 +110,9 @@ Depuis la 3.9.0, l'enseignant coche aussi des **exercices** pour chaque classe (
 
 ## Matières (depuis la 3.1.0)
 
-Les collections fournies sont rangées par matière (champ `matiere` dans `app/collections.js`, sciences par défaut) : sciences, français (nature des mots, familles de mots), maths (multiples, figures planes dessinées en SVG), histoire (grandes périodes), géographie (villes du monde, depuis la 3.4.0) et anglais (deux collections, `langue: 'en'` : noms lus en anglais). Même mécanique de boîtes et mêmes outils ; hors sciences, le logiciel parle d'« éléments » au lieu d'« êtres vivants ». L'accueil a une carte par matière, avec des liens `app/index.html#collection=<id>` qui ouvrent directement la collection. Règle à respecter pour une nouvelle collection : deux attributs ne doivent jamais se croiser (emboîtés ou séparés).
+Les collections fournies (`app/collections.js`) sont rangées par matière : champ `matiere` (sciences par défaut), liste des matières dans `window.MATIERES` du même fichier — c'est là qu'on ajoute une matière, le logiciel, l'accueil et la page « Mes classes » la reprennent. Sept matières : sciences (êtres vivants, aliments, matériaux, système solaire, régimes alimentaires), français, maths (dont figures et solides dessinés en SVG), histoire, géographie, anglais (`langue: 'en'` : lecture à voix haute en anglais) et musique. Champ `elements` : ce qu'on classe, au masculin (`['aliment', 'aliments']`) ; sinon « êtres vivants » en sciences et « éléments » ailleurs.
+
+Règle pour une nouvelle collection : deux attributs ne doivent jamais se croiser (emboîtés ou séparés) et chaque élément a au moins un attribut. Sur l'accueil, la liste et le nombre des collections sont calculés depuis `app/collections.js` ; seuls les boutons des cartes « Une partie par matière » (liens `app/index.html#collection=<id>`) s'ajoutent à la main. Journal pour les utilisateurs : `site/nouveautes/`.
 
 ## Outils (depuis la 3.0.0)
 
@@ -118,6 +120,8 @@ Dans le logiciel, en plus des boîtes (tout est dans `app/app.js`, sections « A
 - **↶ ↷ Annuler / rétablir** (Ctrl+Z, Ctrl+Y ou ⇧⌘Z) : `sauver()` garde jusqu'à 50 états d'avant, pour la collection affichée.
 - **🧰 Outils** : **🌳 arbre** (la classification emboîtée dessinée en arbre de parenté, en SVG : chaque boîte devient une branche portant son attribut, les boîtes vides sont laissées de côté), **📊 tableau des caractères** (êtres vivants × attributs), **🎲 jeu « Qui suis-je ? »** (deviner l'être vivant secret par questions oui/non, record par collection), **💡 indice** (une piste sur une seule erreur, sans la solution ; l'être vivant concerné clignote), **⏱ défi chronométré** (repart de zéro, ↶ ramène le travail d'avant ; le temps s'arrête quand « ✔ Vérifier » trouve tout juste, record par collection), **🔊 lecture à voix haute** (synthèse vocale du navigateur, en français).
 - **Fichier → 🖼 Enregistrer en image** : la même page que le PDF, en PNG.
+
+Depuis : aide « Comment ça marche ? » à la première visite (`boites-a-classer-aide:vue`), thème sombre (variables CSS, `@media screen and (prefers-color-scheme: dark)`), progression ✅ (`boites-a-classer:reussi:<id>`, sauvegardée en ligne avec le travail), confettis à la réussite, lien direct vers un exercice (🔗), impression du tableau des caractères (à remplir ou corrigé) et de l'arbre, cartes et boîtes au clavier (Tab, Entrée, flèches ; Alt + flèches pour la taille d'une boîte).
 
 Records et réglage de la voix sont gardés dans le navigateur, hors de la sauvegarde en ligne (`boites-a-classer-jeu:…`, `boites-a-classer-defi:…`, `boites-a-classer-voix`).
 
