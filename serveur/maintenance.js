@@ -33,7 +33,7 @@ export const PAGE_MAINTENANCE = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Boîtes à classer revient bientôt</title>
+  <title>Boîtes à hanter revient bientôt</title>
   <link rel="icon" href="/icone.png">
   <style>
     @font-face {
@@ -108,7 +108,7 @@ export const PAGE_MAINTENANCE = `<!doctype html>
 <body>
   <main>
     <img src="/icone.png" alt="">
-    <h1>Boîtes à classer revient dans peu de temps…</h1>
+    <h1>Boîtes à hanter revient dans peu de temps…</h1>
     <p>Le site est momentanément fermé. Ton travail est bien gardé : la page reviendra toute seule dès la réouverture.</p>
   </main>
   <script>
