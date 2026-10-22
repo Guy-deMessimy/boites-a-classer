@@ -194,7 +194,8 @@ window.COLLECTIONS = [
 /*
   Collections des autres matières (depuis la 3.1.0) : même principe, mais on classe des mots, des nombres, des
   figures, des événements… Champ « matiere » : francais, maths, histoire ou anglais (sans ce champ : sciences).
-  Champ « langue » : 'en' pour la lecture à voix haute en anglais.
+  Champ « langue » : 'en' pour la lecture à voix haute en anglais. Champ « elements » : ce qu'on classe, au masculin
+  singulier et pluriel (par défaut « êtres vivants » en sciences, « éléments » ailleurs).
   Les attributs d'une collection ne doivent jamais « se croiser » : deux attributs sont soit emboîtés (l'un contient
   l'autre), soit séparés (aucun élément n'a les deux).
 */
@@ -205,6 +206,36 @@ window.COLLECTIONS = [
     + forme + '</g></svg>');
 
   window.COLLECTIONS.push(
+    {
+      id: 'aliments',
+      nom: 'Les aliments et leur origine',
+      elements: ['aliment', 'aliments'],
+      attributs: [
+        { id: 'animale', nom: 'origine animale' },
+        { id: 'laitier', nom: 'produit laitier' },
+        { id: 'vegetale', nom: 'origine végétale' },
+        { id: 'fruit', nom: 'fruit' },
+        { id: 'legume', nom: 'légume' },
+        { id: 'cereales', nom: 'à base de céréales' },
+        { id: 'minerale', nom: 'origine minérale' },
+      ],
+      etres: [
+        { id: 'lait', nom: 'Lait', emoji: '🥛', attributs: ['animale', 'laitier'] },
+        { id: 'fromage', nom: 'Fromage', emoji: '🧀', attributs: ['animale', 'laitier'] },
+        { id: 'beurre', nom: 'Beurre', emoji: '🧈', attributs: ['animale', 'laitier'] },
+        { id: 'oeuf', nom: 'Œuf', emoji: '🥚', attributs: ['animale'] },
+        { id: 'viande', nom: 'Viande', emoji: '🥩', attributs: ['animale'] },
+        { id: 'poisson', nom: 'Poisson', emoji: '🐟', attributs: ['animale'] },
+        { id: 'pomme', nom: 'Pomme', emoji: '🍎', attributs: ['vegetale', 'fruit'] },
+        { id: 'banane', nom: 'Banane', emoji: '🍌', attributs: ['vegetale', 'fruit'] },
+        { id: 'carotte', nom: 'Carotte', emoji: '🥕', attributs: ['vegetale', 'legume'] },
+        { id: 'salade', nom: 'Salade', emoji: '🥬', attributs: ['vegetale', 'legume'] },
+        { id: 'pain', nom: 'Pain', emoji: '🍞', attributs: ['vegetale', 'cereales'] },
+        { id: 'riz', nom: 'Riz', emoji: '🍚', attributs: ['vegetale', 'cereales'] },
+        { id: 'eau', nom: 'Eau', emoji: '💧', attributs: ['minerale'] },
+        { id: 'sel', nom: 'Sel', emoji: '🧂', attributs: ['minerale'] },
+      ],
+    },
     {
       id: 'francais-nature',
       matiere: 'francais',

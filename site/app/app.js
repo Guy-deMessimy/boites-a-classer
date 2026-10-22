@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.6.1';
+  const VERSION = '3.7.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -65,7 +65,8 @@
   const MATIERES = [['sciences', '🔬 Sciences'], ['francais', '📝 Français'], ['maths', '➗ Maths'], ['histoire', '🏛 Histoire'], ['geographie', '🗺 Géographie'], ['anglais', '🌍 Anglais']];
   const matiere = (c) => (c && c.matiere) || 'sciences';
   // Ce qu'on classe : des êtres vivants en sciences, des « éléments » (mots, nombres, figures…) ailleurs.
-  const elements = (c = coll) => (matiere(c) === 'sciences' ? ['être vivant', 'êtres vivants'] : ['élément', 'éléments']);
+  // Une collection peut le préciser (champ « elements », au masculin : ['aliment', 'aliments']).
+  const elements = (c = coll) => (Array.isArray(c.elements) ? c.elements : matiere(c) === 'sciences' ? ['être vivant', 'êtres vivants'] : ['élément', 'éléments']);
   // Collections réussies (tout juste à la vérification) : cochées ✅ dans les listes. Clé sauvegardée en ligne avec le
   // reste du travail, pour retrouver sa progression sur un autre appareil.
   const cleReussie = (c) => 'boites-a-classer:reussi:' + c.id;
