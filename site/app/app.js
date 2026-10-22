@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.1.1';
+  const VERSION = '3.2.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1863,7 +1863,7 @@
 
   // Sous la barre d'outils, qui peut tenir sur deux lignes : le bilan ne doit pas cacher ses boutons.
   function placerBilan() {
-    bilan.style.top = Math.round($('.barre').getBoundingClientRect().bottom + 8) + 'px';
+    bilan.style.top = petitEcran.matches ? '' : Math.round($('.barre').getBoundingClientRect().bottom + 8) + 'px'; // téléphone : en bas
   }
   window.addEventListener('resize', () => { if (!bilan.hidden) placerBilan(); });
 
@@ -2001,7 +2001,7 @@
     }(racine));
 
     const svg = el('svg', { viewBox: `0 0 ${largeur} ${bas + MARGE}`, width: largeur, height: bas + MARGE, role: 'img', 'aria-label': 'Arbre de la classification' });
-    svg.appendChild(el('path', { d: traits.join(' '), fill: 'none', stroke: '#5f6675', 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    svg.appendChild(el('path', { d: traits.join(' '), class: 'branches', fill: 'none', stroke: '#5f6675', 'stroke-width': 3, 'stroke-linecap': 'round' }));
     // Étiquette sur deux lignes au plus, pour tenir entre deux branches voisines (PAS).
     const decouper = (texte) => {
       const lignes = [''];
@@ -2029,7 +2029,7 @@
       const e = f.etre;
       if (e.image) svg.appendChild(el('image', { href: e.image, x: f.x - 24, y: MARGE, width: 48, height: 48, preserveAspectRatio: 'xMidYMid meet' }));
       else svg.appendChild(el('text', { x: f.x, y: MARGE + 40, 'text-anchor': 'middle', 'font-size': 36 }, e.emoji || '❓'));
-      svg.appendChild(el('text', { x: f.x, y: MARGE + 70, 'text-anchor': 'middle', 'font-size': 13, fill: '#1f2430' }, e.nom.length > 13 ? e.nom.slice(0, 12) + '…' : e.nom));
+      svg.appendChild(el('text', { x: f.x, y: MARGE + 70, 'text-anchor': 'middle', 'font-size': 13, fill: 'currentColor' }, e.nom.length > 13 ? e.nom.slice(0, 12) + '…' : e.nom));
     }
 
     const des = elements()[1];
