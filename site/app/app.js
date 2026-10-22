@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.10.0';
+  const VERSION = '3.0.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -11,6 +11,7 @@
   const ZOOM = { min: 0.35, max: 1.6 };
   const SEUIL = 5; // déplacement (px) avant qu'un appui devienne un glisser
   const MAX_XY = 20000; // coordonnée maximale acceptée depuis un fichier
+  const HISTOIRE_MAX = 50; // étapes gardées pour « Annuler »
 
   const $ = (s) => document.querySelector(s);
   const espace = $('#espace');
@@ -23,6 +24,7 @@
   const bilanListe = $('#bilan-liste');
   const boutonEffacer = $('#effacer');
   const boutonFichier = $('#fichier');
+  const boutonOutils = $('#outils');
   const niveauZoom = $('#zoom-niveau');
   const infoDefaut = info.textContent;
   const petitEcran = window.matchMedia('(max-width: 700px)');
@@ -30,6 +32,8 @@
 
   let coll = null;
   let etat = null; // { boites: [{ id, x, y, w, h, attr, texte }], positions: { idEtre: { x, y } } }
+  let histoire = { passe: [], futur: [], actuel: null }; // annuler / rétablir (états du plan de travail en JSON)
+  let defi = null; // défi chronométré en cours : { collection, debut }
   let attrParId = new Map();
   let elBoites = new Map();
   let elEtres = new Map();
@@ -95,7 +99,21 @@
     signalerChangement(k);
   }
 
-  const sauver = () => ecrire(cle(), JSON.stringify(etat));
+  // Chaque enregistrement garde l'état d'avant pour « Annuler » (voir Annuler, rétablir).
+  function sauver() {
+    const s = JSON.stringify(etat);
+    if (histoire.actuel !== null && s !== histoire.actuel) {
+      histoire.passe.push(histoire.actuel);
+      if (histoire.passe.length > HISTOIRE_MAX) {
+        histoire.passe.shift();
+        if (defi) defi.marque--;
+      }
+      histoire.futur = [];
+    }
+    histoire.actuel = s;
+    ecrire(cle(), s);
+    majBoutonsHistoire();
+  }
 
   function charger() {
     try {
@@ -130,7 +148,11 @@
     attrParId = new Map(coll.attributs.map((a, i) =>
       [a.id, { ...a, couleur: a.couleur || PALETTE[i % PALETTE.length] }]));
     etat = etatOuvert ? accorder(etatOuvert) : charger();
+    histoire = { passe: [], futur: [], actuel: null };
     if (etatOuvert) sauver();
+    histoire.actuel = JSON.stringify(etat);
+    majBoutonsHistoire();
+    if (defi && defi.collection !== coll.id) arreterDefi();
     ecrire('boites-a-classer:collection', coll.id);
     fermerBilan();
     rendre();
@@ -311,6 +333,7 @@
 
   function montrerInfo(e) {
     info.textContent = `${e.emoji || ''} ${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`.trim();
+    dire(`${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`);
   }
 
   /* ---------- Glisser-déposer ---------- */
@@ -658,6 +681,21 @@
       info.textContent = r ? compteRendu(r, 'PDF') : infoDefaut;
     } catch (e) {
       info.textContent = 'Impossible de créer le PDF : ' + (e && e.message ? e.message : e);
+    }
+  }
+
+  // Même page que le PDF, en image PNG (à coller dans un document ou à envoyer).
+  async function exporterImage() {
+    fermerMenu();
+    info.textContent = 'Préparation de l\'image…';
+    try {
+      const { toileA4 } = dessinerPage(await chargerImages());
+      const png = await new Promise((ok) => toileA4.toBlob(ok, 'image/png'));
+      const nom = nomDeFichier(`Boîtes à classer - ${coll.nom} - ${new Date().toISOString().slice(0, 10)}`, 'png');
+      const r = await enregistrerFichier(png, nom, { titre: 'Enregistrer en image', nom: 'Image PNG', extension: 'png' });
+      info.textContent = r ? compteRendu(r, 'Fichier image') : infoDefaut;
+    } catch (e) {
+      info.textContent = 'Impossible de créer l\'image : ' + (e && e.message ? e.message : e);
     }
   }
 
@@ -1703,6 +1741,7 @@
       m.append(
         document.createElement('hr'),
         entreeMenu('📄 Enregistrer en PDF', exporterPdf),
+        entreeMenu('🖼 Enregistrer en image', exporterImage),
       );
       if (!petitEcran.matches) m.appendChild(entreeMenu('🖨 Imprimer', () => window.print()));
     });
@@ -1727,9 +1766,9 @@
     oublierVerification();
   }
 
-  function verifier() {
-    fermerMenu();
-    oublierVerification();
+  // Analyse du plan de travail : lignes du bilan [type, texte], êtres vivants mal placés, et « complet » quand tout est
+  // placé sans aucune erreur.
+  function analyser() {
     const lignes = [];
     const fautifs = new Set();
     const places = coll.etres.filter((e) => etat.positions[e.id]);
@@ -1790,7 +1829,20 @@
         : 'Bravo ! Ta classification est correcte.']);
     }
 
+    const complet = !erreurs && etat.boites.length > 0 && restants === 0;
+    return { lignes, fautifs, places, complet };
+  }
+
+  function verifier() {
+    fermerMenu();
+    oublierVerification();
+    const { lignes, fautifs, places, complet } = analyser();
     for (const e of places) elEtres.get(e.id).classList.add(fautifs.has(e.id) ? 'faux' : 'ok');
+    if (complet) {
+      dire('Bravo ! Ta classification est correcte.');
+      const fin = finirDefi();
+      if (fin) lignes.splice(1, 0, ['bravo', fin]);
+    }
 
     bilanListe.replaceChildren(...lignes.map(([type, texte]) => {
       const li = document.createElement('li');
@@ -1798,7 +1850,412 @@
       li.textContent = texte;
       return li;
     }));
+    placerBilan();
     bilan.hidden = false;
+  }
+
+  // Sous la barre d'outils, qui peut tenir sur deux lignes : le bilan ne doit pas cacher ses boutons.
+  function placerBilan() {
+    bilan.style.top = Math.round($('.barre').getBoundingClientRect().bottom + 8) + 'px';
+  }
+  window.addEventListener('resize', () => { if (!bilan.hidden) placerBilan(); });
+
+  /* ---------- Annuler, rétablir ---------- */
+
+  // sauver() garde l'état d'avant chaque changement : ↶ / Ctrl+Z (⌘Z) l'annule, ↷ / Ctrl+Y (⇧⌘Z) le rétablit.
+  // L'historique est propre à la collection affichée et repart à zéro quand on en change.
+  function majBoutonsHistoire() {
+    $('#annuler').disabled = !histoire.passe.length;
+    $('#retablir').disabled = !histoire.futur.length;
+  }
+
+  function deplacerHistoire(de, vers) {
+    if (!de.length) return;
+    vers.push(histoire.actuel);
+    histoire.actuel = de.pop();
+    etat = accorder(JSON.parse(histoire.actuel));
+    ecrire(cle(), histoire.actuel);
+    fermerBilan();
+    rendre();
+    majBoutonsHistoire();
+    // Revenir avant le début d'un défi (son travail d'avant) l'annule : pas de record en reprenant une solution.
+    if (defi && histoire.passe.length < defi.marque) {
+      arreterDefi();
+      info.textContent = '⏱ Défi annulé : tu es revenu à ton travail d\'avant.';
+    }
+  }
+  function annuler() { deplacerHistoire(histoire.passe, histoire.futur); }
+  function retablir() { deplacerHistoire(histoire.futur, histoire.passe); }
+
+  document.addEventListener('keydown', (ev) => {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || document.querySelector('dialog[open]')) return;
+    if (ev.target.closest && ev.target.closest('input, textarea, select, [contenteditable]')) return; // annulation du texte
+    const k = ev.key.toLowerCase();
+    if (k === 'z' && !ev.shiftKey) { ev.preventDefault(); annuler(); }
+    else if ((k === 'z' && ev.shiftKey) || k === 'y') { ev.preventDefault(); retablir(); }
+  });
+
+  /* ---------- Outils ---------- */
+
+  function ouvrirMenuOutils() {
+    afficherMenu(boutonOutils, 'outils', (m) => {
+      m.append(
+        entreeMenu('🌳 Voir ma classification en arbre', ouvrirArbre),
+        entreeMenu('📊 Tableau des caractères', ouvrirTableau),
+        entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
+        entreeMenu('💡 Un indice', donnerIndice),
+        document.createElement('hr'),
+        entreeMenu('↺ Tout ranger (êtres vivants en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
+        entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
+      );
+      if (voixPossible) m.appendChild(entreeMenu(voixActive() ? '🔇 Ne plus lire à voix haute' : '🔊 Lire les noms à voix haute', basculerVoix));
+    });
+  }
+
+  for (const f of ['#fen-arbre', '#fen-tableau', '#fen-jeu']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
+
+  // Être vivant dessiné en petit (emoji ou photo), pour le tableau et le jeu.
+  function icone(e) {
+    const s = document.createElement('span');
+    s.className = 'mini-ico';
+    if (e.image) {
+      const img = document.createElement('img');
+      img.src = e.image;
+      img.alt = '';
+      s.appendChild(img);
+    } else s.textContent = e.emoji || '❓';
+    return s;
+  }
+
+  /* L'arbre : la classification emboîtée dessinée comme un arbre de parenté. */
+
+  const aire = (b) => b.w * b.h;
+
+  // Hiérarchie des boîtes : chaque boîte (et chaque être vivant placé) a pour parent la plus petite boîte qui l'englobe.
+  // Les boîtes sans aucun être vivant sont laissées de côté.
+  function hierarchie() {
+    const boites = [...etat.boites].sort((a, b) => aire(a) - aire(b));
+    const noeuds = new Map(boites.map((b) => [b.id, { boite: b, enfants: [] }]));
+    const racine = { boite: null, enfants: [] };
+    const plusPetite = (test) => boites.find(test) || null;
+    // Parmi les boîtes plus grandes (plus loin dans la liste) : deux boîtes identiques ne s'englobent pas l'une l'autre.
+    boites.forEach((b, i) => {
+      const p = boites.find((q, j) => j > i && englobe(q, b));
+      (p ? noeuds.get(p.id) : racine).enfants.push(noeuds.get(b.id));
+    });
+    const nonPlaces = [];
+    for (const e of coll.etres) {
+      const pos = etat.positions[e.id];
+      if (!pos) { nonPlaces.push(e); continue; }
+      const c = centre(pos);
+      const p = plusPetite((q) => contient(q, c.x, c.y));
+      (p ? noeuds.get(p.id) : racine).enfants.push({ etre: e });
+    }
+    const feuilles = (n) => (n.etre ? 1 : n.enfants.reduce((t, f) => t + feuilles(f), 0));
+    const elaguer = (n) => { n.enfants = n.enfants.filter((f) => f.etre || feuilles(f) > 0); n.enfants.forEach((f) => { if (!f.etre) elaguer(f); }); };
+    elaguer(racine);
+    return { racine, nonPlaces, vides: boites.filter((b) => feuilles(noeuds.get(b.id)) === 0) };
+  }
+
+  function ouvrirArbre() {
+    fermerMenu();
+    const { racine, nonPlaces, vides } = hierarchie();
+    const SVG = 'http://www.w3.org/2000/svg';
+    const el = (nom, attrs, texte) => {
+      const n = document.createElementNS(SVG, nom);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+      if (texte !== undefined) n.textContent = texte;
+      return n;
+    };
+    const PAS = 100, HAUT_FEUILLE = 92, ETAGE = 64, MARGE = 24;
+    // Hauteur d'un nœud : 0 pour un être vivant, 1 de plus que son plus haut enfant pour une boîte.
+    const hauteur = (n) => (n.etre ? 0 : 1 + Math.max(0, ...n.enfants.map(hauteur)));
+    const H = hauteur(racine);
+    let x = MARGE + PAS / 2;
+    const traits = [], etiquettes = [], feuilles = [];
+    // Place les êtres vivants de gauche à droite, puis chaque boîte sous le milieu de ses enfants.
+    function placer(n) {
+      if (n.etre) { n.x = x; x += PAS; n.y = MARGE + HAUT_FEUILLE; feuilles.push(n); return; }
+      n.enfants.forEach(placer);
+      n.x = n.enfants.length ? (n.enfants[0].x + n.enfants[n.enfants.length - 1].x) / 2 : x;
+      n.y = MARGE + HAUT_FEUILLE + hauteur(n) * ETAGE;
+      for (const f of n.enfants) traits.push(`M${f.x} ${f.y} V${n.y}`);
+      if (n.enfants.length > 1) traits.push(`M${n.enfants[0].x} ${n.y} H${n.enfants[n.enfants.length - 1].x}`);
+    }
+    placer(racine);
+    const largeur = Math.max(x - PAS / 2 + MARGE, 320);
+    const bas = MARGE + HAUT_FEUILLE + (H + 0.6) * ETAGE;
+    traits.push(`M${racine.x} ${racine.y} V${bas}`);
+    // L'attribut d'une boîte est écrit sur la branche qui la porte, juste sous son nœud.
+    (function noter(n) {
+      if (n.etre) return;
+      if (n.boite) etiquettes.push(n);
+      n.enfants.forEach(noter);
+    }(racine));
+
+    const svg = el('svg', { viewBox: `0 0 ${largeur} ${bas + MARGE}`, width: largeur, height: bas + MARGE, role: 'img', 'aria-label': 'Arbre de la classification' });
+    svg.appendChild(el('path', { d: traits.join(' '), fill: 'none', stroke: '#5f6675', 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    // Étiquette sur deux lignes au plus, pour tenir entre deux branches voisines (PAS).
+    const decouper = (texte) => {
+      const lignes = [''];
+      for (const mot of texte.split(' ')) {
+        const l = lignes[lignes.length - 1];
+        if (!l || (l + ' ' + mot).length <= 11) lignes[lignes.length - 1] = l ? l + ' ' + mot : mot;
+        else lignes.push(mot);
+      }
+      const garde = lignes.slice(0, 2).map((l) => (l.length > 12 ? l.slice(0, 11) + '…' : l));
+      if (lignes.length > 2) garde[1] = garde[1].slice(0, 10) + '…';
+      return garde;
+    };
+    for (const n of etiquettes) {
+      const b = n.boite;
+      const couleur = couleurBoite(b);
+      const lignes = decouper(b.texte || '?');
+      const l = Math.min(PAS - 8, 16 + Math.max(...lignes.map((t) => t.length)) * 7.2);
+      const g = el('g', {});
+      g.appendChild(el('rect', { x: n.x - l / 2, y: n.y + 6, width: l, height: 8 + lignes.length * 15, rx: 9, fill: couleur }));
+      lignes.forEach((t, i) => g.appendChild(el('text', { x: n.x, y: n.y + 19 + i * 15, 'text-anchor': 'middle', fill: '#fff', 'font-size': 12.5, 'font-weight': 600 }, t)));
+      svg.appendChild(g);
+      svg.appendChild(el('circle', { cx: n.x, cy: n.y, r: 5, fill: couleur }));
+    }
+    for (const f of feuilles) {
+      const e = f.etre;
+      if (e.image) svg.appendChild(el('image', { href: e.image, x: f.x - 24, y: MARGE, width: 48, height: 48, preserveAspectRatio: 'xMidYMid meet' }));
+      else svg.appendChild(el('text', { x: f.x, y: MARGE + 40, 'text-anchor': 'middle', 'font-size': 36 }, e.emoji || '❓'));
+      svg.appendChild(el('text', { x: f.x, y: MARGE + 70, 'text-anchor': 'middle', 'font-size': 13, fill: '#1f2430' }, e.nom.length > 13 ? e.nom.slice(0, 12) + '…' : e.nom));
+    }
+
+    const zone = $('#arbre');
+    if (!feuilles.length) {
+      const p = document.createElement('p');
+      p.className = 'aide';
+      p.textContent = 'Place d\'abord des êtres vivants dans des boîtes : l\'arbre se dessinera ici.';
+      zone.replaceChildren(p);
+    } else zone.replaceChildren(svg);
+    const notes = [];
+    if (nonPlaces.length) notes.push(`Pas encore placés : ${nonPlaces.map((e) => e.nom).join(', ')}.`);
+    if (vides.length) notes.push(`Boîtes vides, laissées de côté : ${vides.map((b) => `« ${b.texte || '?'} »`).join(', ')}.`);
+    if (racine.enfants.some((f) => f.etre)) notes.push('Les êtres vivants posés hors de toute boîte partent directement du tronc.');
+    $('#arbre-notes').replaceChildren(...notes.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+    $('#fen-arbre').showModal();
+  }
+
+  /* Tableau des caractères : êtres vivants × attributs de la collection. */
+
+  function ouvrirTableau() {
+    fermerMenu();
+    const t = $('#tableau');
+    const tete = document.createElement('tr');
+    tete.appendChild(document.createElement('th'));
+    for (const a of attrParId.values()) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      const s = document.createElement('span');
+      s.className = 'pastille';
+      s.style.setProperty('--c', a.couleur);
+      th.append(s, a.nom);
+      tete.appendChild(th);
+    }
+    const lignes = coll.etres.map((e) => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.append(icone(e), ' ' + e.nom);
+      tr.appendChild(th);
+      for (const a of attrParId.values()) {
+        const td = document.createElement('td');
+        if (e.attributs.includes(a.id)) { td.textContent = '✓'; td.className = 'oui'; td.style.setProperty('--c', a.couleur); }
+        tr.appendChild(td);
+      }
+      return tr;
+    });
+    const thead = document.createElement('thead');
+    thead.appendChild(tete);
+    const tbody = document.createElement('tbody');
+    tbody.append(...lignes);
+    t.replaceChildren(thead, tbody);
+    $('#fen-tableau').showModal();
+  }
+
+  /* Jeu « Qui suis-je ? » : trouver l'être vivant choisi au hasard en posant des questions sur ses attributs. */
+
+  let jeu = null; // { secret, reponses: Map(attr → oui/non), essais: Set(id), questions, fini }
+  const CLE_RECORD_JEU = () => 'boites-a-classer-jeu:' + coll.id; // hors du préfixe sauvegardé : propre à l'appareil
+
+  function ouvrirJeu() {
+    fermerMenu();
+    nouvellePartie();
+    $('#fen-jeu').showModal();
+  }
+
+  function nouvellePartie() {
+    jeu = { secret: coll.etres[Math.floor(Math.random() * coll.etres.length)], reponses: new Map(), essais: new Set(), questions: 0, fini: false };
+    const record = parseInt(lire(CLE_RECORD_JEU()), 10);
+    $('#jeu-consigne').textContent = `J'ai choisi en secret un être vivant de la collection « ${coll.nom} ». Pose des questions sur ses attributs pour le trouver, en le moins de questions possible.`
+      + (record ? ` Ton record : ${pluriel(record, 'question', 'questions')}.` : '');
+    $('#jeu-etat').textContent = '';
+    $('#jeu-etat').className = 'jeu-etat';
+    rendreJeu();
+  }
+
+  const compatible = (e) => [...jeu.reponses].every(([a, oui]) => e.attributs.includes(a) === oui) && !jeu.essais.has(e.id);
+
+  function rendreJeu() {
+    $('#jeu-questions').replaceChildren(...[...attrParId.values()].map((a) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.style.setProperty('--c', a.couleur);
+      if (jeu.reponses.has(a.id)) {
+        b.disabled = true;
+        b.classList.add(jeu.reponses.get(a.id) ? 'oui' : 'non');
+        b.textContent = `${a.nom} : ${jeu.reponses.get(a.id) ? 'oui ✓' : 'non ✗'}`;
+      } else {
+        b.textContent = `A-t-il : ${a.nom} ?`;
+        b.disabled = jeu.fini;
+        b.addEventListener('click', () => {
+          const oui = jeu.secret.attributs.includes(a.id);
+          jeu.reponses.set(a.id, oui);
+          jeu.questions++;
+          const reste = coll.etres.filter(compatible).length;
+          dire(oui ? 'Oui' : 'Non');
+          etatJeu(`${oui ? 'Oui' : 'Non'} ! Il reste ${pluriel(reste, 'possibilité', 'possibilités')}${reste === 1 ? ' : appuie dessus !' : '.'}`);
+          rendreJeu();
+        });
+      }
+      return b;
+    }));
+    $('#jeu-candidats').replaceChildren(...coll.etres.map((e) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'jeu-carte';
+      const possible = compatible(e) || (jeu.fini && e === jeu.secret);
+      b.classList.toggle('ecarte', !possible);
+      if (jeu.fini && e === jeu.secret) b.classList.add('trouve');
+      b.disabled = jeu.fini || !possible;
+      b.append(icone(e), e.nom);
+      b.addEventListener('click', () => proposer(e));
+      return b;
+    }));
+  }
+
+  function etatJeu(texte, classe) {
+    $('#jeu-etat').textContent = texte;
+    $('#jeu-etat').className = 'jeu-etat' + (classe ? ' ' + classe : '');
+  }
+
+  function proposer(e) {
+    jeu.questions++;
+    if (e === jeu.secret) {
+      jeu.fini = true;
+      const record = parseInt(lire(CLE_RECORD_JEU()), 10);
+      const nouveau = !record || jeu.questions < record;
+      if (nouveau) ecrire(CLE_RECORD_JEU(), String(jeu.questions));
+      etatJeu(`🎉 Bravo, c'était ${e.nom} ! Trouvé en ${pluriel(jeu.questions, 'coup', 'coups')}${nouveau ? ' : nouveau record !' : '.'}`, 'gagne');
+      dire(`Bravo, c'était ${e.nom} !`);
+    } else {
+      jeu.essais.add(e.id);
+      etatJeu(`Non, ce n'est pas ${e.nom}. Continue !`, 'rate');
+      dire(`Non, ce n'est pas ${e.nom}.`);
+    }
+    rendreJeu();
+  }
+  $('#jeu-nouvelle').addEventListener('click', nouvellePartie);
+
+  /* Indice : une piste, sans donner toute la solution. */
+
+  function donnerIndice() {
+    fermerMenu();
+    const { lignes, fautifs, places, complet } = analyser();
+    const tirer = (l) => l[Math.floor(Math.random() * l.length)];
+    let texte;
+    if (complet) texte = 'Tout est juste ! Appuie sur « ✔ Vérifier » pour le confirmer.';
+    else if (!etat.boites.length) {
+      // L'attribut partagé par le plus d'êtres vivants fait une bonne première boîte.
+      const compte = (a) => coll.etres.filter((e) => e.attributs.includes(a.id)).length;
+      const a = [...attrParId.values()].sort((x, y) => compte(y) - compte(x))[0];
+      texte = a ? `Commence par une grande boîte pour un attribut que beaucoup partagent, par exemple « ${a.nom} ».` : 'Crée une boîte avec « ＋ ».';
+    } else if (etat.boites.some((b) => !b.attr)) texte = 'Une boîte n\'a pas encore d\'attribut : choisis-le avec le petit menu ▾ de la boîte.';
+    else if (lignes.some(([t, l]) => t === 'erreur' && /se chevauchent/.test(l))) texte = 'Deux boîtes se chevauchent : une boîte doit être entièrement dans une autre, ou à côté.';
+    else if (fautifs.size) {
+      const e = coll.etres.find((x) => x.id === tirer([...fautifs]));
+      texte = `Regarde bien ${e.nom} : est-il dans toutes les bonnes boîtes, et seulement celles-là ? Survole-le pour revoir ses attributs.`;
+      const carte = elEtres.get(e.id);
+      carte.classList.remove('indice');
+      void carte.offsetWidth;
+      carte.classList.add('indice');
+      setTimeout(() => carte.classList.remove('indice'), 3000);
+    } else {
+      const reste = coll.etres.filter((e) => !places.includes(e));
+      texte = reste.length ? `Ce qui est placé est juste. Continue avec ${tirer(reste).nom}.` : 'Appuie sur « ✔ Vérifier ».';
+    }
+    info.textContent = '💡 ' + texte;
+    dire(texte);
+  }
+
+  /* Défi chronométré : tout recommencer, puis réussir la classification le plus vite possible. */
+
+  let minuterieDefi = null;
+  const CLE_RECORD_DEFI = () => 'boites-a-classer-defi:' + coll.id;
+  const duree = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s`; };
+
+  function lancerDefi() {
+    fermerMenu();
+    etat = { boites: [], positions: {} };
+    sauver(); // « ↶ Annuler » ramène le travail d'avant
+    fermerBilan();
+    rendre();
+    defi = { collection: coll.id, debut: Date.now(), marque: histoire.passe.length };
+    const chrono = $('#chrono');
+    chrono.hidden = false;
+    const tic = () => {
+      const s = Math.floor((Date.now() - defi.debut) / 1000);
+      chrono.querySelector('span').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    };
+    tic();
+    clearInterval(minuterieDefi);
+    minuterieDefi = setInterval(tic, 1000);
+    const record = parseInt(lire(CLE_RECORD_DEFI()), 10);
+    info.textContent = `⏱ C'est parti ! Classe tous les êtres vivants, puis appuie sur « ✔ Vérifier ».${record ? ' Ton record : ' + duree(record) + '.' : ''} (↶ pour retrouver ton travail d'avant.)`;
+  }
+
+  function arreterDefi() {
+    clearInterval(minuterieDefi);
+    defi = null;
+    $('#chrono').hidden = true;
+  }
+
+  // Appelée quand la vérification trouve tout juste : texte à ajouter au bilan, ou null sans défi en cours.
+  function finirDefi() {
+    if (!defi || defi.collection !== coll.id) return null;
+    const temps = Date.now() - defi.debut;
+    arreterDefi();
+    const record = parseInt(lire(CLE_RECORD_DEFI()), 10);
+    if (!record || temps < record) {
+      ecrire(CLE_RECORD_DEFI(), String(temps));
+      return `⏱ Défi réussi en ${duree(temps)} : nouveau record !`;
+    }
+    return `⏱ Défi réussi en ${duree(temps)} (record : ${duree(record)}).`;
+  }
+
+  /* Lecture à voix haute (synthèse vocale du navigateur), pour les lecteurs débutants. */
+
+  const voixPossible = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance === 'function';
+  const CLE_VOIX = 'boites-a-classer-voix';
+  const voixActive = () => voixPossible && lire(CLE_VOIX) === '1';
+  function dire(texte) {
+    if (!voixActive()) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texte);
+    u.lang = 'fr-FR';
+    u.rate = 0.95;
+    speechSynthesis.speak(u);
+  }
+  function basculerVoix() {
+    if (voixActive()) { speechSynthesis.cancel(); ecrire(CLE_VOIX, '0'); info.textContent = '🔇 Lecture à voix haute arrêtée.'; return; }
+    ecrire(CLE_VOIX, '1');
+    info.textContent = '🔊 Lecture à voix haute : touche ou survole un être vivant pour l\'entendre.';
+    dire('Lecture à voix haute activée.');
   }
 
   /* ---------- Boutons ---------- */
@@ -1846,8 +2303,12 @@
   }
 
   $('#nouvelle').addEventListener('click', nouvelleBoite);
+  $('#annuler').addEventListener('click', annuler);
+  $('#retablir').addEventListener('click', retablir);
+  boutonOutils.addEventListener('click', ouvrirMenuOutils);
+  $('#chrono').addEventListener('click', arreterDefi);
   $('#verifier').addEventListener('click', verifier);
-  $('#ranger').addEventListener('click', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); });
+
   boutonEffacer.addEventListener('click', effacer);
   boutonFichier.addEventListener('click', ouvrirMenuFichier);
   $('#gerer').addEventListener('click', ouvrirCollections);

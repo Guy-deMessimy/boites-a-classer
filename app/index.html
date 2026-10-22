@@ -23,11 +23,11 @@
     <div class="actions">
       <button id="nouvelle" class="principal">＋ <span class="long">Nouvelle boîte</span><span class="court">Boîte</span></button>
       <button id="verifier">✔ Vérifier</button>
-      <button id="ranger" title="Remettre tous les êtres vivants en bas de l'écran" aria-label="Tout ranger">↺<span class="long"> Tout ranger</span></button>
       <button id="effacer" title="Supprimer les boîtes et tout ranger" aria-label="Recommencer">
         <span class="txt-normal"><span class="long">Recommencer</span><span class="court">🗑</span></span><span class="txt-confirmer">Confirmer ?</span>
       </button>
       <button id="compte" title="Se connecter pour sauvegarder son travail en ligne" aria-label="Compte">👤<span class="long" id="compte-nom"> Se connecter</span></button>
+      <button id="outils" class="ouvre-menu" aria-haspopup="menu" title="Arbre, tableau des caractères, jeu, indice, défi…">🧰<span class="long"> Outils</span> ▾</button>
       <button id="fichier" class="ouvre-menu" aria-haspopup="menu" title="Enregistrer, ouvrir, PDF, imprimer">📁<span class="long"> Fichier</span> ▾</button>
     </div>
   </header>
@@ -41,7 +41,11 @@
     <div id="espace" aria-label="Plan de travail">
       <div id="toile"><div id="calque"></div></div>
     </div>
-    <div class="zoom" role="group" aria-label="Zoom">
+    <div class="zoom" role="group" aria-label="Annuler et zoom">
+      <button id="chrono" class="chrono" title="Défi chronométré : appuie pour l'arrêter" hidden>⏱ <span>0:00</span></button>
+      <button id="annuler" class="histoire" title="Annuler (Ctrl+Z)" aria-label="Annuler" disabled>↩︎</button>
+      <button id="retablir" class="histoire" title="Rétablir (Ctrl+Y)" aria-label="Rétablir" disabled>↪︎</button>
+      <span class="separateur" aria-hidden="true"></span>
       <button id="zoom-moins" aria-label="Dézoomer">−</button>
       <span id="zoom-niveau">100 %</span>
       <button id="zoom-plus" aria-label="Zoomer">+</button>
@@ -203,6 +207,47 @@
       </section>
       <p class="sv-aide">Une question, un problème ? <a class="btn" id="sv-lien-aide" href="../aide/" target="_blank" rel="noopener">💬 Service client</a> <strong id="sv-aide-nouveau" hidden>Nouvelle réponse !</strong></p>
       <p class="message" role="status"></p>
+    </div>
+  </dialog>
+
+  <dialog id="fen-arbre" class="fenetre large" aria-labelledby="titre-arbre">
+    <div class="fenetre-tete">
+      <h2 id="titre-arbre">🌳 Ma classification en arbre</h2>
+      <button type="button" class="fermer" aria-label="Fermer">×</button>
+    </div>
+    <div class="fenetre-corps">
+      <p class="aide">Chaque boîte devient une branche : les êtres vivants au-dessus d'une branche partagent l'attribut écrit dessus. Plus deux êtres vivants partagent de boîtes, plus ils sont proches.</p>
+      <div id="arbre" class="arbre"></div>
+      <ul id="arbre-notes" class="arbre-notes"></ul>
+    </div>
+  </dialog>
+
+  <dialog id="fen-tableau" class="fenetre large" aria-labelledby="titre-tableau">
+    <div class="fenetre-tete">
+      <h2 id="titre-tableau">📊 Tableau des caractères</h2>
+      <button type="button" class="fermer" aria-label="Fermer">×</button>
+    </div>
+    <div class="fenetre-corps">
+      <p class="aide">Une coche quand l'être vivant possède l'attribut. Les êtres vivants qui partagent un attribut vont dans la même boîte.</p>
+      <div class="tableau-defile"><table id="tableau" class="tableau-caracteres"></table></div>
+    </div>
+  </dialog>
+
+  <dialog id="fen-jeu" class="fenetre large" aria-labelledby="titre-jeu">
+    <div class="fenetre-tete">
+      <h2 id="titre-jeu">🎲 Qui suis-je ?</h2>
+      <button type="button" class="fermer" aria-label="Fermer">×</button>
+    </div>
+    <div class="fenetre-corps">
+      <p class="aide" id="jeu-consigne"></p>
+      <p class="jeu-etat" id="jeu-etat" role="status"></p>
+      <h3>Pose une question</h3>
+      <div class="jeu-questions" id="jeu-questions"></div>
+      <h3>Ceux qui restent possibles <span class="aide">(appuie sur un être vivant pour proposer ta réponse)</span></h3>
+      <div class="jeu-candidats" id="jeu-candidats"></div>
+    </div>
+    <div class="fenetre-pied">
+      <button type="button" class="btn principal" id="jeu-nouvelle">🎲 Nouvelle partie</button>
     </div>
   </dialog>
 

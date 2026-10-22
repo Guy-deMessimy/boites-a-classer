@@ -553,3 +553,44 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
   #zone, #espace { position: static; overflow: visible; height: 100vh; background: none; }
   .boite, .boite-tete, .etre { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- Outils (3.0.0) : annuler, arbre, tableau des caractères, jeu, indice, défi ---------- */
+.zoom button:disabled { opacity: .35; cursor: default; }
+.zoom .histoire { font-size: 1.05rem; font-weight: 700; }
+.zoom .separateur { width: 1px; align-self: stretch; margin: 2px 2px; background: var(--ligne); }
+.zoom .chrono { width: auto; padding: 0 .5rem; font-variant-numeric: tabular-nums; border-radius: 6px; color: #8a5300; background: #fff4e0; font-weight: 600; }
+.etre.indice { animation: indice .5s ease-in-out 5 alternate; }
+@keyframes indice { to { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(224, 138, 0, .45); } }
+.mini-ico { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; font-size: 1.1em; vertical-align: middle; }
+.mini-ico img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
+
+.arbre { overflow: auto; padding: .5rem 0; }
+.arbre svg { display: block; margin: 0 auto; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.arbre-notes { margin: .6rem 0 0; padding-left: 1.2rem; color: var(--doux); font-size: .9rem; }
+
+.tableau-defile { overflow: auto; max-height: 65vh; border: 1px solid var(--ligne); border-radius: 8px; }
+.tableau-caracteres { border-collapse: collapse; font-size: .9rem; }
+.tableau-caracteres th, .tableau-caracteres td { padding: .35rem .55rem; border-bottom: 1px solid var(--ligne); text-align: center; white-space: nowrap; }
+.tableau-caracteres thead th { position: sticky; top: 0; z-index: 1; background: var(--papier); font-weight: 600; }
+.tableau-caracteres thead th .pastille { display: inline-block; margin-right: .3rem; vertical-align: middle; }
+.tableau-caracteres tbody th { position: sticky; left: 0; background: var(--papier); text-align: left; font-weight: 600; }
+.tableau-caracteres td.oui { color: var(--c); font-weight: 700; font-size: 1.1rem; }
+.tableau-caracteres tbody tr:hover td, .tableau-caracteres tbody tr:hover th { background: #f1f4fa; }
+
+.jeu-etat { min-height: 1.6em; margin: 0 0 .4rem; font-weight: 700; }
+.jeu-etat.gagne { color: var(--ok); }
+.jeu-etat.rate { color: var(--faux); }
+.jeu-questions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.jeu-questions .btn { border-left: 5px solid var(--c); }
+.jeu-questions .btn.oui { background: #e9f7ef; color: var(--ok); opacity: 1; }
+.jeu-questions .btn.non { background: #fbeaea; color: var(--faux); opacity: 1; }
+.jeu-candidats { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: .5rem; }
+.jeu-carte {
+  display: flex; flex-direction: column; align-items: center; gap: .2rem; padding: .5rem .3rem;
+  border: 2px solid var(--ligne); border-radius: 10px; background: var(--papier); cursor: pointer; font-size: .85rem;
+}
+.jeu-carte .mini-ico { font-size: 1.8rem; width: 2.2rem; height: 2.2rem; }
+.jeu-carte:hover:not(:disabled) { border-color: var(--accent); }
+.jeu-carte.ecarte { opacity: .25; filter: grayscale(1); cursor: default; }
+.jeu-carte.trouve { border-color: var(--ok); box-shadow: 0 0 0 3px rgba(31, 157, 85, .3); opacity: 1; filter: none; }
+.jeu-carte:disabled { cursor: default; }

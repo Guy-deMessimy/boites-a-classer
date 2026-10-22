@@ -106,6 +106,15 @@ Le **rôle enseignant** est donné par un admin, dans la page `site/admin/` (« 
 
 Avant de publier cette version : `npx wrangler d1 migrations apply boites-a-classer --remote` (migration 0007).
 
+## Outils (depuis la 3.0.0)
+
+Dans le logiciel, en plus des boîtes (tout est dans `app/app.js`, sections « Annuler, rétablir » et « Outils ») :
+- **↶ ↷ Annuler / rétablir** (Ctrl+Z, Ctrl+Y ou ⇧⌘Z) : `sauver()` garde jusqu'à 50 états d'avant, pour la collection affichée.
+- **🧰 Outils** : **🌳 arbre** (la classification emboîtée dessinée en arbre de parenté, en SVG : chaque boîte devient une branche portant son attribut, les boîtes vides sont laissées de côté), **📊 tableau des caractères** (êtres vivants × attributs), **🎲 jeu « Qui suis-je ? »** (deviner l'être vivant secret par questions oui/non, record par collection), **💡 indice** (une piste sur une seule erreur, sans la solution ; l'être vivant concerné clignote), **⏱ défi chronométré** (repart de zéro, ↶ ramène le travail d'avant ; le temps s'arrête quand « ✔ Vérifier » trouve tout juste, record par collection), **🔊 lecture à voix haute** (synthèse vocale du navigateur, en français).
+- **Fichier → 🖼 Enregistrer en image** : la même page que le PDF, en PNG.
+
+Records et réglage de la voix sont gardés dans le navigateur, hors de la sauvegarde en ligne (`boites-a-classer-jeu:…`, `boites-a-classer-defi:…`, `boites-a-classer-voix`).
+
 ## Service client (depuis la 2.10.0)
 
 Page `site/aide/` (« 💬 Service client » sur l'accueil, dans la fenêtre 👤 du logiciel et sur « Mes classes ») : chacun écrit à l'administrateur du site, qui répond depuis la page `site/admin/` (liste des conversations, non lus, « Marquer résolu », suppression). Une seule conversation par compte connecté (retrouvée sur tous ses appareils), ou par navigateur pour un visiteur sans compte (jeton tiré au hasard, gardé sous `boites-a-classer-support:jeton`, le serveur n'en garde que l'empreinte). Les réponses arrivent sans recharger (toutes les 20 s, 30 s côté admin) ; le logiciel met une pastille sur 👤 quand une réponse n'est pas lue. API `functions/api/support/[action].js` (visiteur) et `functions/api/admin/[action].js` (admin), tables dans `migrations/0008_support.sql` ; 2 000 caractères par message, 20 messages par heure et par adresse, 200 messages gardés par conversation, effacée après un an sans message ou avec le compte.
