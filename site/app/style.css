@@ -607,6 +607,9 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 .zoom .separateur { width: 1px; align-self: stretch; margin: 2px 2px; background: var(--ligne); }
 .zoom .chrono { width: auto; padding: 0 .5rem; font-variant-numeric: tabular-nums; border-radius: 6px; color: var(--texte-jaune); background: var(--fond-jaune); font-weight: 600; }
 .etre.indice { animation: indice .5s ease-in-out 5 alternate; }
+.confettis { position: fixed; inset: 0; z-index: 9000; overflow: hidden; pointer-events: none; }
+.confettis span { position: absolute; top: -40px; animation: tombe linear forwards; }
+@keyframes tombe { to { transform: translateY(110vh) rotate(540deg); } }
 @keyframes indice { to { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(224, 138, 0, .45); } }
 .mini-ico { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; font-size: 1.1em; vertical-align: middle; }
 .mini-ico img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }

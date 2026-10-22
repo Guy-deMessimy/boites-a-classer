@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.10.1';
+  const VERSION = '3.11.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1856,6 +1856,7 @@
     for (const e of places) elEtres.get(e.id).classList.add(fautifs.has(e.id) ? 'faux' : 'ok');
     if (complet) {
       dire('Bravo ! Ta classification est correcte.');
+      confettis();
       if (!reussie(coll)) {
         ecrire(cleReussie(coll), new Date().toISOString());
         remplirSelect();
@@ -1874,6 +1875,26 @@
     }));
     placerBilan();
     bilan.hidden = false;
+  }
+
+  // Une pluie de confettis quand tout est juste (rien si l'appareil demande moins d'animations).
+  function confettis() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const pluie = document.createElement('div');
+    pluie.className = 'confettis';
+    pluie.setAttribute('aria-hidden', 'true');
+    const formes = ['🎉', '⭐', '✨', '🟦', '🟨', '🟥', '🟩'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('span');
+      c.textContent = formes[i % formes.length];
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.animationDelay = Math.random() * 0.6 + 's';
+      c.style.animationDuration = 1.6 + Math.random() * 1.4 + 's';
+      c.style.fontSize = 12 + Math.random() * 18 + 'px';
+      pluie.appendChild(c);
+    }
+    document.body.appendChild(pluie);
+    setTimeout(() => pluie.remove(), 3800);
   }
 
   // Sous la barre d'outils, qui peut tenir sur deux lignes : le bilan ne doit pas cacher ses boutons.
