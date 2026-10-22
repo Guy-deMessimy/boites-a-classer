@@ -10,7 +10,7 @@ Logiciel pour apprendre à classer les êtres vivants dans des boîtes emboîté
 | `app/collections.js` | Les collections fournies (êtres vivants et attributs) : c'est ici qu'on en ajoute. Les collections créées dans le logiciel sont, elles, gardées dans le navigateur (voir Mes collections). |
 | `desktop/` | Configuration Neutralino, qui transforme `app/` en logiciel de bureau. |
 | `icone/` | Icône (source `icone.svg`, déclinaisons PNG et `.icns`). |
-| `site/` | Le site à mettre en ligne : page de téléchargement, `app/` (version en ligne) et `telechargements/`. |
+| `site/` | Le site à mettre en ligne : page de téléchargement (avec l’annonce de la prochaine version en haut et la pub `pub/` intégrée), `app/` (version en ligne) et `telechargements/`. |
 | `build.sh` | Reconstruit les versions de bureau et met à jour `site/`. |
 | `functions/`, `serveur/`, `migrations/`, `wrangler.toml` | Sauvegarde en ligne, comptes et administration (page `site/admin/`) : API Cloudflare Pages Functions et base D1 (voir Sauvegarde en ligne). |
 | `redirection/` | Archive : pages qui redirigeaient l'ancienne adresse (GitHub Pages, supprimée) vers la nouvelle. |

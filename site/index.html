@@ -162,6 +162,24 @@
 
     header .connexion { margin-left: auto; }
 
+    /* Annonce en haut de page : à mettre à jour ou retirer à la sortie de la version annoncée. */
+    .annonce { display: flex; justify-content: center; margin: 0 0 16px; }
+    .annonce p {
+      margin: 0;
+      padding: .55rem 1.3rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #cfe3ff, #d4f3e4);
+      color: #1f2430;
+      font-weight: 600;
+      font-size: 1.05rem;
+      box-shadow: var(--ombre);
+      text-align: center;
+    }
+
+    /* Publicité animée (pub/), lancée quand elle devient visible. */
+    .pub { margin: 24px 0 0; overflow: hidden; border-radius: 22px; box-shadow: var(--ombre); }
+    .pub iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+    @media (max-width: 700px) { .pub iframe { aspect-ratio: auto; height: 600px; } }
 
     footer { margin-top: 48px; padding: 14px 20px; color: var(--doux); font-size: .9rem; }
     footer a { color: var(--accent); }
@@ -169,6 +187,8 @@
 </head>
 <body>
   <main>
+    <aside class="annonce" aria-label="Annonce"><p>🚀 Prochaine mise à jour : version 2.9</p></aside>
+
     <header class="panneau">
       <img src="icone.png" alt="">
       <div>
@@ -179,12 +199,16 @@
       <a class="bouton secondaire connexion" href="app/index.html#compte">Se connecter ou créer un compte</a>
     </header>
 
+    <section class="pub">
+      <iframe src="pub/" title="Boîtes à classer en 20 secondes (publicité animée)" loading="lazy"></iframe>
+    </section>
+
     <section class="en-ligne">
       <p><strong>Sans rien installer :</strong> le logiciel fonctionne directement dans le navigateur, sur ordinateur ou tablette.</p>
       <a class="bouton" href="app/index.html">Utiliser en ligne</a>
     </section>
 
-    <h2>Télécharger</h2>
+    <h2 id="telecharger">Télécharger</h2>
     <div class="grille">
       <article class="carte" data-os="mobile">
         <h3>Téléphone et tablette <span class="pour-vous">votre appareil</span></h3>
