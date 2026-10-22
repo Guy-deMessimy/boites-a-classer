@@ -1,8 +1,9 @@
 // Effets des événements du site (serveur/evenement.js : Halloween, Noël), chargés par site/arret.js et app/app.js
 // quand un admin en a déclenché un (page site/admin/). Chaque événement a sa fiche dans THEMES (petits personnages à
 // attraper, boss, textes, couleurs, décor). Préfixe « hanter » (classes, window.hanter) : historique, Halloween d'abord.
-// - accueil (classe « theme-<nom> » sur <html>, site/<nom>/theme.css) : le fond s'anime et le clip d'intro
-//   (site/<nom>/index.html) passe une fois par déclenchement ;
+// - accueil : s'il ne porte pas déjà le thème de l'événement (classe « theme-<nom> » sur <html>,
+//   site/<nom>/theme.css), il le prend le temps de l'événement puis retrouve le sien ; le fond s'anime et le clip
+//   d'intro (site/<nom>/index.html) passe une fois par déclenchement ;
 // - partout : les petits personnages (fantômes, lutins) traversent la page ; un clic les attrape, et chacun rapporte
 //   un point à un compte connecté (functions/api/evenement/[action].js). « Chasser les … » les renvoie (choix gardé
 //   dans le navigateur ; dans le logiciel, l'entrée est dans 🧰 Outils) ;
@@ -20,6 +21,8 @@
   var CLE_JETON = 'boites-a-classer-compte:jeton'; // session du compte (app/app.js)
   var racine = document.documentElement;
   var logiciel = /\/app\//.test(location.pathname);
+  var pageAccueil = /^\/(index\.html)?$/.test(location.pathname);
+  var themePrete = null; // { nom, classes, liens } : thème de l'événement prêté à l'accueil, et ce qu'il remplace
   var reduit = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var en = null; // événement en cours : { nom, depuis }
   var T = null; // sa fiche (THEMES)
@@ -85,7 +88,8 @@
   var THEMES = {
     halloween: {
       emoji: '🎃', de: "d'Halloween", police: 'Creepster',
-      petit: { svg: FANTOME, emoji: '👻', un: 'fantôme', des: 'fantômes', attrape: 'Bouh !', coucou: 'Bouh !', vide: 'Ils courent toujours !' },
+      petit: { svg: FANTOME, emoji: '👻', un: 'fantôme', des: 'fantômes', attrape: 'Bouh !', coucou: 'Bouh !', vide: 'Ils courent toujours !',
+        hauteur: [8, 68], duree: [10, 18] }, // ils flottent partout
       boss: { svg: ROI_FANTOMES, titre: '👑 Le Roi des fantômes', nom: 'le Roi des fantômes', Nom: 'Le Roi des fantômes', emoji: '⚔️',
         apparu: "👑 Le Roi des fantômes est apparu ! Tout le monde à l'attaque : clique dessus !", agir: "l'attaquer",
         vaincu: 'vaincu', victoire: '👑 Victoire !', coup: ['coup', 'coups'], coupPorte: ['coup porté', 'coups portés'], plus: 'a porté le plus de coups',
@@ -98,7 +102,8 @@
     },
     noel: {
       emoji: '🎄', de: 'de Noël', police: 'Mountains of Christmas',
-      petit: { svg: LUTIN, emoji: '🧝', un: 'lutin', des: 'lutins', attrape: 'Hop !', coucou: 'Coucou !', vide: 'Ils se cachent toujours !' },
+      petit: { svg: LUTIN, emoji: '🧝', un: 'lutin', des: 'lutins', attrape: 'Hop !', coucou: 'Coucou !', vide: 'Ils se cachent toujours !',
+        hauteur: [38, 78], duree: [7, 12] }, // ils courent en sautillant dans le bas de l'écran
       boss: { svg: PERE_NOEL, titre: '🎅 Le Père Noël', nom: 'le Père Noël', Nom: 'Le Père Noël', emoji: '🎁',
         apparu: "🎅 Le Père Noël est arrivé ! Tout le monde l'attrape : clique dessus !", agir: "l'attraper",
         vaincu: 'attrapé', victoire: '🎁 Bravo !', coup: ['clic', 'clics'], coupPorte: ['clic', 'clics'], plus: "l'a attrapé le plus de fois",
@@ -170,6 +175,8 @@
     '.hanter-fantome>div{position:relative;animation:hanter-onde 2.3s ease-in-out infinite alternate}',
     '@keyframes hanter-onde{from{transform:translateY(-16px) rotate(-6deg)}to{transform:translateY(16px) rotate(6deg)}}',
     '.hanter-fantome svg{display:block;width:100%;opacity:.95;filter:drop-shadow(0 0 14px var(--ev-aura-petit))}',
+    ':root[data-evenement="noel"] .hanter-fantome:not(.coucou):not(.pouf)>div{animation:hanter-saut .42s cubic-bezier(.3,0,.7,1) infinite alternate}',
+    '@keyframes hanter-saut{from{transform:translateY(0) rotate(-5deg)}to{transform:translateY(-30px) rotate(5deg)}}',
     '.hanter-fantome.gauche svg{transform:scaleX(-1)}',
     '.hanter-fantome.coucou{top:auto;bottom:0;left:var(--x);animation:hanter-coucou 5s ease-in-out forwards}',
     '.hanter-fantome.coucou>div{animation-duration:1.2s}',
@@ -211,7 +218,8 @@
     '.hanter-boss-barre b{display:block;color:var(--ev-barre-titre);font:var(--ev-poids) 21px/1.1 var(--ev-police);letter-spacing:.03em}',
     '.hanter-boss-barre .jauge{display:block;height:14px;margin:6px 0 5px;border-radius:99px;background:rgb(255 255 255 / .15);overflow:hidden}',
     '.hanter-boss-barre .jauge i{display:block;width:100%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff4d4d,#ff8c1a,#7bd88f);transition:width .4s}',
-    '.hanter-boss{position:absolute;left:50%;top:56%;width:min(44vw,44vh,320px);transform:translate(-50%,-50%);animation:hanter-boss-derive 14s ease-in-out infinite alternate}',
+    '.hanter-boss{position:absolute;left:50%;top:56%;width:min(44vw,44vh,320px);transform:translate(-50%,-50%);animation:hanter-boss-arrivee .9s cubic-bezier(.2,1.3,.4,1),hanter-boss-derive 14s ease-in-out .9s infinite alternate}',
+    '@keyframes hanter-boss-arrivee{from{transform:translate(-50%,-160%) scale(.3);opacity:0}to{transform:translate(-50%,-50%)}}',
     '.hanter-boss .corps{animation:hanter-onde 2.6s ease-in-out infinite alternate}',
     '.hanter-boss svg{display:block;width:100%;pointer-events:auto;cursor:crosshair;filter:drop-shadow(0 0 28px var(--ev-aura-boss))}',
     '.hanter-boss.touche svg{animation:hanter-touche .25s}',
@@ -223,7 +231,14 @@
     '.hanter-boss-zone.vaincu .hanter-boss{animation:hanter-boss-fin 1.5s ease-in forwards}',
     '.hanter-boss-zone.vaincu .hanter-boss svg{pointer-events:none}',
     '@keyframes hanter-boss-fin{to{transform:translate(-50%,-50%) scale(1.8) rotate(25deg);opacity:0;filter:brightness(3) blur(4px)}}',
-    '@media (prefers-reduced-motion:reduce){.hanter-boss,.hanter-boss .corps{animation:none}}',
+    // Le Père Noël ne disparaît pas en fumée : il salue (« Ho ho ho ! ») et s'envole en laissant des cadeaux.
+    ':root[data-evenement="noel"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-pere-noel 1.6s cubic-bezier(.5,0,.8,.6) forwards}',
+    '@keyframes hanter-pere-noel{25%{transform:translate(-50%,-55%) rotate(-6deg)}to{transform:translate(40vw,-110vh) scale(.35) rotate(-18deg);opacity:.4}}',
+    '.hanter-boss .hanter-bulle{bottom:auto;top:18%;left:78%;font-size:26px;opacity:1}',
+    '.hanter-cadeaux{position:fixed;inset:0;z-index:2147483090;pointer-events:none;overflow:hidden}',
+    '.hanter-cadeau{position:absolute;top:-8vh;left:var(--x);font-size:var(--t);animation:hanter-cadeau var(--d) cubic-bezier(.4,0,.8,.6) var(--r) forwards}',
+    '@keyframes hanter-cadeau{to{transform:translate(var(--dx),118vh) rotate(var(--a))}}',
+    '@media (prefers-reduced-motion:reduce){.hanter-boss,.hanter-boss .corps{animation:none}.hanter-cadeaux{display:none}}',
     // Clip d'intro, bandeau
     '.hanter-intro{position:fixed;inset:0;z-index:2147483600;background:#000;opacity:0;transition:opacity .6s}',
     '.hanter-intro.visible{opacity:1}',
@@ -325,8 +340,8 @@
       f.firstChild.appendChild(el('span', 'hanter-bulle', T.petit.coucou));
     } else {
       if (Math.random() < .5) f.classList.add('gauche');
-      f.style.setProperty('--y', hasard(8, 68) + 'vh');
-      f.style.setProperty('--d', (logiciel ? hasard(9, 13) : hasard(10, 18)) + 's');
+      f.style.setProperty('--y', hasard(T.petit.hauteur[0], T.petit.hauteur[1]) + 'vh');
+      f.style.setProperty('--d', (logiciel ? hasard(9, 13) : hasard(T.petit.duree[0], T.petit.duree[1])) + 's');
     }
     f.addEventListener('animationend', function (ev) { if (ev.target === f) f.remove(); });
     f.addEventListener('click', function () { faireFuir(f, true); });
@@ -553,6 +568,10 @@
     var z = bossZone;
     afficherPv();
     z.classList.add('vaincu');
+    if (T.nom === 'noel') {
+      bossEl.appendChild(el('span', 'hanter-bulle', 'Ho ho ho !'));
+      if (!reduit) pluieDeCadeaux();
+    }
     setTimeout(function () {
       z.remove();
       if (bossZone === z) bossZone = bossEl = barre = null;
@@ -561,6 +580,23 @@
       if (lire(CLE + 'boss') !== en.depuis) montrerVictoire();
       prochainFantome(true);
     }, 1600);
+  }
+
+  function pluieDeCadeaux() {
+    var p = el('div', 'hanter-cadeaux');
+    p.setAttribute('aria-hidden', 'true');
+    for (var i = 0; i < 18; i++) {
+      var c = el('span', 'hanter-cadeau', ['🎁', '🎁', '🍬', '⭐', '🧸'][i % 5]);
+      c.style.setProperty('--x', hasard(5, 92) + 'vw');
+      c.style.setProperty('--t', hasard(26, 48) + 'px');
+      c.style.setProperty('--dx', hasard(-12, 12) + 'vw');
+      c.style.setProperty('--a', hasard(-200, 200) + 'deg');
+      c.style.setProperty('--d', hasard(2.2, 3.4) + 's');
+      c.style.setProperty('--r', hasard(0, .9) + 's');
+      p.appendChild(c);
+    }
+    document.body.appendChild(p);
+    setTimeout(function () { p.remove(); }, 4600);
   }
 
   // Écran de victoire, une fois par événement : le gagnant et ses badges, les meilleurs chasseurs, mes clics.
@@ -736,6 +772,39 @@
     annonce = null;
   }
 
+  // L'accueil prend le thème de l'événement le temps de l'événement (Noël déclenché pendant le mode Halloween, par
+  // exemple) : sa classe theme-… et sa feuille sont mises de côté, puis rendues à la fin.
+  function preterTheme(nom) {
+    if (!pageAccueil || racine.classList.contains('theme-' + nom)) return;
+    var classes = Array.prototype.filter.call(racine.classList, function (c) { return /^theme-/.test(c); });
+    var liens = Array.prototype.filter.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) { return /\/theme\.css$/.test(l.getAttribute('href') || ''); });
+    var lien = el('link');
+    lien.rel = 'stylesheet';
+    lien.href = BASE + nom + '/theme.css';
+    document.head.appendChild(lien);
+    liens.forEach(function (l) { l.disabled = true; });
+    classes.forEach(function (c) { racine.classList.remove(c); });
+    racine.classList.add('theme-' + nom);
+    themePrete = { nom: nom, classes: classes, liens: liens, lien: lien, noms: [] };
+    // Le nom d'un autre événement (« Boîtes à hanter » pour Halloween) n'a pas de sens ici : « Boîtes à classer » le temps
+    // de l'événement.
+    var h1 = document.querySelector('h1');
+    [[h1, 'textContent'], [document, 'title']].forEach(function (x) {
+      if (!x[0] || !/Boîtes à hanter/.test(x[0][x[1]])) return;
+      themePrete.noms.push([x[0], x[1], x[0][x[1]]]);
+      x[0][x[1]] = x[0][x[1]].replace(/Boîtes à hanter/g, 'Boîtes à classer');
+    });
+  }
+  function rendreTheme() {
+    if (!themePrete) return;
+    racine.classList.remove('theme-' + themePrete.nom);
+    themePrete.classes.forEach(function (c) { racine.classList.add(c); });
+    themePrete.liens.forEach(function (l) { l.disabled = false; });
+    themePrete.lien.remove();
+    themePrete.noms.forEach(function (x) { x[0][x[1]] = x[2]; });
+    themePrete = null;
+  }
+
   // Appelée à chaque réponse de /api/etat : ne fait rien tant que c'est le même déclenchement.
   function demarrer(e) {
     if (!e || !e.nom) return;
@@ -743,6 +812,7 @@
     if (en) arreter();
     en = e;
     choisir(e.nom);
+    preterTheme(e.nom);
     racine.classList.add('hanter-en-cours');
     if (accueil() && !reduit) document.body.appendChild(fond = creerFond());
     troupe = el('div', 'hanter-troupe');
@@ -777,6 +847,7 @@
     file = 0;
     racine.classList.remove('hanter-en-cours');
     remettreAnnonce();
+    rendreTheme();
   }
 
   // Appelée à chaque réponse de /api/etat : e = événement en cours, fini = dernier événement arrêté (ou null),

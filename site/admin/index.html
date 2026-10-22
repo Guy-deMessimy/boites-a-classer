@@ -413,7 +413,7 @@
         $('#evenement-detail').textContent = e
           ? 'Depuis le ' + date(e.depuis) + ' : fond animé, ' + f.petits + ' à attraper sur tout le site, clip d\'intro sur l\'accueil. À l\'arrêt, le classement est montré à tous.'
           : (fini ? 'Arrêté le ' + date(fini.fin) + ' : son classement est montré à tous. ' : '')
-            + 'Déclencher : choisir l\'événement dans la liste (l\'accueil doit porter son thème pour le fond animé, le clip et le bandeau)'
+            + 'Déclencher : choisir l\'événement dans la liste (l\'accueil prend son thème le temps de l\'événement, avec le fond animé, le clip et le bandeau)'
             + (fini ? ' ; cela remet le classement à zéro.' : '.');
         $('#classement-evenement').hidden = !(e || fini);
         $('#classement-titre').textContent = e ? '🏆 Classement (en direct)' : '🏆 Classement final';

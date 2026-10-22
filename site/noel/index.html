@@ -9,7 +9,7 @@
   <meta property="og:image" content="https://boites-a-classer.pages.dev/icone.png">
   <link rel="icon" href="../icone.png">
   <style>
-    /* Clip d'intro de l'événement de Noël (environ 18 s), montré en plein écran par site/evenement.js quand un admin
+    /* Clip d'intro de l'événement de Noël (environ 20 s), montré en plein écran par site/evenement.js quand un admin
        déclenche l'événement (?integre=1 : démarre seul, sans le son, et prévient la page à la fin), ou ouvert
        directement (bouton « Lancer », avec le son). Tout est dessiné en HTML et CSS ; le son est fabriqué avec Web Audio
        (air de « Jingle Bells », J. Pierpont, 1857, domaine public). Même déroulé que site/halloween/index.html.
@@ -134,14 +134,23 @@
     }
     #titre p { margin: 0; opacity: 0; transform: translateY(2vmin); transition: opacity .7s, transform .7s; }
     #titre .sous { font: 700 6vmin/1.1 "Mountains of Christmas", serif; color: #ffd34d; text-shadow: 0 0 2vmin rgb(255 210 80 / .5); }
-    #titre .petit { font-size: 3vmin; color: #eef4ff; }
+    /* Les règles du jeu, une par une, puis le Père Noël passe la tête : « Ho ho ho ! ». */
+    #titre .regles { display: grid; gap: 1.2vmin; margin: 1vmin auto 0; padding: 0; list-style: none; text-align: left; font-size: 2.9vmin; color: #eef4ff; }
+    #titre .regles li { padding: 1vmin 2vmin; border-radius: 1.6vmin; background: rgb(255 255 255 / .1); opacity: 0; transform: translateX(-3vmin); transition: opacity .5s, transform .5s; }
+    #titre .regles li.vue { opacity: 1; transform: none; }
     .titre #titre h1 { opacity: 1; transform: none; }
-    .sous-titre #titre .sous, .petit #titre .petit { opacity: 1; transform: none; }
+    .sous-titre #titre .sous { opacity: 1; transform: none; }
+    #pere { position: absolute; right: 5%; bottom: 0; width: min(24vmin, 190px); transform: translateY(110%); transition: transform .8s cubic-bezier(.3, 1.4, .5, 1); }
+    .pere #pere { transform: translateY(38%); }
+    #pere svg { display: block; width: 100%; filter: drop-shadow(0 0 2vmin rgb(255 255 255 / .4)); }
+    #pere b { position: absolute; right: 70%; top: 2%; padding: .5vmin 1.6vmin; border-radius: 2vmin; background: #fff; color: #b3203a; font: 700 3.6vmin/1.2 "Mountains of Christmas", serif; white-space: nowrap; opacity: 0; transition: opacity .3s .5s; }
+    .pere #pere b { opacity: 1; }
     .titre .astre { opacity: 1; }
     .astre { position: absolute; width: 4vmin; opacity: 0; transition: opacity 1s; animation: tourne 6s linear infinite; color: #ffe08a; font-size: 4vmin; line-height: 1; }
     .astre:nth-of-type(2) { animation-duration: 7.5s; animation-direction: reverse; }
     @keyframes tourne { from { transform: rotate(0) translateX(30vmin) rotate(0); } to { transform: rotate(360deg) translateX(30vmin) rotate(-360deg); } }
-    #astres { position: absolute; left: 50%; top: 45%; }
+    #astres { position: absolute; left: 50%; top: 45%; z-index: 0; }
+    #titre > :not(#astres) { position: relative; z-index: 1; } /* les étoiles qui tournent passent derrière le texte */
 
     #noir { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }
     .fin #noir { opacity: 1; }
@@ -161,6 +170,7 @@
     #depart[hidden] { display: none; }
 
     @media (orientation: portrait) {
+      #titre .regles { font-size: 3.8vmin; }
       #lune { top: 4%; width: 16vmin; height: 16vmin; }
       #texte[data-place="haut"] { top: 20%; right: 4%; }
     }
@@ -192,8 +202,13 @@
       <div id="astres" aria-hidden="true"><span class="astre">★</span><span class="astre">✦</span></div>
       <h1>Boîtes à classer</h1>
       <p class="sous">L'événement de Noël commence !</p>
-      <p class="petit">Les lutins se cachent partout sur le site… Attrape-les ! 🧝</p>
+      <ul class="regles">
+        <li>🧝 Les lutins se cachent sur le site : clique dessus pour les attraper.</li>
+        <li>🎅 À 30 lutins attrapés par tous, le Père Noël arrive : attrapez-le ensemble !</li>
+        <li>🏆 À la fin : le classement, et des badges à gagner ⛄ ✔ 🎅</li>
+      </ul>
     </div>
+    <div id="pere" aria-hidden="true"><b>Ho ho ho !</b></div>
     <div id="noir"></div>
   </div>
 
@@ -205,7 +220,7 @@
 
   <div id="depart" hidden>
     <h1>🎄 Noël</h1>
-    <p>Le clip d'intro de l'événement de Noël de Boîtes à classer (18 secondes).</p>
+    <p>Le clip d'intro de l'événement de Noël de Boîtes à classer (20 secondes).</p>
     <button type="button" id="lancer">▶ Lancer le clip</button>
   </div>
 
@@ -233,6 +248,7 @@
         e.style.backgroundImage = g.join(',');
       });
       $('#traineau').innerHTML = TRAINEAU;
+      $('#pere').insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 200 240"><path d="M46 160q-32 8-32 44" stroke="#d6334a" stroke-width="22" fill="none" stroke-linecap="round"/><circle cx="14" cy="208" r="12" fill="#2a1a12"/><path d="M154 160q34-4 36-46" stroke="#d6334a" stroke-width="22" fill="none" stroke-linecap="round"/><circle cx="190" cy="110" r="12" fill="#2a1a12"/><path d="M40 154q60-30 120 0l14 84H26z" fill="#d6334a"/><rect x="93" y="150" width="14" height="88" fill="#fff"/><rect x="30" y="196" width="140" height="16" fill="#2a1a12"/><rect x="87" y="191" width="26" height="26" rx="3" fill="none" stroke="#ffd34d" stroke-width="5"/><ellipse cx="100" cy="106" rx="38" ry="30" fill="#fbd7b5"/><path d="M60 114q4 58 40 66q36-8 40-66q-12 16-40 18q-28-2-40-18z" fill="#fff" stroke="#dfe6ef" stroke-width="2"/><path d="M100 118q-16-10-30 0q10 10 30 2q20 8 30-2q-14-10-30 0z" fill="#fff" stroke="#dfe6ef" stroke-width="2"/><path d="M92 128q8 6 16 0" stroke="#b5465a" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="86" cy="99" rx="4.5" ry="5.5" fill="#2a1a12"/><ellipse cx="114" cy="99" rx="4.5" ry="5.5" fill="#2a1a12"/><path d="M78 90q8-5 16 0M106 90q8-5 16 0" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="74" cy="112" r="7" fill="#ff8f9c" opacity=".7"/><circle cx="126" cy="112" r="7" fill="#ff8f9c" opacity=".7"/><circle cx="100" cy="110" r="7" fill="#f29a86"/><path d="M52 76C58 32 88 12 124 16c22 3 34 18 40 40l-16 6c-4-12-10-20-20-22l8 36z" fill="#d6334a"/><circle cx="158" cy="64" r="11" fill="#fff"/><rect x="46" y="68" width="110" height="20" rx="10" fill="#fff"/></svg>');
       for (var i = 0; i < 90; i++) {
         var f = document.createElement('div'), d = hasard(6, 14);
         f.className = 'flocon';
@@ -262,6 +278,7 @@
       function taire() { $('#texte').classList.remove('visible'); }
       function filante() { var e = $('#filante'); e.classList.remove('passe'); void e.offsetWidth; e.classList.add('passe'); }
       function boite(id) { $('#b-' + id).classList.add('montree'); }
+      function regle(i) { $$('#titre .regles li')[i].classList.add('vue'); }
       function ranger(nom) {
         var c = carte(nom);
         c.style.setProperty('--x', c.dataset.cx);
@@ -351,6 +368,29 @@
         function air(t, notes, pas) {
           notes.forEach(function (n) { cloche(t, n[0], .16, n[1] * pas + .5); t += n[1] * pas; });
         }
+        function hoho(t) {
+          for (var k = 0; k < 3; k++) {
+            var u = t + k * .34, o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(118 - k * 6, u);
+            o.frequency.linearRampToValueAtTime(96 - k * 6, u + .24);
+            g.gain.setValueAtTime(0, u);
+            g.gain.linearRampToValueAtTime(.5, u + .04);
+            g.gain.setValueAtTime(.5, u + .16);
+            g.gain.exponentialRampToValueAtTime(.001, u + .3);
+            [[520, 6, 1], [880, 8, .5]].forEach(function (v) {
+              var f = ctx.createBiquadFilter(), m = ctx.createGain();
+              f.type = 'bandpass';
+              f.frequency.value = v[0];
+              f.Q.value = v[1];
+              m.gain.value = v[2];
+              relier(g, f, m, sortie);
+            });
+            o.connect(g);
+            o.start(u);
+            o.stop(u + .32);
+          }
+        }
         var pop = function (t) { bip('sine', 520, t, .14, .18, 900); };
         var range = function (t) { bip('triangle', 700, t, .12, .14, 420); };
         var SONS = [
@@ -362,8 +402,11 @@
           [9900, function (t) { cloche(t, E5, .16); cloche(t + .12, 830.6, .16); cloche(t + .24, 987.8, .2, 1.6); }],
           [11700, function (t) { for (var i = 0; i < 5; i++) bip('sine', 400 + i * 90, t + i * .1, .5, .08, 1400 + i * 200); }],
           [13400, function (t) { [C5 / 2, E5 / 2, G5 / 2, C5].forEach(function (f) { cloche(t, f, .1, 3); }); air(t + .5, SUITE, .22); }],
+          [15400, pop], [16200, pop], [17000, pop],
+          [18000, hoho],
+          [18300, function (t) { grelots(t, 1.4); }],
         ];
-        var FIN = 18000;
+        var FIN = 20500;
         return {
           actif: function () { return actif; },
           // ecoule : temps déjà passé dans le clip (ms) ; seuls les sons à venir sont programmés.
@@ -416,8 +459,11 @@
         [13000, function () { taire(); filante(); }],
         [13400, function () { scene.classList.add('titre'); }],
         [14600, function () { scene.classList.add('sous-titre'); }],
-        [15500, function () { scene.classList.add('petit'); }],
-        [17800, finir],
+        [15400, function () { regle(0); }],
+        [16200, function () { regle(1); }],
+        [17000, function () { regle(2); }],
+        [17900, function () { scene.classList.add('pere'); }],
+        [20200, finir],
       ];
 
       function finir() {
@@ -438,6 +484,7 @@
         taire();
         $('#verdict').classList.remove('visible');
         $$('.boite').forEach(function (b) { b.classList.remove('montree', 'tremble'); });
+        $$('#titre .regles li').forEach(function (l) { l.classList.remove('vue'); });
         $$('.carte').forEach(function (c, i) {
           c.classList.remove('hesite');
           c.style.setProperty('--x', (20 + i * 20) + '%');
