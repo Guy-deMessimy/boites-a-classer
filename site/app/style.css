@@ -67,6 +67,7 @@ body {
   height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr); /* jamais plus large que l'écran (320 px) */
   background: var(--fond);
   color: var(--encre);
   overflow: hidden;
@@ -96,15 +97,15 @@ button { touch-action: manipulation; }
 .barre h1 { font-size: 1.15rem; margin: 0; white-space: nowrap; }
 
 .choix { display: flex; align-items: center; gap: .4rem; color: var(--doux); font-size: .9rem; }
-.choix select, #gerer {
+.choix select, #gerer, #exercices {
   padding: .3rem .5rem;
   border: 1px solid var(--ligne);
   border-radius: 6px;
   background: var(--surface);
   color: var(--encre);
 }
-#gerer { cursor: pointer; white-space: nowrap; }
-#gerer:hover { border-color: var(--accent); }
+#gerer, #exercices { cursor: pointer; white-space: nowrap; }
+#gerer:hover, #exercices:hover { border-color: var(--accent); }
 
 .actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-left: auto; }
 .actions button, .btn {
@@ -127,6 +128,9 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 .sv-aide { margin: 1.2rem 0 0; padding-top: .8rem; border-top: 1px solid var(--ligne-douce); font-size: .9rem; }
 #sv-aide-nouveau, .sv-messages { color: #c0392b; }
 #compte.reponse::after { content: ""; display: inline-block; width: .55em; height: .55em; margin-left: .3em; border-radius: 50%; background: #e4572e; vertical-align: super; }
+body.consultation #exercices { display: none; }
+.compteur { display: inline-block; min-width: 1.4em; margin-left: .35em; padding: 0 .35em; border-radius: 1em; background: #e4572e; color: #fff; font-size: .8em; font-weight: 600; line-height: 1.4; }
+.compteur[hidden] { display: none; }
 
 /* Plan de travail */
 
@@ -570,11 +574,11 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
   .barre h1 { display: none; }
   .long { display: none; }
   .court { display: inline; }
-  .choix { flex: 1 1 100%; }
+  .choix { flex: 1 1 100%; min-width: 0; }
   .choix select { flex: 1; min-width: 0; }
   .actions { width: 100%; margin-left: 0; flex-wrap: nowrap; }
   .actions button { flex: 1 1 auto; padding: .45rem .4rem; white-space: nowrap; }
-  #gerer { padding: .3rem .7rem; }
+  #gerer, #exercices { padding: .3rem .7rem; }
   .fenetre, .fenetre.large {
     width: 100vw;
     max-width: 100vw;

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.23.1';
+  const VERSION = '3.24.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -1168,8 +1168,7 @@
       selColl.appendChild(g);
     };
     // Élève : les exercices donnés par son enseignant d'abord (page site/classe/).
-    const eleve = jetonCompte() && eleveConnecte();
-    const donnes = eleve && Array.isArray(eleve.exercices) ? eleve.exercices.map((id) => toutes().find((c) => c.id === id)).filter(Boolean) : [];
+    const donnes = exercicesDonnes();
     if (donnes.length) groupe('📌 Donnés par ton enseignant', donnes);
     // Les collections du site qui ont une matière se rangent avec elle ; les autres restent à part.
     for (const [m, titre] of MATIERES) groupe(titre, [...FOURNIES.filter((c) => matiere(c) === m), ...collectionsSite.filter((c) => c.matiere && matiere(c) === m)]);
@@ -1177,6 +1176,7 @@
     if (sansMatiere.length) groupe('Collections du site', sansMatiere);
     if (mesCollections.length) groupe('Mes collections', mesCollections);
     if (coll) selColl.value = coll.id;
+    majBoutonExercices();
   }
 
   const fenCollections = $('#fen-collections');
@@ -1941,6 +1941,13 @@
         remplirSelect();
         const faites = toutes().filter(reussie).length;
         lignes.push(['bravo', `✅ Collection réussie ! Tu en as réussi ${faites} sur ${toutes().length}.`]);
+        const donnes = exercicesDonnes();
+        if (donnes.includes(coll)) {
+          const restent = donnes.filter((c) => !reussie(c)).length;
+          lignes.push(['bravo', restent
+            ? `📌 Encore ${pluriel(restent, 'exercice', 'exercices')} de ton enseignant à faire (bouton 📌).`
+            : '📌 Tu as réussi tous les exercices de ton enseignant !']);
+        }
       }
       const fin = finirDefi();
       if (fin) lignes.splice(1, 0, ['bravo', fin]);
@@ -2697,6 +2704,7 @@
     for (const k of [CLE_JETON, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE]) oublier(k);
     oublier(CLE_VERSION);
     oublier(CLE_DATE);
+    remplirSelect();
     majBoutonCompte();
     if (fenSauvegarde.open) rendreSauvegarde();
     info.textContent = 'Ta session a expiré : reconnecte-toi (bouton 👤) pour continuer à sauvegarder en ligne.';
@@ -2821,6 +2829,7 @@
     $('#compte-nom').textContent = ' ' + (nom || 'Se connecter');
     boutonCompte.title = nom ? `Compte ${nom} : sauvegarde en ligne` : 'Se connecter pour sauvegarder son travail en ligne';
     boutonCompte.classList.toggle('connecte', !!nom);
+    majBoutonExercices();
   }
 
   // Commence à sauvegarder sur ce compte (après une connexion ou une création de compte).
@@ -2862,11 +2871,86 @@
 
   // Élève : rappelle les exercices donnés par l'enseignant qui ne sont pas encore réussis.
   function annoncerExercices() {
-    const eleve = jetonCompte() && eleveConnecte();
-    if (!eleve || !Array.isArray(eleve.exercices) || info.textContent !== infoDefaut) return;
-    const restent = eleve.exercices.map((id) => toutes().find((c) => c.id === id)).filter((c) => c && !reussie(c));
-    if (restent.length) info.textContent = `📌 Ton enseignant t'a donné ${pluriel(restent.length, 'exercice', 'exercices')} à faire : en haut de la liste (${restent.map((c) => c.nom).join(', ')}).`;
+    if (info.textContent !== infoDefaut) return;
+    const restent = exercicesDonnes().filter((c) => !reussie(c));
+    if (restent.length) info.textContent = `📌 Ton enseignant t'a donné ${pluriel(restent.length, 'exercice', 'exercices')} à faire (${restent.map((c) => c.nom).join(', ')}) : bouton 📌 en haut.`;
   }
+
+  // Élève : les collections données par son enseignant, dans l'ordre de la page « Mes classes ».
+  function exercicesDonnes() {
+    const eleve = jetonCompte() && eleveConnecte();
+    return eleve && Array.isArray(eleve.exercices) ? eleve.exercices.map((id) => toutes().find((c) => c.id === id)).filter(Boolean) : [];
+  }
+
+  // Bouton 📌 de la barre (élève connecté seulement), avec le nombre d'exercices pas encore réussis.
+  function majBoutonExercices() {
+    const bouton = $('#exercices');
+    const restent = exercicesDonnes().filter((c) => !reussie(c)).length;
+    bouton.hidden = !(jetonCompte() && eleveConnecte());
+    $('#exercices-nb').hidden = !restent;
+    $('#exercices-nb').textContent = restent;
+    bouton.setAttribute('aria-label', restent ? `Mes exercices : ${restent} à faire` : 'Mes exercices');
+    if ($('#fen-exercices').open) remplirExercices();
+  }
+
+  function remplirExercices() {
+    const eleve = jetonCompte() && eleveConnecte();
+    const donnes = exercicesDonnes();
+    const restent = donnes.filter((c) => !reussie(c));
+    const faits = donnes.filter(reussie);
+    const classe = eleve && eleve.classe ? ` (classe ${eleve.classe})` : '';
+    $('#ex-aide').textContent = !donnes.length
+      ? `Ton enseignant${classe} ne t'a pas encore donné d'exercice. En attendant, tu peux choisir une collection dans la liste en haut.`
+      : restent.length
+        ? `Les exercices donnés par ton enseignant${classe}. Un exercice est réussi quand « ✔ Vérifier » ne trouve plus d'erreur.`
+        : `🎉 Bravo, tu as réussi tous les exercices de ton enseignant${classe} !`;
+    const ligne = (c) => {
+      const el = document.createElement('div');
+      el.className = 'coll' + (c === coll ? ' courante' : '');
+      const infos = document.createElement('div');
+      infos.className = 'coll-infos';
+      const titre = document.createElement('strong');
+      titre.textContent = (reussie(c) ? '✅ ' : '') + c.nom;
+      const detail = document.createElement('small');
+      const nomMatiere = (MATIERES.find(([m]) => m === matiere(c)) || [])[1];
+      detail.textContent = [nomMatiere, pluriel(c.etres.length, ...elements(c)), c === coll ? 'en cours' : ''].filter(Boolean).join(' · ');
+      infos.append(titre, detail);
+      const actions = document.createElement('div');
+      actions.className = 'coll-actions';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn' + (reussie(c) ? '' : ' principal');
+      b.textContent = c === coll ? 'Continuer' : reussie(c) ? 'Revoir' : 'Commencer';
+      b.addEventListener('click', () => {
+        fermerFenetres();
+        if (c !== coll) choisirCollection(c.id);
+      });
+      actions.appendChild(b);
+      el.append(infos, actions);
+      return el;
+    };
+    const section = (titre, liste) => {
+      const s = document.createElement('section');
+      s.className = 'coll-groupe';
+      const h = document.createElement('h3');
+      h.textContent = titre;
+      s.append(h, ...liste.map(ligne));
+      return s;
+    };
+    const parties = [];
+    if (restent.length) parties.push(section(`À faire (${restent.length})`, restent));
+    if (faits.length) parties.push(section(`Réussis (${faits.length})`, faits));
+    $('#liste-exercices').replaceChildren(...parties);
+  }
+
+  function ouvrirExercices() {
+    fermerMenu();
+    remplirExercices();
+    $('#fen-exercices').showModal();
+  }
+
+  $('#exercices').addEventListener('click', ouvrirExercices);
+  $('#fen-exercices').querySelector('.fermer').addEventListener('click', () => $('#fen-exercices').close());
 
   function eleveConnecte() {
     try { return JSON.parse(lire(CLE_ELEVE)) || null; } catch (e) { return null; }
@@ -3146,7 +3230,7 @@
       fermerFenetres();
       info.textContent = `Bonjour ${identifiant} ! Ton travail est récupéré (sauvegarde du ${dateLisible(v.date)}).`;
       if (r.eleve && Array.isArray(r.eleve.exercices) && r.eleve.exercices.length) {
-        info.textContent += ` 📌 ${pluriel(r.eleve.exercices.length, 'exercice', 'exercices')} de ton enseignant en haut de la liste.`;
+        info.textContent += ` 📌 ${pluriel(r.eleve.exercices.length, 'exercice', 'exercices')} de ton enseignant : bouton 📌 en haut.`;
       }
     } else {
       ecrire(CLE_ATTENTE, '1');
@@ -3237,6 +3321,7 @@
     $('#sv-identifiant').value = '';
     $('#sv-effacer').checked = false;
     delete $('#sv-effacer').dataset.touche;
+    remplirSelect();
     majBoutonCompte();
     rendreSauvegarde();
     svMessage.textContent = effacer
