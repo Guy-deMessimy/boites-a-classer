@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confidentialité · Boîtes à classer</title>
+  <meta name="description" content="Quelles données Boîtes à classer garde, où, combien de temps, et comment les effacer.">
+  <link rel="icon" href="../icone.png">
+  <style>
+    /* Données personnelles : ce que le site garde réellement (voir le code : functions/, serveur/, migrations/). */
+    @font-face { font-family: "Space Grotesk"; font-weight: 300 700; font-display: swap; src: url(../polices/space-grotesk-latin.woff2) format("woff2"); }
+    :root { --fond: #f6f4ef; --carte: #fff; --encre: #1f2430; --doux: #5f6675; --ligne: #e2ddd2; --accent: #2f6fde;
+      --degrade: linear-gradient(160deg, #eaf6f4 0%, #eef3fc 50%, #f3effb 100%); --grille: rgb(58 123 213 / .07); }
+    @media (prefers-color-scheme: dark) {
+      :root { --fond: #15171c; --carte: #1e2128; --encre: #ecedf0; --doux: #a3a8b4; --ligne: #30343d; --accent: #5b8ff0;
+        --degrade: linear-gradient(160deg, #0f1f22 0%, #131b2c 50%, #1a1730 100%); --grille: rgb(120 165 235 / .06); }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--encre); font: 16px/1.6 "Space Grotesk", system-ui, sans-serif;
+      background: linear-gradient(var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed, linear-gradient(90deg, var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed, var(--fond) var(--degrade) fixed;
+    }
+    main { max-width: 780px; margin: 0 auto; padding: 24px 16px 48px; }
+    a { color: var(--accent); }
+    h1 { margin: 8px 0 4px; font-size: clamp(1.6rem, 5vw, 2.2rem); }
+    .intro { margin: 0 0 20px; color: var(--doux); }
+    section { margin: 0 0 12px; padding: 14px 18px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
+    h2 { margin: 0 0 6px; font-size: 1.1rem; }
+    ul { margin: 0; padding-left: 1.2em; }
+    li { margin: 3px 0; }
+    p { margin: 0 0 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="../">← Boîtes à classer</a>
+    <h1>🔒 Confidentialité</h1>
+    <p class="intro">Boîtes à classer est gratuit, sans publicité et sans mesure d'audience. Voici exactement ce qu'il garde, pourquoi, et comment l'effacer.</p>
+
+    <section>
+      <h2>Sans compte</h2>
+      <ul>
+        <li>Le travail est gardé <strong>dans le navigateur</strong> de l'appareil (pas de cookie) : il ne quitte pas l'appareil.</li>
+        <li>Si l'on active la <strong>sauvegarde avec un code</strong>, le travail est aussi envoyé au serveur, rangé sous une empreinte du code (le code lui-même n'est pas gardé). Les 10 dernières versions sont gardées ; tout est effacé après un an sans modification.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Avec un compte</h2>
+      <ul>
+        <li>Un <strong>identifiant</strong> choisi librement (sans e-mail : choisissez-le sans votre nom de famille) et un mot de passe qui <strong>ne quitte jamais l'appareil</strong> : le serveur n'en garde qu'une empreinte.</li>
+        <li>Le travail (10 dernières versions), les collections réussies, la date de dernière utilisation, et les sessions ouvertes (empreintes seulement).</li>
+        <li>Un compte inutilisé pendant un an est effacé avec son travail. On peut le supprimer soi-même à tout moment : bouton 👤 → « Supprimer mon compte ».</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Élèves d'une classe</h2>
+      <ul>
+        <li>L'enseignant crée le compte de l'élève avec un <strong>prénom</strong> (pas de nom de famille) ; l'élève se connecte avec un code dont le serveur ne garde que l'empreinte.</li>
+        <li>L'enseignant voit le travail de ses élèves, leur dernière connexion et les collections réussies. Il peut changer un prénom, donner un nouveau code ou effacer un élève (avec son travail).</li>
+        <li>Supprimer une classe, ou le compte de l'enseignant, efface les comptes de ses élèves et leur travail.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Service client</h2>
+      <p>Les messages écrits au service client sont gardés avec le compte (ou, sans compte, une empreinte d'un jeton propre au navigateur), jusqu'à un an sans nouveau message, ou jusqu'à la suppression du compte. Ne mettez pas d'informations personnelles dans les messages.</p>
+    </section>
+
+    <section>
+      <h2>Ce qui sert à protéger le site</h2>
+      <p>Pour limiter les essais de mots de passe et les abus, le serveur compte les tentatives par adresse IP, sous forme d'empreinte, pendant au plus quelques heures. Le site n'enregistre rien d'autre sur les visites.</p>
+    </section>
+
+    <section>
+      <h2>Qui voit quoi</h2>
+      <ul>
+        <li>L'administrateur du site voit la liste des comptes, peut consulter un travail, répondre au service client et supprimer un compte.</li>
+        <li>Un enseignant ne voit que ses classes et ses élèves.</li>
+        <li>Les données ne sont ni vendues, ni données, ni utilisées pour de la publicité.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Où sont les données</h2>
+      <p>Le site est hébergé par Cloudflare (Cloudflare Pages). La base de données est créée avec l'option qui garde les données dans l'Union européenne.</p>
+    </section>
+
+    <section>
+      <h2>Une question, une demande d'effacement ?</h2>
+      <p>Écrivez au <a href="../aide/">💬 service client</a>. Ce site a été réalisé par Gabriel Des Rioux de Messimy ; son code source est public (licence GNU GPL v3).</p>
+    </section>
+  </main>
+  <script src="/arret.js"></script>
+</body>
+</html>
