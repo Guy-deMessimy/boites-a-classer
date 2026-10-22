@@ -205,7 +205,39 @@ window.COLLECTIONS = [
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="#dbe7fb" stroke="#2f6fde" stroke-width="5" stroke-linejoin="round">'
     + forme + '</g></svg>');
 
+  // Astres dessinés : disque coloré, avec un anneau pour Saturne.
+  const astre = (couleur, rayon, anneau) => 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+    + `<circle cx="50" cy="50" r="${rayon}" fill="${couleur}" stroke="rgba(0,0,0,.25)" stroke-width="2"/>`
+    + (anneau ? '<ellipse cx="50" cy="50" rx="46" ry="12" fill="none" stroke="#c9a96b" stroke-width="5"/>' : '')
+    + '</svg>');
+
   window.COLLECTIONS.push(
+    {
+      id: 'systeme-solaire',
+      nom: 'Le système solaire',
+      elements: ['astre', 'astres'],
+      attributs: [
+        { id: 'etoile', nom: 'étoile (elle produit sa lumière)' },
+        { id: 'planete', nom: 'planète' },
+        { id: 'rocheuse', nom: 'planète rocheuse' },
+        { id: 'vie', nom: 'on y trouve la vie' },
+        { id: 'geante', nom: 'planète géante (gazeuse)' },
+        { id: 'satellite', nom: 'satellite naturel (tourne autour d\'une planète)' },
+      ],
+      etres: [
+        { id: 'soleil', nom: 'Soleil', image: astre('#ffcc33', 40), attributs: ['etoile'] },
+        { id: 'mercure', nom: 'Mercure', image: astre('#9e9e9e', 16), attributs: ['planete', 'rocheuse'] },
+        { id: 'venus', nom: 'Vénus', image: astre('#e8c27a', 22), attributs: ['planete', 'rocheuse'] },
+        { id: 'terre', nom: 'Terre', image: astre('#3f86d8', 24), attributs: ['planete', 'rocheuse', 'vie'] },
+        { id: 'mars', nom: 'Mars', image: astre('#c8553d', 19), attributs: ['planete', 'rocheuse'] },
+        { id: 'jupiter', nom: 'Jupiter', image: astre('#d6a26f', 40), attributs: ['planete', 'geante'] },
+        { id: 'saturne', nom: 'Saturne', image: astre('#e3c88f', 30, true), attributs: ['planete', 'geante'] },
+        { id: 'uranus', nom: 'Uranus', image: astre('#8fd3dc', 30), attributs: ['planete', 'geante'] },
+        { id: 'neptune', nom: 'Neptune', image: astre('#3d5fd1', 30), attributs: ['planete', 'geante'] },
+        { id: 'lune', nom: 'Lune', image: astre('#d9d9d9', 18), attributs: ['satellite'] },
+      ],
+    },
     {
       id: 'aliments',
       nom: 'Les aliments et leur origine',
