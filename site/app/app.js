@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.30.4';
+  const VERSION = '3.30.5';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2831,9 +2831,12 @@
   const boutonCompte = $('#compte');
   function majBoutonCompte() {
     const nom = jetonCompte() && lire(CLE_IDENTIFIANT);
-    const avatar = nom && lire(CLE_AVATAR);
-    $('#compte-avatar').textContent = avatar || '👤';
-    $('#compte-avatar').classList.toggle('avatar', !!avatar); // photo de profil dans un rond
+    // Connecté : sa photo de profil, ou le rond à son initiale (app/profil.css) ; sinon 👤.
+    if (nom) rondProfil($('#compte-avatar'), nom, lire(CLE_AVATAR));
+    else {
+      $('#compte-avatar').textContent = '👤';
+      $('#compte-avatar').classList.remove('avatar', 'defaut');
+    }
     $('#compte-nom').textContent = ' ' + (nom || 'Se connecter');
     if (nom) ajouterBadges($('#compte-nom'));
     boutonCompte.title = nom ? `Compte ${nom} : sauvegarde en ligne` : 'Se connecter pour sauvegarder son travail en ligne';
@@ -2882,6 +2885,78 @@
       [s.textContent, s.title, s.className] = BADGES[b];
       cible.appendChild(s);
     }
+  }
+
+  // Carte de profil (fenêtre du compte, app/profil.css) : chaque badge y devient une médaille, avec un nom court, une
+  // précision et sa famille (couleur de l'anneau et du ruban).
+  const MEDAILLES = {
+    verifie: ['Vérifié', 'par le site', 'verifie'],
+    halloween: ['Halloween', 'Roi des fantômes vaincu', 'or'],
+    'participation-halloween': ['Participation', 'Halloween', 'argent'],
+    noel: ['Noël', 'Père Noël vaincu', 'or'],
+    'participation-noel': ['Participation', 'Noël', 'argent'],
+  };
+  // Teinte (0 à 359) tirée d'un nom : la même pour un même nom, d'un appareil à l'autre.
+  function teinte(nom) {
+    let h = 7;
+    for (const c of nom) h = (h * 31 + c.codePointAt(0)) % 360;
+    return h;
+  }
+  // Rond de la photo de profil ; sans photo, l'initiale du nom sur un dégradé de sa teinte.
+  function rondProfil(el, nom, avatar) {
+    el.classList.add('avatar');
+    el.classList.toggle('defaut', !avatar);
+    el.style.setProperty('--teinte', teinte(nom || '?'));
+    el.textContent = avatar || ([...(nom || '?')][0] || '?').toLocaleUpperCase('fr-FR');
+    return el;
+  }
+  function rendreCarteProfil() {
+    let carte = $('#sv-carte');
+    if (!carte) { // index.html d'avant la carte : elle prend la place des anciennes lignes « Compte : … » et « Badges : … »
+      carte = document.createElement('div');
+      carte.id = 'sv-carte';
+      carte.className = 'carte-profil';
+      $('#sv-compte').prepend(carte);
+    }
+    for (const vieux of document.querySelectorAll('#sv-compte .sv-qui, #sv-badges')) vieux.remove();
+    const nom = lire(CLE_IDENTIFIANT) || '';
+    const eleve = eleveConnecte();
+    const role = eleve ? ['eleve', 'Élève'] : lire(CLE_ADMIN) ? ['admin', 'Admin'] : lire(CLE_ENSEIGNANT) ? ['enseignant', 'Enseignant'] : null;
+    const el = (balise, classe, texte) => {
+      const e = document.createElement(balise);
+      if (classe) e.className = classe;
+      if (texte) e.textContent = texte;
+      return e;
+    };
+    carte.style.setProperty('--teinte', teinte(nom || '?'));
+    const identite = el('div', 'cp-identite');
+    const rond = rondProfil(el('span', 'grand'), nom, lire(CLE_AVATAR));
+    rond.title = lire(CLE_AVATAR) ? 'Photo de profil (choisie par l\'administrateur)' : 'Pas encore de photo de profil : l\'administrateur peut en choisir une';
+    const qui = el('div', 'cp-qui');
+    const n = el('strong', 'cp-nom', nom);
+    n.title = nom;
+    qui.append(n);
+    if (role) qui.append(el('span', 'cp-role ' + role[0], role[1]));
+    identite.append(rond, qui);
+    const medailles = badgesCompte();
+    const titre = el('p', 'cp-titre', medailles.length > 1 ? 'Mes médailles' : 'Ma médaille');
+    let liste;
+    if (medailles.length) {
+      liste = el('ul', 'cp-medailles');
+      liste.setAttribute('aria-label', 'Médailles');
+      for (const b of medailles) {
+        const [court, detail, famille] = MEDAILLES[b];
+        const li = el('li', 'medaille ' + famille);
+        li.title = BADGES[b][1];
+        li.append(el('span', 'm-ruban'), el('span', 'm-disque', BADGES[b][0]), el('span', 'm-nom', court), el('span', 'm-detail', detail));
+        liste.append(li);
+      }
+    } else {
+      titre.textContent = 'Médailles';
+      liste = el('p', 'cp-vide', 'Pas encore de médaille : on en gagne pendant les événements du site.');
+    }
+    carte.replaceChildren(el('div', 'cp-bandeau'), identite, titre, liste);
+    carte.hidden = false;
   }
   // Le compte vient de gagner des badges (site/evenement.js, victoire contre le boss).
   window.addEventListener('hanter:badges', () => rafraichirCompte());
@@ -3119,14 +3194,7 @@
     $('#sv-bascule').textContent = creation ? 'J\'ai déjà un compte' : 'Créer un compte';
     if (!$('#sv-identifiant').value) $('#sv-identifiant').value = lire(CLE_IDENTIFIANT) || '';
     for (const b of [boutonRecuperer, $('#sv-arreter'), $('#sv-deconnecter'), $('#sv-supprimer')]) remettreConfirmation(b);
-    if (compte) {
-      $('#sv-identifiant-affiche').textContent = lire(CLE_IDENTIFIANT) || '';
-      ajouterBadges($('#sv-identifiant-affiche'));
-    }
-    $('#sv-avatar').hidden = !compte || !lire(CLE_AVATAR);
-    $('#sv-avatar').textContent = (compte && lire(CLE_AVATAR)) || '';
-    $('#sv-badges').hidden = !compte || !badgesCompte().length;
-    $('#sv-badges').textContent = 'Badges : ' + badgesCompte().map((b) => BADGES[b][0] + ' ' + BADGES[b][1]).join(' · ');
+    if (compte) rendreCarteProfil();
     $('#sv-admin').hidden = !compte || !lire(CLE_ADMIN);
     const eleve = compte && eleveConnecte();
     $('#sv-enseignant').hidden = !compte || !lire(CLE_ENSEIGNANT);

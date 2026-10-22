@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex">
   <title>Mes classes · Boîtes à hanter</title>
   <link rel="icon" href="../icone.png">
+  <link rel="stylesheet" href="../app/profil.css"><!-- petite carte de profil de chaque élève -->
   <style>
     /* Page « Mes classes » des enseignants (rôle donné par un admin) : classes, comptes des élèves, codes de connexion à
        imprimer, consultation du travail. Le serveur vérifie chaque appel (functions/api/classe/[action].js).
@@ -119,7 +120,6 @@
     th { color: var(--doux); font-weight: 600; white-space: nowrap; }
     tr:last-child td { border-bottom: 0; }
     td.nom { font-weight: 600; }
-    .avatar { display: inline-grid; place-items: center; width: 1.7em; height: 1.7em; margin-right: 6px; border-radius: 50%; background: var(--accent-doux); font-weight: 400; line-height: 1; vertical-align: middle; }
     .exercices { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 4px 16px; margin: 10px 0; }
     .exercices h4 { grid-column: 1 / -1; margin: 8px 0 0; font-size: .9rem; color: var(--doux); }
     .exercices label { display: flex; align-items: center; gap: 6px; font-size: .92rem; cursor: pointer; }
@@ -506,19 +506,62 @@
         return b;
       }
 
+      // Petite carte de profil d'un élève (../app/profil.css, comme la carte du logiciel) : photo donnée par l'admin, ou
+      // son initiale sur un dégradé de la même teinte que dans le logiciel ; prénom ; médailles gagnées aux événements.
+      var MEDAILLES = [
+        ['verifie', '✔', 'Vérifié par le site', 'verifie'],
+        ['halloween', '🎃', 'Halloween : Roi des fantômes vaincu', 'or'],
+        ['participation-halloween', '🧛', 'Participation à Halloween', 'argent'],
+        ['noel', '🎅', 'Noël : Père Noël vaincu', 'or'],
+        ['participation-noel', '⛄', 'Participation à Noël', 'argent'],
+      ];
+      function teinte(nom) { // même calcul que teinte() dans app/app.js
+        var h = 7;
+        Array.from(nom).forEach(function (c) { h = (h * 31 + c.codePointAt(0)) % 360; });
+        return h;
+      }
+      function miniProfil(e) {
+        var carte = document.createElement('span');
+        carte.className = 'mini-profil';
+        carte.style.setProperty('--teinte', teinte(e.nom || '?'));
+        var rond = document.createElement('span');
+        rond.className = 'avatar' + (e.avatar ? '' : ' defaut');
+        rond.textContent = e.avatar || (Array.from(e.nom || '?')[0] || '?').toLocaleUpperCase('fr-FR');
+        rond.title = e.avatar ? 'Photo de profil (choisie par l\'administrateur)' : 'Pas de photo de profil';
+        var texte = document.createElement('span');
+        texte.className = 'mp-texte';
+        var nom = document.createElement('span');
+        nom.className = 'mp-nom';
+        nom.textContent = e.nom;
+        texte.appendChild(nom);
+        var gagnees = MEDAILLES.filter(function (m) { return (e.badges || []).indexOf(m[0]) >= 0; });
+        if (gagnees.length) {
+          var liste = document.createElement('span');
+          liste.className = 'mp-medailles';
+          gagnees.forEach(function (m) {
+            var med = document.createElement('span');
+            med.className = 'medaille ' + m[3];
+            med.title = m[2];
+            var ruban = document.createElement('span');
+            ruban.className = 'm-ruban';
+            var disque = document.createElement('span');
+            disque.className = 'm-disque';
+            disque.textContent = m[1];
+            med.append(ruban, disque);
+            liste.appendChild(med);
+          });
+          texte.appendChild(liste);
+        }
+        carte.append(rond, texte);
+        return carte;
+      }
+
       function afficherEleves() {
         var lignes = eleves.map(function (e) {
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
           nom.className = 'nom';
-          if (e.avatar) { // photo de profil donnée par l'admin
-            var avatar = document.createElement('span');
-            avatar.className = 'avatar';
-            avatar.title = 'Photo de profil';
-            avatar.textContent = e.avatar;
-            nom.appendChild(avatar);
-          }
-          nom.append(e.nom);
+          nom.appendChild(miniProfil(e));
           var connexion = document.createElement('td');
           if (e.derniere === e.cree) {
             connexion.className = 'jamais';

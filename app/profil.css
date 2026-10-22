@@ -1,0 +1,158 @@
+/* Carte de profil (3.30.2) : fenêtre du compte du logiciel (app/app.js, rendreCarteProfil) et, en petit, chaque élève
+   de « Mes classes » (site/classe/, qui charge ../app/profil.css). Les couleurs viennent de la page qui l'accueille
+   (--surface dans le logiciel, --carte dans Mes classes), avec des valeurs de secours. --teinte (0 à 359) est tirée du
+   nom : fond de la carte et rond par défaut d'un compte sans photo. */
+
+.carte-profil, .avatar.defaut, .medaille {
+  --cp-surface: var(--surface, var(--carte, #fff));
+  --cp-encre: var(--encre, #1c2233);
+  --cp-doux: var(--doux, #5d6679);
+  --cp-ligne: var(--ligne, #dce2eb);
+  --cp-grille: var(--grille, rgb(58 123 213 / .05));
+  --cp-grille-forte: var(--grille-forte, rgb(58 123 213 / .09));
+  --cp-bandeau: hsl(var(--teinte, 215) 80% 94%);
+  --cp-ombre: 0 1px 2px rgb(28 34 51 / .06), 0 6px 18px rgb(28 34 51 / .08);
+  /* médailles : anneau, reflet, ruban */
+  --m-or: #d9a21b;
+  --m-or-clair: #fff3cc;
+  --m-argent: #9aa3b1;
+  --m-argent-clair: #f1f3f7;
+  --m-bleu: #2f6fde;
+  --m-bleu-clair: #e3edfd;
+}
+@media screen and (prefers-color-scheme: dark) {
+  .carte-profil, .avatar.defaut, .medaille {
+    --cp-bandeau: hsl(var(--teinte, 215) 35% 20%);
+    --cp-ombre: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .3);
+    --m-or: #e6b43a;
+    --m-or-clair: #4a3a12;
+    --m-argent: #8b94a3;
+    --m-argent-clair: #2c313b;
+    --m-bleu: #5b8ff0;
+    --m-bleu-clair: #1f2a40;
+  }
+}
+
+/* Rond de la photo (un emoji choisi par l'admin) ; sans photo, l'initiale du nom sur un dégradé. Les deux premières
+   règles reprennent celles de la 3.30.1 (encore dans style.css) : la carte n'en dépend plus. */
+.avatar { display: inline-grid; place-items: center; width: 1.55em; height: 1.55em; border-radius: 50%; background: var(--fond-accent, var(--accent-doux, #eaf1fd)); box-shadow: inset 0 0 0 1px var(--cp-ligne, rgb(0 0 0 / .08)); line-height: 1; vertical-align: middle; }
+#compte .avatar { width: 22px; height: 22px; margin-block: -.3em; font-size: 14px; } /* bouton en pilule de 38 px */
+.avatar.defaut {
+  background: linear-gradient(140deg, hsl(var(--teinte, 215) 78% 64%), hsl(calc(var(--teinte, 215) + 38) 70% 46%));
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / .14);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-shadow: 0 1px 2px rgb(0 0 0 / .22);
+}
+#compte .avatar.defaut { font-size: 12px; }
+
+/* ---------- Carte de la fenêtre du compte ---------- */
+.carte-profil {
+  overflow: hidden;
+  margin: 0 0 1rem;
+  border: 1px solid var(--cp-ligne);
+  border-radius: 18px;
+  background: var(--cp-surface);
+  box-shadow: var(--cp-ombre);
+  color: var(--cp-encre);
+}
+/* Bandeau en papier millimétré, teinté d'après le nom. */
+.cp-bandeau {
+  height: 64px;
+  background-color: var(--cp-bandeau);
+  background-image:
+    linear-gradient(var(--cp-grille-forte) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cp-grille-forte) 1px, transparent 1px),
+    linear-gradient(var(--cp-grille) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cp-grille) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+}
+.cp-identite { display: flex; align-items: flex-end; gap: 14px; margin-top: -42px; padding: 0 18px; }
+.carte-profil .avatar.grand {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  font-size: 44px;
+  border: 4px solid var(--cp-surface);
+  background-color: var(--cp-surface);
+  box-shadow: 0 2px 8px rgb(28 34 51 / .16);
+}
+.carte-profil .avatar.grand:not(.defaut) { background: var(--cp-surface); box-shadow: 0 2px 8px rgb(28 34 51 / .16), inset 0 0 0 1px var(--cp-ligne); }
+.carte-profil .avatar.grand.defaut { font-size: 38px; }
+.cp-qui { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; padding-bottom: 8px; }
+.cp-nom { overflow: hidden; max-width: 100%; font-size: 1.3rem; font-weight: 700; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.cp-role {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--m-bleu-clair);
+  color: var(--m-bleu);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.cp-role.admin { background: var(--m-or-clair); color: color-mix(in srgb, var(--m-or) 70%, var(--cp-encre)); }
+.cp-role.eleve { background: color-mix(in srgb, var(--ok, #17955a) 14%, var(--cp-surface)); color: var(--ok, #17955a); }
+.cp-titre { margin: 14px 18px 8px; color: var(--cp-doux); font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.cp-medailles { display: flex; flex-wrap: wrap; gap: 12px 10px; margin: 0; padding: 0 18px 18px; list-style: none; }
+.cp-vide { margin: 0; padding: 0 18px 18px; color: var(--cp-doux); font-size: .9rem; }
+
+/* ---------- Médailles ---------- */
+.medaille { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; width: 92px; text-align: center; }
+.m-disque {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-top: 13px; /* place du ruban */
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, var(--cp-surface) 0 18%, var(--m-clair) 70%);
+  box-shadow: inset 0 0 0 3px var(--m-anneau), inset 0 -4px 0 rgb(0 0 0 / .1), 0 2px 6px rgb(28 34 51 / .14);
+  font-size: 22px;
+  line-height: 1;
+}
+/* Ruban en V derrière le haut du disque (le disque vient après lui : il passe devant). */
+.m-ruban {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 26px;
+  height: 28px;
+  background: linear-gradient(90deg, var(--m-anneau) 0 50%, color-mix(in srgb, var(--m-anneau) 72%, #000) 50%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+  transform: translateX(-50%);
+}
+.medaille.verifie { --m-anneau: var(--m-bleu); --m-clair: var(--m-bleu-clair); }
+.medaille.verifie .m-disque { color: var(--m-bleu); font-weight: 700; }
+.medaille.or { --m-anneau: var(--m-or); --m-clair: var(--m-or-clair); }
+.medaille.argent { --m-anneau: var(--m-argent); --m-clair: var(--m-argent-clair); }
+.m-nom { color: var(--cp-encre); font-size: .78rem; font-weight: 600; line-height: 1.2; }
+.m-detail { margin-top: -4px; color: var(--cp-doux); font-size: .7rem; line-height: 1.2; }
+
+@media (max-width: 420px) {
+  .cp-identite { gap: 10px; padding: 0 14px; }
+  .carte-profil .avatar.grand { width: 72px; height: 72px; font-size: 38px; }
+  .carte-profil .avatar.grand.defaut { font-size: 32px; }
+  .cp-nom { font-size: 1.15rem; }
+  .cp-titre { margin-inline: 14px; }
+  .cp-medailles { gap: 10px 6px; padding: 0 14px 16px; }
+  .cp-vide { padding: 0 14px 16px; }
+  .medaille { width: 80px; }
+}
+
+/* ---------- Petite carte (une par élève, page « Mes classes ») ---------- */
+.mini-profil { display: inline-flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
+.mini-profil .avatar { flex: none; width: 38px; height: 38px; margin: 0; font-size: 20px; }
+.mini-profil .avatar:not(.defaut) { background: hsl(var(--teinte, 215) 80% 94%); box-shadow: inset 0 0 0 1px var(--cp-ligne, rgb(0 0 0 / .08)); }
+.mini-profil .avatar.defaut { font-size: 17px; }
+.mini-profil .mp-texte { display: grid; gap: 2px; }
+.mini-profil .mp-nom { font-weight: 600; white-space: nowrap; }
+.mini-profil .mp-medailles { display: flex; gap: 6px; }
+.mini-profil .medaille { width: auto; }
+.mini-profil .m-disque { width: 26px; height: 26px; margin-top: 6px; font-size: 14px; box-shadow: inset 0 0 0 2px var(--m-anneau), 0 1px 2px rgb(28 34 51 / .14); }
+.mini-profil .m-ruban { width: 12px; height: 14px; }
+@media screen and (prefers-color-scheme: dark) {
+  .mini-profil .avatar:not(.defaut) { background: hsl(var(--teinte, 215) 30% 22%); }
+}
