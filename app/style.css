@@ -594,3 +594,15 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 .jeu-carte.ecarte { opacity: .25; filter: grayscale(1); cursor: default; }
 .jeu-carte.trouve { border-color: var(--ok); box-shadow: 0 0 0 3px rgba(31, 157, 85, .3); opacity: 1; filter: none; }
 .jeu-carte:disabled { cursor: default; }
+
+/* Très petits téléphones (320 px) : la barre passe sur deux lignes plutôt que de déborder. */
+@media (max-width: 360px) {
+  .actions { flex-wrap: wrap; }
+  .actions button { padding: .45rem .35rem; }
+}
+
+/* Tablettes : « Recommencer » devient 🗑 (comme sur téléphone) pour que les boutons tiennent sur une ligne. */
+@media (min-width: 701px) and (max-width: 1100px) {
+  #effacer .long { display: none; }
+  #effacer .court { display: inline; }
+}
