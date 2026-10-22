@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.10.0';
+  const VERSION = '3.10.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -3221,6 +3221,18 @@
   async function reponsesSupport() {
     if (!enLignePossible || document.body.classList.contains('consultation')) return;
     const jeton = jetonCompte();
+    // Admin : messages des visiteurs à lire (page d'administration, section 💬).
+    if (jeton && lire(CLE_ADMIN) === '1') {
+      try {
+        const rep = await fetch(RACINE_API + '/admin/support-non-lus', { headers: { Authorization: 'Bearer ' + jeton } });
+        const { nonLus } = rep.ok ? await rep.json() : { nonLus: 0 };
+        boutonCompte.classList.toggle('reponse', nonLus > 0);
+        $('#sv-admin-messages').hidden = !(nonLus > 0);
+        $('#sv-admin-messages').textContent = `💬 ${pluriel(nonLus, 'message', 'messages')} à lire`;
+        if (nonLus > 0) info.textContent = `💬 Service client : ${pluriel(nonLus, 'message', 'messages')} à lire (bouton 👤 → Administration).`;
+      } catch (e) { /* hors connexion */ }
+      return;
+    }
     const support = lire('boites-a-classer-support:jeton'); // conversation sans compte (gardée par la page site/aide/)
     if (!jeton && !support) return;
     try {

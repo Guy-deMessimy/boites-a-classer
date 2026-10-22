@@ -125,7 +125,7 @@ body.consultation #compte { display: none; }
 body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 #sv-admin .btn, #sv-enseignant .btn, .sv-aide .btn { display: inline-block; color: inherit; text-decoration: none; }
 .sv-aide { margin: 1.2rem 0 0; padding-top: .8rem; border-top: 1px solid var(--ligne-douce); font-size: .9rem; }
-#sv-aide-nouveau { color: #c0392b; }
+#sv-aide-nouveau, .sv-messages { color: #c0392b; }
 #compte.reponse::after { content: ""; display: inline-block; width: .55em; height: .55em; margin-left: .3em; border-radius: 50%; background: #e4572e; vertical-align: super; }
 
 /* Plan de travail */

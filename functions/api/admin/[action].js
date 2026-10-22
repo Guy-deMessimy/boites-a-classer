@@ -11,6 +11,7 @@
 //   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
 //   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
 //   GET  /api/admin/support                    → { fils: [{ id, qui, detail, anonyme, resolu, maj, non_lus, dernier }] }  service client
+//   GET  /api/admin/support-non-lus           → { nonLus }   messages des visiteurs pas encore lus (pastille du logiciel)
 //   GET  /api/admin/support-fil?id=…           → { messages: [{ auteur, texte, date }] }   (les messages du visiteur deviennent lus)
 //   POST /api/admin/support-reponse { id, texte } répond au visiteur → { messages }
 //   POST /api/admin/support-resolu  { id, resolu } marque la conversation résolue (ou non) → 204
@@ -168,6 +169,11 @@ const actions = {
     });
   },
 
+  async 'support-non-lus'(request, env) {
+    const r = await env.DB.prepare('SELECT COALESCE(sum(non_lus_admin), 0) AS n FROM support_fils').first();
+    return json({ nonLus: r.n });
+  },
+
   async 'support-fil'(request, env) {
     const id = new URL(request.url).searchParams.get('id');
     if (!FORME_ID.test(id || '')) return erreur('conversation introuvable', 404);
@@ -220,7 +226,7 @@ const actions = {
 
 const METHODES = {
   comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'],
-  support: ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
+  support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], maintenance: ['GET', 'POST'],
 };
 
