@@ -116,6 +116,9 @@ button { touch-action: manipulation; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
 
 .court, .txt-confirmer { display: none; }
+.txt-normal { display: inline-flex; align-items: center; gap: .3em; }
+/* Icônes dessinées (symboles en haut de index.html) : elles prennent la couleur du texte. */
+.ico { flex: none; width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .confirmer .txt-normal { display: none; }
 .confirmer .txt-confirmer { display: inline; }
 
@@ -210,7 +213,7 @@ button { touch-action: manipulation; }
 #effacer.confirmer { background: var(--fond-faux); border-color: var(--faux); color: var(--faux); font-weight: 600; }
 /* Un petit trait sépare « faire » (boîte, vérifier, recommencer) de « ranger » (outils, fichier, compte). */
 #outils { margin-left: .5rem; }
-.fleche { margin-left: .1em; color: var(--doux); font-size: .8em; }
+.ico.fleche { margin-left: -.1em; width: .95em; height: .95em; color: var(--doux); }
 #compte { border-radius: 999px; padding-inline: .9rem; }
 #compte.connecte { border-color: color-mix(in srgb, var(--ok) 55%, var(--ligne)); background: var(--fond-ok); color: var(--ok); font-weight: 600; }
 /* Badges gagnés pendant les événements (« vérifié par le site », Halloween), à côté du nom du compte. */
@@ -250,6 +253,19 @@ body.consultation #exercices { display: none; }
 }
 
 #toile { position: relative; }
+/* Plan de travail encore vide : une phrase pour savoir par où commencer (sans effet sur les clics). */
+#espace:has(#calque:empty)::before {
+  content: "Appuie sur « Nouvelle boîte », puis glisse les cartes du bas dans les boîtes.";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  color: var(--doux);
+  font-size: 1.05rem;
+  text-align: center;
+  pointer-events: none;
+}
 #calque { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 
 .zoom {
@@ -278,6 +294,8 @@ body.consultation #exercices { display: none; }
   line-height: 1;
   cursor: pointer;
 }
+.zoom button { display: grid; place-items: center; }
+.zoom .ico { width: 18px; height: 18px; }
 .zoom button:hover:not(:disabled) { background: var(--survol); color: var(--accent); }
 #zoom-niveau { min-width: 3.4em; text-align: center; font-size: .8rem; font-weight: 600; color: var(--doux); font-variant-numeric: tabular-nums; }
 
@@ -337,6 +355,18 @@ body.consultation #exercices { display: none; }
   line-height: 1;
 }
 .boite-menu:hover, .boite-suppr:hover { background: rgba(255, 255, 255, .42); }
+/* ▾ et × (écrits par app.js) remplacés par les mêmes icônes que la barre. */
+.boite-menu, .boite-suppr { font-size: 0; }
+.boite-menu::before, .boite-suppr::before {
+  content: "";
+  width: 15px;
+  height: 15px;
+  background: currentColor;
+  -webkit-mask: var(--icone) center / contain no-repeat;
+  mask: var(--icone) center / contain no-repeat;
+}
+.boite-menu { --icone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+.boite-suppr { --icone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"); }
 
 /* Coin pour agrandir : un triangle avec deux traits, dans l'arrondi de la boîte. */
 .boite-coin {
@@ -508,7 +538,17 @@ body.consultation #exercices { display: none; }
 .fenetre-corps { flex: 1; min-height: 0; overflow: auto; padding: 1.1rem 1.2rem; }
 .fenetre .aide { margin: 0 0 .9rem; color: var(--doux); font-size: .9rem; line-height: 1.45; }
 .fenetre code { padding: 0 .3em; border-radius: 4px; background: var(--sable); }
-.fenetre select { padding: .4rem .55rem; border: 1px solid var(--ligne); border-radius: 8px; background: var(--surface); }
+.fenetre select {
+  min-height: 38px;
+  padding: .4rem 2.1rem .4rem .65rem;
+  border: 1px solid var(--ligne);
+  border-radius: 10px;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%237d8597' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right .8rem center;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.fenetre select:focus { outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 0; border-color: var(--accent); }
 .fenetre input[type="text"], .fenetre input[type="password"] {
   min-width: 0;
   min-height: 38px;
@@ -779,7 +819,7 @@ body.consultation #exercices { display: none; }
 .zoom button:disabled { opacity: .3; cursor: default; }
 .zoom .histoire { font-size: 1.05rem; font-weight: 700; }
 .zoom .separateur { width: 1px; align-self: stretch; margin: 4px 3px; background: var(--ligne); }
-.zoom .chrono { width: auto; padding: 0 .6rem; font-variant-numeric: tabular-nums; border-radius: 10px; color: var(--texte-jaune); background: var(--fond-jaune); font-weight: 600; }
+.zoom .chrono { display: inline-flex; gap: .3rem; width: auto; padding: 0 .6rem; font-variant-numeric: tabular-nums; border-radius: 10px; color: var(--texte-jaune); background: var(--fond-jaune); font-weight: 600; }
 .etre.indice { animation: indice .5s ease-in-out 5 alternate; }
 .confettis { position: fixed; inset: 0; z-index: 9000; overflow: hidden; pointer-events: none; }
 .confettis span { position: absolute; top: -40px; animation: tombe linear forwards; }
@@ -865,10 +905,52 @@ body.consultation #exercices { display: none; }
   .actions button { padding: .45rem .35rem; }
 }
 
-/* Écrans moyens : « Recommencer » devient 🗑 (comme sur téléphone) pour que tout tienne sur une ligne. */
+/* ---------- Fond du plan de travail selon le thème du site ----------
+   Événement en cours (data-evenement + classe hanter-en-cours, posés par site/evenement.js). Les règles data-theme
+   attendent un thème de base du site que rien ne pose encore : l'événement passe avant (sélecteur plus précis). Sans thème connu (application de bureau, hors connexion),
+   le papier millimétré reste. Le motif (dessins de l'accueil, site/<nom>/fond-<nom>.svg) est sur un calque à part,
+   assez pâle pour que les boîtes et les cartes restent lisibles. */
+#zone::before { content: none; }
+:root[data-theme="halloween"], :root.hanter-en-cours[data-evenement="halloween"] {
+  --plan-theme: linear-gradient(180deg, #f5f0fb 0%, #fbf1e7 100%);
+  --motif: url(../halloween/fond-halloween.svg);
+  --motif-opacite: .2;
+}
+:root[data-theme="noel"], :root.hanter-en-cours[data-evenement="noel"] {
+  --plan-theme: linear-gradient(180deg, #e9f1fc 0%, #f4f8fe 100%);
+  --motif: url(../noel/fond-noel.svg);
+  --motif-opacite: .3;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root[data-theme="halloween"], :root.hanter-en-cours[data-evenement="halloween"] {
+    --plan-theme: linear-gradient(180deg, #0f0a1a 0%, #1a1028 60%, #24122d 100%);
+    --motif-opacite: .2;
+  }
+  :root[data-theme="noel"], :root.hanter-en-cours[data-evenement="noel"] {
+    --plan-theme: linear-gradient(180deg, #08122a 0%, #0e1f40 100%);
+    --motif-opacite: .24;
+  }
+}
+:root[data-theme="halloween"] #zone, :root[data-theme="noel"] #zone, :root.hanter-en-cours[data-evenement] #zone { background: var(--plan-theme); }
+:root[data-theme="halloween"] #espace, :root[data-theme="noel"] #espace, :root.hanter-en-cours[data-evenement] #espace { background: none; }
+:root[data-theme="halloween"] #zone::before, :root[data-theme="noel"] #zone::before, :root.hanter-en-cours[data-evenement] #zone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--motif) 0 0 / 320px 320px;
+  opacity: var(--motif-opacite);
+  pointer-events: none;
+}
+/* Les boîtes gardent un fond plein : le motif ne passe pas derrière les cartes rangées. */
+:root[data-theme="halloween"] .boite, :root[data-theme="noel"] .boite, :root.hanter-en-cours[data-evenement] .boite { background: linear-gradient(var(--c-fond), var(--c-fond)), var(--plan); }
+@media print {
+  #zone::before { content: none !important; }
+  #zone { background: none !important; }
+}
+
+/* Écrans moyens : « Recommencer » ne garde que sa corbeille (comme sur téléphone) pour que tout tienne sur une ligne. */
 @media (min-width: 701px) and (max-width: 1440px) {
   #effacer .long { display: none; }
-  #effacer .court { display: inline; }
 }
 /* Écrans un peu étroits : le titre ne garde que le logo. */
 @media (min-width: 701px) and (max-width: 1240px) {
@@ -878,6 +960,7 @@ body.consultation #exercices { display: none; }
 @media (min-width: 701px) and (max-width: 1100px) {
   .choix { max-width: none; }
   .actions { width: 100%; margin-left: 0; }
+  .actions button { padding-inline: .6rem; }
   #compte { margin-left: auto; }
 }
 

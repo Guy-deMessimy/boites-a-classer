@@ -12,23 +12,40 @@
   <link rel="icon" href="icone.png">
   <link rel="apple-touch-icon" href="icone-apple.png">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="profil.css">
 </head>
 <body>
+  <!-- Icônes de la barre et du zoom : Lucide (licence ISC, https://lucide.dev), utilisées par <svg class="ico"><use href="#i-…"/></svg>. -->
+  <svg hidden aria-hidden="true">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-moins" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-coche" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-corbeille" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-cle" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+    <symbol id="i-dossier" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-piles" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83ZM22 17.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+    <symbol id="i-liste" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-annuler" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-retablir" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+    <symbol id="i-cadre" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="i-chrono" viewBox="0 0 24 24"><path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/></symbol>
+  </svg>
   <header class="barre">
     <h1><img src="icone.png" alt="" width="30" height="30"><span class="titre-long">Boîtes à hanter</span></h1>
     <div class="choix">
       <select id="collection" aria-label="Collection"></select>
-      <button id="gerer" title="Choisir une collection (les administrateurs peuvent en créer)" aria-label="Gérer les collections">✎<span class="long"> Collections</span></button>
-      <button id="exercices" hidden title="Les exercices donnés par ton enseignant">📌<span class="long"> Exercices</span><span id="exercices-nb" class="compteur" hidden></span></button>
+      <button id="gerer" title="Choisir une collection (les administrateurs peuvent en créer)" aria-label="Gérer les collections"><svg class="ico"><use href="#i-piles"/></svg><span class="long">Collections</span></button>
+      <button id="exercices" hidden title="Les exercices donnés par ton enseignant"><svg class="ico"><use href="#i-liste"/></svg><span class="long">Exercices</span><span id="exercices-nb" class="compteur" hidden></span></button>
     </div>
     <div class="actions">
-      <button id="nouvelle" class="principal">＋ <span class="long">Nouvelle boîte</span><span class="court">Boîte</span></button>
-      <button id="verifier">✔ Vérifier</button>
+      <button id="nouvelle" class="principal"><svg class="ico"><use href="#i-plus"/></svg><span class="long">Nouvelle boîte</span><span class="court">Boîte</span></button>
+      <button id="verifier"><svg class="ico"><use href="#i-coche"/></svg>Vérifier</button>
       <button id="effacer" title="Supprimer les boîtes et tout ranger" aria-label="Recommencer">
-        <span class="txt-normal"><span class="long">Recommencer</span><span class="court">🗑</span></span><span class="txt-confirmer">Confirmer ?</span>
+        <span class="txt-normal"><svg class="ico"><use href="#i-corbeille"/></svg><span class="long">Recommencer</span></span><span class="txt-confirmer">Confirmer ?</span>
       </button>
-      <button id="outils" class="ouvre-menu" aria-haspopup="menu" title="Arbre, tableau des caractères, jeu, indice, défi…">🧰<span class="long"> Outils</span><span class="fleche">▾</span></button>
-      <button id="fichier" class="ouvre-menu" aria-haspopup="menu" title="Enregistrer, ouvrir, PDF, imprimer">📁<span class="long"> Fichier</span><span class="fleche">▾</span></button>
+      <button id="outils" class="ouvre-menu" aria-haspopup="menu" title="Arbre, tableau des caractères, jeu, indice, défi…"><svg class="ico"><use href="#i-cle"/></svg><span class="long">Outils</span><svg class="ico fleche"><use href="#i-chevron"/></svg></button>
+      <button id="fichier" class="ouvre-menu" aria-haspopup="menu" title="Enregistrer, ouvrir, PDF, imprimer"><svg class="ico"><use href="#i-dossier"/></svg><span class="long">Fichier</span><svg class="ico fleche"><use href="#i-chevron"/></svg></button>
       <button id="compte" title="Se connecter pour sauvegarder son travail en ligne" aria-label="Compte"><span id="compte-avatar">👤</span><span class="long" id="compte-nom"> Se connecter</span></button>
     </div>
   </header>
@@ -43,14 +60,14 @@
       <div id="toile"><div id="calque"></div></div>
     </div>
     <div class="zoom" role="group" aria-label="Annuler et zoom">
-      <button id="chrono" class="chrono" title="Défi chronométré : appuie pour l'arrêter" hidden>⏱ <span>0:00</span></button>
-      <button id="annuler" class="histoire" title="Annuler (Ctrl+Z)" aria-label="Annuler" disabled>↩︎</button>
-      <button id="retablir" class="histoire" title="Rétablir (Ctrl+Y)" aria-label="Rétablir" disabled>↪︎</button>
+      <button id="chrono" class="chrono" title="Défi chronométré : appuie pour l'arrêter" hidden><svg class="ico"><use href="#i-chrono"/></svg><span>0:00</span></button>
+      <button id="annuler" class="histoire" title="Annuler (Ctrl+Z)" aria-label="Annuler" disabled><svg class="ico"><use href="#i-annuler"/></svg></button>
+      <button id="retablir" class="histoire" title="Rétablir (Ctrl+Y)" aria-label="Rétablir" disabled><svg class="ico"><use href="#i-retablir"/></svg></button>
       <span class="separateur" aria-hidden="true"></span>
-      <button id="zoom-moins" aria-label="Dézoomer">−</button>
+      <button id="zoom-moins" title="Dézoomer" aria-label="Dézoomer"><svg class="ico"><use href="#i-moins"/></svg></button>
       <span id="zoom-niveau">100 %</span>
-      <button id="zoom-plus" aria-label="Zoomer">+</button>
-      <button id="zoom-tout" title="Tout voir" aria-label="Tout voir">⤢</button>
+      <button id="zoom-plus" title="Zoomer" aria-label="Zoomer"><svg class="ico"><use href="#i-plus"/></svg></button>
+      <button id="zoom-tout" title="Tout voir" aria-label="Tout voir"><svg class="ico"><use href="#i-cadre"/></svg></button>
     </div>
   </main>
 
@@ -235,13 +252,13 @@
     </div>
     <div class="fenetre-corps">
       <ol class="aide-etapes">
-        <li><span aria-hidden="true">📦</span><div><strong>Crée une boîte</strong> avec « ＋ Nouvelle boîte », puis donne-lui un attribut : écris-le, ou choisis-le avec le petit menu ▾.</div></li>
+        <li><span aria-hidden="true">📦</span><div><strong>Crée une boîte</strong> avec le bouton bleu « Nouvelle boîte », puis donne-lui un attribut : écris-le, ou choisis-le avec le petit menu ▾.</div></li>
         <li><span aria-hidden="true">✋</span><div><strong>Glisse les cartes</strong> d'en bas dans les boîtes (au clavier : Tab, Entrée, puis les flèches). Une boîte peut aller dans une autre : agrandis-la avec son coin en bas à droite.</div></li>
         <li><span aria-hidden="true">📏</span><div><strong>La règle :</strong> une boîte contient <em>tous</em> ceux qui ont son attribut, et <em>seulement</em> eux. Survole une carte pour voir ses attributs.</div></li>
-        <li><span aria-hidden="true">✔</span><div><strong>Vérifie</strong> : les erreurs s'affichent une par une. Tu bloques ? 🧰 Outils → 💡 Un indice. Une bêtise ? ↩ annule.</div></li>
+        <li><span aria-hidden="true">✔</span><div><strong>Vérifie</strong> : les erreurs s'affichent une par une. Tu bloques ? Outils → 💡 Un indice. Une bêtise ? La flèche ↩ en bas à droite annule.</div></li>
         <li><span aria-hidden="true">💾</span><div><strong>Ton travail est gardé</strong> tout seul dans ce navigateur. Pour le retrouver ailleurs : 👤 (compte, code de classe ou code de sauvegarde).</div></li>
       </ol>
-      <p class="aide">Pour changer d'exercice : la liste en haut, rangée par matière (sciences, français, maths, histoire, géographie, anglais, musique). Si ton enseignant t'a donné des exercices, ils sont dans 📌 Exercices.</p>
+      <p class="aide">Pour changer d'exercice : la liste en haut, rangée par matière (sciences, français, maths, histoire, géographie, anglais, musique). Si ton enseignant t'a donné des exercices, ils sont dans « Exercices », à côté de la liste.</p>
     </div>
     <div class="fenetre-pied">
       <button type="button" class="btn principal" id="aide-ok" autofocus>C'est parti !</button>
