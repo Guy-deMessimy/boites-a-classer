@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.9.0';
+  const VERSION = '2.9.1';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2680,6 +2680,18 @@
   if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer);
   else if (consultationDemandee()) ouvrirConsultation().then(() => demarrer(0));
   else demarrer(0);
+
+  // Site arrêté par un admin (serveur/maintenance.js) : la page se recharge d'elle-même et devient « revient dans peu de
+  // temps » (même chose que site/arret.js). Le travail reste dans le navigateur ; ce qui n'était pas encore envoyé
+  // partira à la réouverture. L'application de bureau, elle, continue de marcher.
+  if (location.protocol === 'https:' || location.port === '8788') {
+    const siteArrete = () => {
+      if (document.visibilityState !== 'visible') return;
+      fetch(RACINE_API + '/etat', { cache: 'no-store' }).then((rep) => { if (rep.status === 503) location.reload(); }).catch(() => { /* hors connexion */ });
+    };
+    setInterval(siteArrete, 20000);
+    document.addEventListener('visibilitychange', siteArrete);
+  }
 
   // Version installable (écran d'accueil du téléphone) et utilisable hors connexion, seulement en ligne.
   if ('serviceWorker' in navigator && location.protocol === 'https:') {

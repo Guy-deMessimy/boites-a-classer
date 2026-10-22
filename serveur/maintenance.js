@@ -25,7 +25,8 @@ export async function changerMaintenance(env, actif) {
   cache = { actif, lu: Date.now() };
 }
 
-// Même fond que la page d'accueil (papier millimétré + instruments de science), message en rouge.
+// Même fond que la page d'accueil (papier millimétré + instruments de science), message en rouge. La page se recharge
+// d'elle-même à la réouverture (functions/api/etat.js).
 export const PAGE_MAINTENANCE = `<!doctype html>
 <html lang="fr">
 <head>
@@ -108,8 +109,14 @@ export const PAGE_MAINTENANCE = `<!doctype html>
   <main>
     <img src="/icone.png" alt="">
     <h1>Boîtes à classer revient dans peu de temps…</h1>
-    <p>Le site est momentanément fermé. Ton travail est bien gardé : reviens un peu plus tard.</p>
+    <p>Le site est momentanément fermé. Ton travail est bien gardé : la page reviendra toute seule dès la réouverture.</p>
   </main>
+  <script>
+    // Dès que l'admin rouvre le site, /api/etat ne répond plus 503 : on recharge, et la vraie page revient.
+    setInterval(function () {
+      fetch('/api/etat', { cache: 'no-store' }).then(function (rep) { if (rep.ok) location.reload(); }).catch(function () {});
+    }, 20000);
+  </script>
 </body>
 </html>
 `;
