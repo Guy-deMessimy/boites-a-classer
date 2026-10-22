@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.29.0';
+  const VERSION = '3.30.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -172,7 +172,7 @@
     infoDefaut = `Touche ou survole un ${elements()[0]} pour voir ses caractéristiques.`;
     if (info.textContent === ancienInfo) info.textContent = infoDefaut;
     plateau.dataset.vide = `Tous les ${elements()[1]} sont placés.`;
-    document.title = `${coll.nom} · Boîtes à classer`; // onglets et favoris
+    document.title = `${coll.nom} · Boîtes à hanter`; // onglets et favoris
     ecrire('boites-a-classer:collection', coll.id);
     fermerBilan();
     rendre();
@@ -2083,7 +2083,7 @@
     fermerMenu();
     const lien = 'https://boites-a-classer.pages.dev/app/#collection=' + encodeURIComponent(coll.id);
     try {
-      if (tactile.matches && navigator.share) await navigator.share({ title: `Boîtes à classer : ${coll.nom}`, url: lien });
+      if (tactile.matches && navigator.share) await navigator.share({ title: `Boîtes à hanter : ${coll.nom}`, url: lien });
       else await navigator.clipboard.writeText(lien);
       info.textContent = `🔗 Lien de « ${coll.nom} » ${tactile.matches && navigator.share ? 'partagé' : 'copié'} : ${lien}`;
     } catch (e) {
@@ -2205,7 +2205,7 @@
     if (vides.length) notes.push(`Boîtes vides, laissées de côté : ${vides.map((b) => `« ${b.texte || '?'} »`).join(', ')}.`);
     if (racine.enfants.some((f) => f.etre)) notes.push(`Les ${des} posés hors de toute boîte partent directement du tronc.`);
     $('#arbre-notes').replaceChildren(...notes.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
-    $('#arbre-titre').textContent = `Boîtes à classer · ${coll.nom} · ma classification en arbre`;
+    $('#arbre-titre').textContent = `Boîtes à hanter · ${coll.nom} · ma classification en arbre`;
     $('#fen-arbre').showModal();
   }
 
@@ -2245,7 +2245,7 @@
     const tbody = document.createElement('tbody');
     tbody.append(...lignes);
     t.replaceChildren(thead, tbody);
-    $('#tableau-titre').textContent = `Boîtes à classer · ${coll.nom} · tableau des caractères`;
+    $('#tableau-titre').textContent = `Boîtes à hanter · ${coll.nom} · tableau des caractères`;
     $('#fen-tableau').showModal();
   }
 
