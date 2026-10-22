@@ -4,3 +4,13 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# Polices et images qui ne changent pas : gardées par le navigateur (moins de requêtes, donc moins d'appels au serveur).
+/polices/*
+  Cache-Control: public, max-age=2592000, immutable
+/fond-sciences.svg
+  Cache-Control: public, max-age=604800
+/icone.png
+  Cache-Control: public, max-age=604800
+/app/icone*
+  Cache-Control: public, max-age=604800
