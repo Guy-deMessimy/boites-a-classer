@@ -119,6 +119,7 @@
     th { color: var(--doux); font-weight: 600; white-space: nowrap; }
     tr:last-child td { border-bottom: 0; }
     td.nom { font-weight: 600; }
+    td.reussies { white-space: nowrap; font-variant-numeric: tabular-nums; cursor: help; }
     td.actions { min-width: 330px; }
     td.actions .bouton { margin: 2px 0; }
     .jamais { color: var(--doux); font-style: italic; }
@@ -215,7 +216,7 @@
         <div class="defile">
           <table>
             <thead>
-              <tr><th>Élève</th><th>Ajouté le</th><th>Dernière connexion</th><th>Dernière sauvegarde</th><th>Actions</th></tr>
+              <tr><th>Élève</th><th>Ajouté le</th><th>Dernière connexion</th><th>Dernière sauvegarde</th><th title="Collections réussies (tout juste à la vérification)">Réussies</th><th>Actions</th></tr>
             </thead>
             <tbody id="lignes"></tbody>
           </table>
@@ -225,6 +226,7 @@
     </div>
   </main>
 
+  <script src="../app/collections.js"></script>
   <script>
     (function () {
       'use strict';
@@ -465,7 +467,10 @@
           travail.textContent = e.versions ? date(e.date) : 'aucune';
           var cree = document.createElement('td');
           cree.textContent = date(e.cree);
-          tr.append(nom, cree, connexion, travail);
+          var reussies = document.createElement('td');
+          reussies.className = 'reussies';
+          reussies.textContent = e.versions ? '…' : '—';
+          tr.append(nom, cree, connexion, travail, reussies);
 
           var actions = document.createElement('td');
           actions.className = 'actions';
@@ -484,13 +489,44 @@
         if (!lignes.length) {
           var tr = document.createElement('tr');
           var td = document.createElement('td');
-          td.colSpan = 5;
+          td.colSpan = 6;
           td.className = 'vide';
           td.textContent = 'Aucun élève dans cette classe pour l\'instant : ajoutez-les ci-dessus.';
           tr.appendChild(td);
           lignes.push(tr);
         }
         $('#lignes').replaceChildren.apply($('#lignes'), lignes);
+        progression(lignes);
+      }
+
+      // Collections réussies par chaque élève : lues dans son dernier travail sauvegardé (clés
+      // « boites-a-classer:reussi:<id> » posées par le logiciel), quatre élèves à la fois.
+      var NOMS = {};
+      (window.COLLECTIONS || []).forEach(function (c) { NOMS[c.id] = c.nom; });
+      var tour = 0;
+      function progression(lignes) {
+        var moi = ++tour;
+        if (typeof DecompressionStream !== 'function') return;
+        var file = eleves.map(function (e, i) { return { e: e, cellule: lignes[i] && lignes[i].querySelector('.reussies') }; })
+          .filter(function (x) { return x.e.versions && x.cellule; });
+        function suivant() {
+          var x = file.shift();
+          if (!x || moi !== tour) return null;
+          return fetch('/api/classe/travail?eleve=' + encodeURIComponent(x.e.id), { headers: { Authorization: 'Bearer ' + jeton } })
+            .then(function (rep) {
+              if (!rep.ok) throw new Error(rep.status);
+              return new Response(rep.body.pipeThrough(new DecompressionStream('gzip'))).json();
+            })
+            .then(function (donnees) {
+              var ids = Object.keys(donnees).filter(function (k) { return k.indexOf('boites-a-classer:reussi:') === 0; })
+                .map(function (k) { return k.slice('boites-a-classer:reussi:'.length); });
+              x.cellule.textContent = ids.length ? '✅ ' + ids.length : '0';
+              x.cellule.title = ids.map(function (id) { return NOMS[id] || 'collection du site'; }).join(', ');
+            })
+            .catch(function () { x.cellule.textContent = '?'; })
+            .then(suivant);
+        }
+        for (var i = 0; i < 4; i++) suivant();
       }
 
       $('#form-ajout').addEventListener('submit', function (ev) {
