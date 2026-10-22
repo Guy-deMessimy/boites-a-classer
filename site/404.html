@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Page introuvable · Boîtes à classer</title>
+  <link rel="icon" href="/icone.png">
+  <style>
+    /* Page des adresses inconnues (Cloudflare Pages la sert avec le code 404). Même fond que l'accueil. */
+    @font-face { font-family: "Space Grotesk"; font-weight: 300 700; font-display: swap; src: url(/polices/space-grotesk-latin.woff2) format("woff2"); }
+    :root { --fond: #f6f4ef; --voile: rgb(255 255 255 / .82); --encre: #1f2430; --doux: #5f6675; --accent: #2f6fde; --accent-encre: #fff;
+      --degrade: linear-gradient(160deg, #eaf6f4 0%, #eef3fc 50%, #f3effb 100%); --grille: rgb(58 123 213 / .07); --ombre: 0 6px 18px rgb(58 110 170 / .14); }
+    @media (prefers-color-scheme: dark) {
+      :root { --fond: #15171c; --voile: rgb(24 22 38 / .82); --encre: #ecedf0; --doux: #a3a8b4; --accent: #5b8ff0; --accent-encre: #0d1220;
+        --degrade: linear-gradient(160deg, #0f1f22 0%, #131b2c 50%, #1a1730 100%); --grille: rgb(120 165 235 / .06); --ombre: 0 6px 18px rgb(0 0 0 / .35); }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; display: grid; place-items: center; padding: 16px; color: var(--encre); text-align: center;
+      background: linear-gradient(var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed, linear-gradient(90deg, var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed, var(--fond) var(--degrade) fixed;
+      font: 17px/1.5 "Space Grotesk", system-ui, sans-serif;
+    }
+    main { max-width: 560px; padding: 32px 28px; background: var(--voile); border-radius: 22px; box-shadow: var(--ombre); }
+    .grand { font-size: 4rem; line-height: 1; }
+    h1 { margin: 12px 0 6px; font-size: clamp(1.5rem, 5vw, 2.2rem); }
+    p { margin: 0 0 18px; color: var(--doux); }
+    .liens { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    a { display: inline-block; padding: .6rem 1.1rem; border: 2px solid var(--accent); border-radius: 999px; color: var(--accent); font-weight: 600; text-decoration: none; }
+    a.principal { background: var(--accent); color: var(--accent-encre); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="grand" aria-hidden="true">📦❓</div>
+    <h1>Cette page n'est dans aucune boîte…</h1>
+    <p>L'adresse demandée n'existe pas (ou plus). Rien de grave : voici où aller.</p>
+    <div class="liens">
+      <a class="principal" href="/">Accueil</a>
+      <a href="/app/">Ouvrir le logiciel</a>
+      <a href="/aide/">💬 Service client</a>
+    </div>
+  </main>
+</body>
+</html>

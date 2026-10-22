@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /classe/
+Disallow: /api/
+Disallow: /enseignant/
+
+Sitemap: https://boites-a-classer.pages.dev/sitemap.xml
