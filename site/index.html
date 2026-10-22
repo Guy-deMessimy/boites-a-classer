@@ -158,6 +158,10 @@
     .carte.detecte { border: 2px solid var(--accent); }
     .matieres { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; }
     .matiere h3 { margin: 0; font-size: 1.25rem; }
+    .enseignants { margin-top: 24px; }
+    .enseignants h3 { margin: 0; font-size: 1.25rem; }
+    .enseignants .liens { display: flex; flex-wrap: wrap; gap: 8px; }
+    .aide-enseignants { margin: 0; color: var(--doux); font-size: .9rem; }
     .matiere .liens { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
     .carte h3 { margin: 0; font-size: 1.3rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
     .carte .pour-vous { font-size: .75rem; font-weight: 600; color: var(--accent); display: none; }
@@ -293,6 +297,20 @@
         <div class="liens"><a class="bouton" href="app/index.html#collection=musique-instruments">Les familles d'instruments</a></div>
       </article>
     </div>
+
+    <section class="carte enseignants">
+      <h3>🎓 Vous êtes enseignant ?</h3>
+      <ul class="fonctions">
+        <li>Créez vos classes : chaque élève reçoit un code personnel (cartes à imprimer), sans e-mail ni mot de passe.</li>
+        <li>Donnez des exercices 📌 à la classe et suivez qui les a réussis ; ouvrez le travail de chaque élève.</li>
+        <li>Créez vos propres collections, et montrez la solution au tableau.</li>
+      </ul>
+      <div class="liens">
+        <a class="bouton" href="aide/?sujet=enseignant">Demander le rôle enseignant</a>
+        <a class="bouton secondaire" href="classe/">🎓 Mes classes</a>
+      </div>
+      <p class="aide-enseignants">Créez d'abord un compte (bouton « Se connecter ou créer un compte »), puis demandez le rôle : l'administrateur du site vous répond sur la page du service client.</p>
+    </section>
 
     <section class="en-ligne">
       <p><strong>Sans rien installer :</strong> le logiciel fonctionne directement dans le navigateur, sur ordinateur ou tablette.</p>

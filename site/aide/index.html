@@ -225,6 +225,13 @@
       setInterval(function () { if (document.visibilityState === 'visible') charger(); }, 20000);
       document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') charger(); });
 
+      // Lien « Demander le rôle enseignant » de l'accueil : message prérempli.
+      if (/[?&]sujet=enseignant\b/.test(location.search) && !$('#texte').value) {
+        var nom = lire('boites-a-classer-compte:identifiant');
+        $('#texte').value = 'Bonjour, je suis enseignant(e) à l\'école … (ville …), en classe de … Pourriez-vous donner le rôle enseignant à mon compte « '
+          + (jetonCompte && nom ? nom : 'mon identifiant') + ' » ? Merci !';
+      }
+
       majQui();
       charger();
     })();
