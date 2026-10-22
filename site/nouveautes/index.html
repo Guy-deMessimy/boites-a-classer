@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nouveautés · Boîtes à classer</title>
+  <meta name="description" content="Ce qui a changé dans Boîtes à classer, version après version.">
+  <link rel="icon" href="../icone.png">
+  <style>
+    /* Journal des nouveautés, écrit pour les utilisateurs (le détail technique est dans le README et l'historique Git). */
+    @font-face { font-family: "Space Grotesk"; font-weight: 300 700; font-display: swap; src: url(../polices/space-grotesk-latin.woff2) format("woff2"); }
+    :root { --fond: #f6f4ef; --carte: #fff; --encre: #1f2430; --doux: #5f6675; --ligne: #e2ddd2; --accent: #2f6fde; --accent-doux: #e8effc;
+      --degrade: linear-gradient(160deg, #eaf6f4 0%, #eef3fc 50%, #f3effb 100%); --grille: rgb(58 123 213 / .07); }
+    @media (prefers-color-scheme: dark) {
+      :root { --fond: #15171c; --carte: #1e2128; --encre: #ecedf0; --doux: #a3a8b4; --ligne: #30343d; --accent: #5b8ff0; --accent-doux: #1f2a40;
+        --degrade: linear-gradient(160deg, #0f1f22 0%, #131b2c 50%, #1a1730 100%); --grille: rgb(120 165 235 / .06); }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--encre); font: 16px/1.55 "Space Grotesk", system-ui, sans-serif;
+      background: linear-gradient(var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed, linear-gradient(90deg, var(--grille) 1px, transparent 1px) 0 0 / 24px 24px fixed, var(--fond) var(--degrade) fixed;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+    a { color: var(--accent); }
+    h1 { margin: 8px 0 4px; font-size: clamp(1.6rem, 5vw, 2.2rem); }
+    .intro { margin: 0 0 20px; color: var(--doux); }
+    .version { margin: 0 0 12px; padding: 14px 18px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
+    .version h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 6px; font-size: 1.1rem; }
+    .version h2 small { color: var(--doux); font-weight: 400; font-size: .85rem; }
+    .version ul { margin: 0; padding-left: 1.2em; }
+    .version li { margin: 2px 0; }
+    .version.recente { border: 2px solid var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="../">← Boîtes à classer</a>
+    <h1>🎉 Nouveautés</h1>
+    <p class="intro">Ce qui a changé, de la plus récente à la plus ancienne. Le logiciel en ligne se met à jour tout seul ; la version de bureau se télécharge à nouveau depuis l'accueil.</p>
+
+    <section class="version recente"><h2>3.7 <small>22 octobre 2026</small></h2><ul>
+      <li>Sciences : nouvelle collection « Les aliments et leur origine » (animale, végétale, minérale).</li>
+      <li>Enseignants : la page « Mes classes » montre les collections réussies par chaque élève.</li>
+      <li>🔗 Outils → « Copier le lien de cet exercice », pour envoyer un exercice précis à la classe.</li>
+      <li>✅ Les collections réussies sont cochées, dans le logiciel et sur l'accueil.</li>
+    </ul></section>
+    <section class="version"><h2>3.4 <small>22 octobre 2026</small></h2><ul>
+      <li>🗺 Une partie Géographie (les villes du monde) et une deuxième collection d'anglais (days, months and numbers).</li>
+      <li>❓ Une aide « Comment ça marche ? » à la première visite.</li>
+      <li>🌙 Thème sombre, si l'appareil le demande.</li>
+      <li>Barre des boutons mieux rangée sur tablette et sur les petits téléphones.</li>
+    </ul></section>
+    <section class="version"><h2>3.1 <small>22 octobre 2026</small></h2><ul>
+      <li>Une partie par matière : 📝 français (nature des mots, familles de mots), ➗ maths (multiples, figures planes), 🏛 histoire (grandes périodes), 🌍 anglais.</li>
+    </ul></section>
+    <section class="version"><h2>3.0 <small>22 octobre 2026</small></h2><ul>
+      <li>↩ ↪ Annuler et rétablir.</li>
+      <li>🧰 Outils : 🌳 la classification en arbre, 📊 le tableau des caractères, 🎲 le jeu « Qui suis-je ? », 💡 un indice, ⏱ le défi chronométré, 🔊 la lecture à voix haute.</li>
+      <li>🖼 Enregistrer son travail en image.</li>
+    </ul></section>
+    <section class="version"><h2>2.10 <small>22 octobre 2026</small></h2><ul>
+      <li>💬 Service client : une question, un problème ? On écrit à l'administrateur du site, qui répond sur la même page.</li>
+    </ul></section>
+    <section class="version"><h2>2.9 <small>22 octobre 2026</small></h2><ul>
+      <li>🎓 Rôle enseignant : créer ses classes ; chaque élève se connecte avec un code personnel, et l'enseignant voit son travail.</li>
+      <li>Cartes des codes à imprimer et à découper.</li>
+    </ul></section>
+    <section class="version"><h2>2.2 à 2.4 <small>21 octobre 2026</small></h2><ul>
+      <li>👤 Comptes (identifiant et mot de passe, sans e-mail) pour retrouver son travail sur tous ses appareils.</li>
+      <li>Collections du site, préparées par l'administrateur et proposées à tout le monde.</li>
+    </ul></section>
+    <section class="version"><h2>2.0 et 2.1 <small>16 octobre 2026</small></h2><ul>
+      <li>☁️ Sauvegarde en ligne avec un code secret de quatre mots.</li>
+      <li>💾 Enregistrer et ouvrir son travail dans un fichier ; collections « petites bêtes » et « animaux de la ferme ».</li>
+    </ul></section>
+    <section class="version"><h2>1.0 à 1.2 <small>14 octobre 2026</small></h2><ul>
+      <li>📦 Première version : boîtes emboîtées, vérification, versions Windows, macOS et Linux.</li>
+      <li>📱 Version pour téléphone et tablette, installable, qui marche sans connexion.</li>
+      <li>📄 Export en PDF ; collections plantes et animaux marins.</li>
+    </ul></section>
+  </main>
+  <script src="/arret.js"></script>
+</body>
+</html>
