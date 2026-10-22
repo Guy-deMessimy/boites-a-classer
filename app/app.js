@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.20.0';
+  const VERSION = '3.21.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2028,6 +2028,7 @@
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
         entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
         document.createElement('hr'),
+        ...(peutCreer() ? [entreeMenu('🧑‍🏫 Montrer la solution (enseignants)', montrerSolution)] : []),
         entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
       );
@@ -2330,6 +2331,45 @@
     rendreJeu();
   }
   $('#jeu-nouvelle').addEventListener('click', nouvellePartie);
+
+  /* Solution (enseignants et admin) : les boîtes emboîtées correctes, dessinées toutes seules. ↩ annule. */
+
+  function montrerSolution() {
+    fermerMenu();
+    const ens = (a) => new Set(coll.etres.filter((e) => e.attributs.includes(a.id)).map((e) => e.id));
+    // Du plus grand ensemble au plus petit ; chaque attribut va dans la boîte de son plus petit sur-ensemble.
+    const noeuds = [...attrParId.values()].map((a) => ({ a, ens: ens(a), enfants: [] })).filter((n) => n.ens.size)
+      .sort((x, y) => y.ens.size - x.ens.size);
+    noeuds.forEach((n, i) => {
+      n.parent = noeuds.slice(0, i).filter((p) => [...n.ens].every((id) => p.ens.has(id))).pop() || null;
+      if (n.parent) n.parent.enfants.push(n);
+    });
+    const profond = (e) => noeuds.filter((n) => n.ens.has(e.id)).pop() || null;
+    const ESPACE = ETRE.l + 10, TETE = 46;
+    function mesurer(n) {
+      n.directs = coll.etres.filter((e) => profond(e) === n);
+      n.enfants.forEach(mesurer);
+      n.w = Math.max(BOITE_MIN.l + 40, 20 + n.directs.length * ESPACE + n.enfants.reduce((t, f) => t + f.w + 10, 0));
+      n.h = TETE + 14 + Math.max(ETRE.h + 10, ...n.enfants.map((f) => f.h + 10));
+    }
+    const boites = [], positions = {};
+    function poser(n, x, y) {
+      boites.push({ id: nouvelId('b'), x, y, w: n.w, h: n.h, attr: n.a.id, texte: n.a.nom });
+      let cx = x + 12;
+      for (const e of n.directs) { positions[e.id] = { x: cx, y: y + TETE + 4 }; cx += ESPACE; }
+      for (const f of n.enfants) { poser(f, cx, y + TETE); cx += f.w + 10; }
+    }
+    let x = 20;
+    for (const n of noeuds.filter((m) => !m.parent)) { mesurer(n); poser(n, x, 20); x += n.w + 20; }
+    // Ceux qui n'ont aucun attribut restent à côté, hors des boîtes.
+    for (const e of coll.etres) if (!positions[e.id]) { positions[e.id] = { x, y: 20 }; x += ESPACE; }
+    etat = { boites, positions };
+    sauver();
+    fermerBilan();
+    rendre();
+    toutVoir();
+    info.textContent = '🧑‍🏫 Voici la solution. « ↩ Annuler » ramène le travail d\'avant.';
+  }
 
   /* Indice : une piste, sans donner toute la solution. */
 
