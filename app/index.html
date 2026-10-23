@@ -269,9 +269,21 @@
       <p class="aide">Trop facile, trop dur ? Le bouton 🌿 à côté de la liste change de niveau : 🌱 facile (les couleurs des attributs sur les cartes, correction en direct), 🌿 normal, 🌳 expert (attributs cachés, trophée 🏆).</p>
     </div>
     <div class="fenetre-pied">
+      <button type="button" class="btn" id="aide-tuto">▶ Me montrer pas à pas</button>
       <button type="button" class="btn principal" id="aide-ok" autofocus>C'est parti !</button>
     </div>
   </dialog>
+
+  <!-- Tutoriel pas à pas (app.js, « Tutoriel ») : une bulle près de ce qu'il faut toucher, et un anneau autour. -->
+  <div id="tuto-anneau" class="tuto-anneau" aria-hidden="true" hidden></div>
+  <section id="tuto" class="tuto" role="region" aria-label="Tutoriel pas à pas" hidden>
+    <p class="tuto-compte" id="tuto-compte"></p>
+    <p class="tuto-texte" id="tuto-texte" aria-live="polite"></p>
+    <div class="tuto-boutons">
+      <button type="button" class="btn" id="tuto-passer">Passer le tutoriel</button>
+      <button type="button" class="btn principal" id="tuto-suivant">Suivant</button>
+    </div>
+  </section>
 
   <dialog id="fen-arbre" class="fenetre large" aria-labelledby="titre-arbre">
     <div class="fenetre-tete">
