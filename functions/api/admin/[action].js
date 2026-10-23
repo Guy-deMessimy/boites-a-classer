@@ -23,11 +23,17 @@
 //   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
 //   GET  /api/admin/evenement                             → { evenement: { nom, depuis } | null, fini: { nom, depuis, fin } | null,
 //                                                         boss: { pv, max, vaincu, chasseurs, gagnant } | null, total, seuil }
+//                                                         + programme [{ evenement, debut, fin, lance, arrete }], maintenant (Paris)
 //   POST /api/admin/evenement    { nom }                  déclenche l'événement (« halloween », classement remis à zéro) ou
 //                                                         l'arrête (null, classement gardé) → comme GET  (serveur/evenement.js)
-//   GET  /api/admin/theme                                 → { theme, nom, themes }  thème du site (serveur/theme.js)
-//   POST /api/admin/theme        { theme }                « halloween », « noel » ou « normal » : décor de l'accueil, couleurs du
-//                                                         logiciel et nom du site, suivis par les pages ouvertes → comme GET
+//   POST /api/admin/evenement    { programme }            événements à déclencher et arrêter tout seuls (debut et fin en
+//                                                         « AAAA-MM-JJTHH:MM », heure de Paris) → comme GET
+//   GET  /api/admin/theme                                 → { theme, nom, choisi, programme, periode, jour, themes }  thème du
+//                                                         site en ce moment (serveur/theme.js), thème choisi hors des périodes
+//                                                         programmées, programme [{ theme, du, au }], période en cours, jour à Paris
+//   POST /api/admin/theme        { theme } | { programme } « halloween », « noel » ou « normal » : décor de l'accueil, couleurs du
+//                                                         logiciel et nom du site, suivis par les pages ouvertes ; ou le
+//                                                         programme entier (dates « AAAA-MM-JJ », jours compris) → comme GET
 //   GET  /api/admin/classement                            → { participants, top: [{ nom, identifiant, eleve, points }] }
 //                                                         classement du dernier événement (en direct pendant l'événement)
 //
@@ -35,9 +41,10 @@
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
-import { EVENEMENTS, lireEtat, changerEvenement, classement, oublierCache, SEUIL_BOSS } from '../../../serveur/evenement.js';
+import { EVENEMENTS, lireEtat, changerEvenement, classement, oublierCache, SEUIL_BOSS, lireProgrammeEvenements, changerProgrammeEvenements } from '../../../serveur/evenement.js';
 import { effacerCompte } from '../../../serveur/classes.js';
-import { THEMES, lireTheme, changerTheme } from '../../../serveur/theme.js';
+import { THEMES, lireReglageTheme, periodeDuJour, changerTheme, verifierProgramme, changerProgramme } from '../../../serveur/theme.js';
+import { jourParis, minuteParis } from '../../../serveur/programme.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
@@ -264,22 +271,36 @@ const actions = {
 
   async evenement(request, env) {
     if (request.method === 'POST') {
-      const { nom } = await lireCorps(request);
-      if (nom !== null && !EVENEMENTS.includes(nom)) return erreur('« nom » doit valoir ' + EVENEMENTS.join(', ') + ' ou null', 400);
-      await changerEvenement(env, nom);
+      const corps = await lireCorps(request);
+      if ('programme' in corps) {
+        if (!(await changerProgrammeEvenements(env, corps.programme))) {
+          return erreur('programme invalide : [{ evenement, debut, fin }], dates « AAAA-MM-JJTHH:MM », debut < fin, 20 au plus', 400);
+        }
+      } else {
+        if (corps.nom !== null && !EVENEMENTS.includes(corps.nom)) return erreur('« nom » doit valoir ' + EVENEMENTS.join(', ') + ' ou null', 400);
+        await changerEvenement(env, corps.nom);
+      }
     }
     const { evenement: v, boss, total } = await lireEtat(env);
-    return json({ evenement: v && !v.fin ? v : null, fini: v && v.fin ? v : null, boss, total, seuil: SEUIL_BOSS });
+    return json({ evenement: v && !v.fin ? v : null, fini: v && v.fin ? v : null, boss, total, seuil: SEUIL_BOSS,
+      programme: await lireProgrammeEvenements(env), maintenant: minuteParis() });
   },
 
   async theme(request, env) {
     if (request.method === 'POST') {
-      const { theme } = await lireCorps(request);
-      if (!Object.hasOwn(THEMES, theme || '')) return erreur('« theme » doit valoir ' + Object.keys(THEMES).join(', '), 400);
-      await changerTheme(env, theme);
+      const corps = await lireCorps(request);
+      if ('programme' in corps) {
+        const programme = verifierProgramme(corps.programme);
+        if (!programme) return erreur('programme invalide : [{ theme, du, au }], dates « AAAA-MM-JJ », du ≤ au, 20 périodes au plus', 400);
+        await changerProgramme(env, programme);
+      } else {
+        if (!Object.hasOwn(THEMES, corps.theme || '')) return erreur('« theme » doit valoir ' + Object.keys(THEMES).join(', '), 400);
+        await changerTheme(env, corps.theme);
+      }
     }
-    const theme = await lireTheme(env);
-    return json({ theme, nom: THEMES[theme].nom, themes: THEMES });
+    const { choisi, programme } = await lireReglageTheme(env);
+    const jour = jourParis(), periode = periodeDuJour(programme, jour), theme = periode ? periode.theme : choisi;
+    return json({ theme, nom: THEMES[theme].nom, choisi, programme, periode, jour, themes: THEMES });
   },
 
   async classement(request, env) {

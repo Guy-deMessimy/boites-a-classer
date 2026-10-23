@@ -8,6 +8,9 @@
 // boss) gagne le badge de participation (« participation-<nom> » : vampire 🧛, bonhomme de neige ⛄).
 // Rangé dans la table reglages (migrations/0005_reglages.sql), clé « evenement » : { nom, depuis } pendant l'événement,
 // { nom, depuis, fin } une fois arrêté (son classement reste consultable), ou vide.
+// Un admin peut aussi le programmer à heure fixe (clé « programme-evenement », voir appliquerProgramme).
+
+import { minuteParis, dateValide, lireListe, PERIODES_MAX } from './programme.js';
 
 export const EVENEMENTS = ['halloween', 'noel'];
 export const SEUIL_BOSS = 30;
@@ -38,6 +41,7 @@ const DEPUIS = "CASE WHEN json_valid(r.valeur) THEN json_extract(r.valeur, '$.de
 // L'événement (en cours, sans « fin », ou arrêté, avec « fin »), son boss et le nombre de fantômes attrapés par tous.
 export async function lireEtat(env) {
   if (Date.now() - cache.lu < DUREE_CACHE) return cache.valeur;
+  await appliquerProgramme(env).catch(() => {});
   let valeur = { evenement: null, boss: null, total: 0 };
   try {
     const r = await env.DB.prepare('SELECT r.valeur, b.pv, b.max, b.apparu, b.vaincu, g.identifiant AS g_identifiant, g.nom AS g_nom, g.classe AS g_classe, g.badges AS g_badges, g.avatar AS g_avatar, '
@@ -145,4 +149,68 @@ export async function recompenser(env, e) {
   ]);
   oublierCache();
   return { nom: premier.nom, badges };
+}
+
+// Événements programmés par un admin (page site/admin/) : déclenchés puis arrêtés tout seuls à l'heure dite (Paris), à la
+// première lecture de l'état qui suit (pages ouvertes, ou premier visiteur : le serveur n'a pas d'horloge à lui).
+// Clé « programme-evenement » de reglages : [{ evenement, debut, fin, lance, arrete }] en JSON, debut et fin en
+// « AAAA-MM-JJTHH:MM », triés par début. Déclencher remplace l'événement en cours s'il y en a un (et remet les points à
+// zéro) ; à la fin, l'événement est arrêté s'il est toujours en cours. Un événement dont toute la plage est passée sans
+// lecture de l'état est marqué fait, sans être déclenché.
+// Plusieurs instances du serveur lisent en même temps : le programme n'est remplacé que s'il n'a pas changé entre-temps
+// (UPDATE … AND valeur = l'ancienne), et seule l'instance qui a réussi agit.
+const PAUSE_PROGRAMME = 10000; // une lecture du programme toutes les 10 s au plus par instance
+let programmeVu = 0;
+
+const parDebut = (a, b) => (a.debut < b.debut ? -1 : a.debut > b.debut ? 1 : 0);
+
+// Programme envoyé par la page admin, rangé par début, ou null s'il est mal formé. Ce qui a déjà été fait le reste (la
+// page a pu lire le programme avant qu'un événement soit déclenché).
+export function verifierProgrammeEvenements(liste, ancien = []) {
+  if (!Array.isArray(liste) || liste.length > PERIODES_MAX) return null;
+  const propre = [];
+  for (const p of liste) {
+    if (!p || !EVENEMENTS.includes(p.evenement) || !dateValide(p.debut, true) || !dateValide(p.fin, true) || p.fin <= p.debut) return null;
+    const avant = ancien.find((a) => a.evenement === p.evenement && a.debut === p.debut && a.fin === p.fin) || {};
+    propre.push({ evenement: p.evenement, debut: p.debut, fin: p.fin, ...(avant.lance ? { lance: true } : {}), ...(avant.arrete ? { arrete: true } : {}) });
+  }
+  return propre.sort(parDebut);
+}
+
+async function lireProgrammeBrut(env) {
+  const r = await env.DB.prepare("SELECT valeur FROM reglages WHERE cle = 'programme-evenement'").first();
+  return { texte: (r && r.valeur) || '', liste: lireListe(r && r.valeur) };
+}
+
+export const lireProgrammeEvenements = async (env) => (await lireProgrammeBrut(env)).liste;
+
+export async function changerProgrammeEvenements(env, liste) {
+  const propre = verifierProgrammeEvenements(liste, (await lireProgrammeBrut(env)).liste);
+  if (!propre) return null;
+  await env.DB.prepare("INSERT INTO reglages (cle, valeur) VALUES ('programme-evenement', ?1) ON CONFLICT (cle) DO UPDATE SET valeur = ?1")
+    .bind(JSON.stringify(propre)).run();
+  programmeVu = 0;
+  oublierCache();
+  return propre;
+}
+
+// La première chose en retard dans le programme : un événement à déclencher ou à arrêter.
+async function appliquerProgramme(env) {
+  if (Date.now() - programmeVu < PAUSE_PROGRAMME) return;
+  programmeVu = Date.now();
+  const { texte, liste } = await lireProgrammeBrut(env);
+  const maintenant = minuteParis();
+  const i = liste.findIndex((p) => (!p.lance && p.debut <= maintenant) || (p.lance && !p.arrete && p.fin <= maintenant));
+  if (i < 0) return;
+  const p = liste[i];
+  const lancer = !p.lance && maintenant < p.fin;
+  const nouvelle = liste.map((x, j) => (j !== i ? x : lancer ? { ...x, lance: true } : { ...x, lance: true, arrete: true }));
+  const r = await env.DB.prepare("UPDATE reglages SET valeur = ?1 WHERE cle = 'programme-evenement' AND valeur = ?2")
+    .bind(JSON.stringify(nouvelle), texte).run();
+  if (!r.meta || r.meta.changes !== 1) return; // une autre instance s'en est chargée
+  if (lancer) await changerEvenement(env, p.evenement);
+  else if (p.lance) {
+    const e = await evenementEnCours(env);
+    if (e && e.nom === p.evenement) await changerEvenement(env, null);
+  }
 }

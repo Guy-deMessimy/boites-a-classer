@@ -7,7 +7,12 @@
 // functions/_middleware.js habille les pages au moment de les envoyer (les fichiers gardent le nom « Boîtes à classer »
 // et le thème sciences, comme l'application de bureau) ; GET /api/etat donne le thème aux pages ouvertes, qui le suivent
 // (site/arret.js, app/app.js).
-// Rangé dans la table reglages (migrations/0005_reglages.sql), clé « theme » : le nom du thème.
+// Un admin peut aussi le programmer par périodes (« Noël du 1er décembre au 6 janvier », jours compris, heure de Paris) :
+// pendant une période, son thème remplace le thème choisi, qui revient tout seul à la fin, sans republier.
+// Rangé dans la table reglages (migrations/0005_reglages.sql) : clé « theme » (le thème choisi) et clé
+// « programme-theme » ([{ theme, du, au }] en JSON, du et au en « AAAA-MM-JJ », triées par début).
+
+import { jourParis, dateValide, lireListe, PERIODES_MAX } from './programme.js';
 
 export const THEMES = {
   halloween: { nom: 'Boîtes à hanter' },
@@ -17,29 +22,58 @@ export const THEMES = {
 export const THEME_DEFAUT = 'normal';
 const NOMS = /Boîtes à (classer|hanter|lutins)/g;
 
-// Chaque instance du serveur garde le thème quelques secondes (il est lu à chaque page envoyée).
+// Chaque instance du serveur garde les réglages quelques secondes (ils sont lus à chaque page envoyée) ; le thème du
+// jour, lui, est recalculé à chaque fois : il change à minuit (Paris) sans attendre.
 const DUREE_CACHE = 5000;
-let cache = { theme: THEME_DEFAUT, lu: 0 };
+let cache = { reglage: { choisi: THEME_DEFAUT, programme: [] }, lu: 0 };
 
-export async function lireTheme(env) {
-  if (Date.now() - cache.lu < DUREE_CACHE) return cache.theme;
-  let theme = THEME_DEFAUT;
+// Le thème choisi et le programme.
+export async function lireReglageTheme(env) {
+  if (Date.now() - cache.lu < DUREE_CACHE) return cache.reglage;
+  const reglage = { choisi: THEME_DEFAUT, programme: [] };
   try {
-    const r = await env.DB.prepare('SELECT valeur FROM reglages WHERE cle = ?').bind('theme').first();
-    if (r && Object.hasOwn(THEMES, r.valeur)) theme = r.valeur;
+    const { results } = await env.DB.prepare("SELECT cle, valeur FROM reglages WHERE cle IN ('theme', 'programme-theme')").all();
+    for (const r of results) {
+      if (r.cle === 'theme' && Object.hasOwn(THEMES, r.valeur)) reglage.choisi = r.valeur;
+      if (r.cle === 'programme-theme') reglage.programme = verifierProgramme(lireListe(r.valeur)) || [];
+    }
   } catch (e) {
     // base injoignable : thème par défaut
   }
-  cache = { theme, lu: Date.now() };
-  return theme;
+  cache = { reglage, lu: Date.now() };
+  return reglage;
 }
 
-export async function changerTheme(env, theme) {
-  await env.DB.prepare('INSERT INTO reglages (cle, valeur) VALUES (?1, ?2) ON CONFLICT (cle) DO UPDATE SET valeur = ?2')
-    .bind('theme', theme).run();
-  cache = { theme, lu: Date.now() };
-  return theme;
+// La période du programme en cours ce jour-là, s'il y en a une (la première, si elles se chevauchent).
+export const periodeDuJour = (programme, jour = jourParis()) => programme.find((p) => p.du <= jour && jour <= p.au) || null;
+
+// Le thème du site en ce moment.
+export async function lireTheme(env) {
+  const { choisi, programme } = await lireReglageTheme(env);
+  const p = periodeDuJour(programme);
+  return p ? p.theme : choisi;
 }
+
+async function ecrire(env, cle, valeur) {
+  await env.DB.prepare('INSERT INTO reglages (cle, valeur) VALUES (?1, ?2) ON CONFLICT (cle) DO UPDATE SET valeur = ?2')
+    .bind(cle, valeur).run();
+  cache.lu = 0;
+}
+
+export const changerTheme = (env, theme) => ecrire(env, 'theme', theme);
+
+// Programme envoyé par la page admin : la liste rangée par début, ou null s'il est mal formé.
+export function verifierProgramme(liste) {
+  if (!Array.isArray(liste) || liste.length > PERIODES_MAX) return null;
+  const propre = [];
+  for (const p of liste) {
+    if (!p || !Object.hasOwn(THEMES, p.theme) || !dateValide(p.du) || !dateValide(p.au) || p.au < p.du) return null;
+    propre.push({ theme: p.theme, du: p.du, au: p.au });
+  }
+  return propre.sort((a, b) => (a.du < b.du ? -1 : a.du > b.du ? 1 : 0));
+}
+
+export const changerProgramme = (env, programme) => ecrire(env, 'programme-theme', JSON.stringify(programme));
 
 // Remplace le nom du site dans un texte coupé en morceaux (HTMLRewriter) : les morceaux sont gardés jusqu'au dernier.
 // Le texte est celui du fichier (entités HTML comprises), d'où « html: true » pour le remettre tel quel.

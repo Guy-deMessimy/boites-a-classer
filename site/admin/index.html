@@ -95,6 +95,16 @@
     .evenement-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .evenement-actions select { padding: .5rem .7rem; border: 1px solid var(--ligne); border-radius: 10px; background: var(--carte); color: inherit; font: inherit; }
     .evenement-actions select[hidden] { display: none; }
+    /* Programmes (thème par périodes, événements à heure fixe) : sous la carte, sur toute sa largeur. */
+    .programme { flex-basis: 100%; border-top: 1px solid var(--ligne); padding-top: 12px; }
+    .programme h3 { margin: 0 0 8px; font-size: 1rem; }
+    .programme ul { margin: 0 0 10px; padding: 0; list-style: none; }
+    .programme li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 4px 0; }
+    .programme li small { color: var(--doux); }
+    .programme li .bouton { padding: .2rem .7rem; font-size: .85rem; }
+    .programme label { display: flex; align-items: center; gap: 6px; color: var(--doux); }
+    .programme input { padding: .45rem .6rem; border: 1px solid var(--ligne); border-radius: 10px; background: var(--carte); color: inherit; font: inherit; }
+    .programme .note { margin: 8px 0 0; color: var(--doux); font-size: .85rem; }
     .classement-liste { margin: 0 0 12px; padding-left: 1.6em; }
     .classement-liste li { padding: 2px 0; }
     .classement-liste small { color: var(--doux); }
@@ -183,7 +193,7 @@
       <section class="etat-site evenement" id="etat-theme">
         <div>
           <strong id="theme-texte">Thème du site…</strong>
-          <span>Décor et bandeau de l'accueil, couleurs du logiciel et nom du site. Les pages ouvertes suivent en quelques secondes.</span>
+          <span id="theme-detail">Décor et bandeau de l'accueil, couleurs du logiciel et nom du site. Les pages ouvertes suivent en quelques secondes.</span>
         </div>
         <div class="evenement-actions">
           <select id="theme-choix" aria-label="Thème du site">
@@ -192,6 +202,21 @@
             <option value="noel">🎄 Noël : Boîtes à lutins</option>
           </select>
           <button type="button" class="bouton" id="appliquer-theme" disabled>Appliquer</button>
+        </div>
+        <div class="programme">
+          <h3>📅 Thèmes programmés</h3>
+          <ul id="theme-periodes"></ul>
+          <form class="evenement-actions" id="theme-ajout">
+            <select id="theme-ajout-choix" aria-label="Thème à programmer">
+              <option value="halloween">🎃 Halloween</option>
+              <option value="noel">🎄 Noël</option>
+              <option value="normal">🔬 Normal</option>
+            </select>
+            <label>du <input type="date" id="theme-du" required></label>
+            <label>au <input type="date" id="theme-au" required></label>
+            <button type="submit" class="bouton">Programmer</button>
+          </form>
+          <p class="note">Jours compris, heure de Paris. À la fin de la période, le site reprend le thème choisi au-dessus, sans rien republier.</p>
         </div>
       </section>
       <section class="etat-site evenement" id="etat-evenement">
@@ -206,6 +231,20 @@
             <option value="noel">🎄 Noël</option>
           </select>
           <button type="button" class="bouton" id="basculer-evenement" disabled></button>
+        </div>
+        <div class="programme">
+          <h3>📅 Événements programmés</h3>
+          <ul id="evenement-periodes"></ul>
+          <form class="evenement-actions" id="evenement-ajout">
+            <select id="evenement-ajout-choix" aria-label="Événement à programmer">
+              <option value="halloween">🎃 Halloween</option>
+              <option value="noel">🎄 Noël</option>
+            </select>
+            <label>du <input type="datetime-local" id="evenement-debut" required></label>
+            <label>au <input type="datetime-local" id="evenement-fin" required></label>
+            <button type="submit" class="bouton">Programmer</button>
+          </form>
+          <p class="note">Heure de Paris. Déclenché puis arrêté tout seul, dès qu'une page du site est ouverte après l'heure dite (sinon au premier visiteur). Le déclencher remet le classement à zéro et remplace l'événement en cours s'il y en a un.</p>
         </div>
       </section>
       <section class="support" id="classement-evenement" hidden>
@@ -405,11 +444,39 @@
 
       /* Thème du site (serveur/theme.js) : normal (sciences), Halloween ou Noël, indépendant des événements. */
       var nomSite = document.title.replace(/^.*· /, ''), themeActuel = null;
+      var libelleTheme = function (t) { var o = $('#theme-choix option[value="' + t + '"]'); return o ? o.textContent : t; };
+      // « AAAA-MM-JJ » et « AAAA-MM-JJTHH:MM » (heure de Paris, comme le serveur) en toutes lettres.
+      var jourFr = function (j) { return new Date(j + 'T12:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); };
+      var minuteFr = function (m) { return jourFr(m.slice(0, 10)) + ' à ' + m.slice(11, 13) + ' h ' + m.slice(14, 16); };
+      // Les lignes d'un programme : texte, état et bouton « Retirer » (renvoie le programme sans la ligne).
+      function lignesProgramme(liste, ul, texte, etat, retirer) {
+        ul.replaceChildren.apply(ul, liste.map(function (p, i) {
+          var li = document.createElement('li'), t = document.createElement('span'), e = document.createElement('small'), b = document.createElement('button');
+          t.textContent = texte(p);
+          e.textContent = etat(p);
+          b.type = 'button';
+          b.className = 'bouton';
+          b.textContent = 'Retirer';
+          b.addEventListener('click', function () { retirer(liste.filter(function (x, j) { return j !== i; })); });
+          li.append(t, e, b);
+          return li;
+        }));
+        if (!liste.length) { var vide = document.createElement('li'); vide.textContent = 'Rien de programmé.'; ul.appendChild(vide); }
+      }
+      var programmeTheme = [];
       function afficherTheme(r) {
-        themeActuel = r.theme;
+        themeActuel = r.choisi;
         nomSite = r.nom;
-        $('#theme-choix').value = r.theme;
-        $('#theme-texte').textContent = '🎨 Thème : ' + $('#theme-choix').selectedOptions[0].textContent;
+        programmeTheme = r.programme || [];
+        $('#theme-choix').value = r.choisi;
+        $('#theme-texte').textContent = '🎨 Thème : ' + libelleTheme(r.theme);
+        $('#theme-detail').textContent = r.periode
+          ? 'Programmé du ' + jourFr(r.periode.du) + ' au ' + jourFr(r.periode.au) + ', puis retour au thème choisi ci-dessous : ' + libelleTheme(r.choisi) + '.'
+          : 'Décor et bandeau de l\'accueil, couleurs du logiciel et nom du site. Les pages ouvertes suivent en quelques secondes.';
+        lignesProgramme(programmeTheme, $('#theme-periodes'),
+          function (p) { return libelleTheme(p.theme) + ' : du ' + jourFr(p.du) + ' au ' + jourFr(p.au); },
+          function (p) { return p.au < r.jour ? 'terminé' : p.du <= r.jour ? 'en cours' : 'à venir'; },
+          envoyerProgrammeTheme);
         $('#appliquer-theme').disabled = true;
         document.title = document.title.replace(/Boîtes à (classer|hanter|lutins)/, r.nom);
         if (r.theme === 'normal') delete document.documentElement.dataset.theme;
@@ -419,13 +486,27 @@
       function chargerTheme() {
         appel('theme').then(function (x) { if (x.statut === 200) afficherTheme(x.r); });
       }
+      function envoyerProgrammeTheme(programme) {
+        return appel('theme', { programme: programme }).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return false; }
+          afficherTheme(x.r);
+          message('Programme des thèmes enregistré.');
+          return true;
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); return false; });
+      }
+      $('#theme-ajout').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var p = { theme: $('#theme-ajout-choix').value, du: $('#theme-du').value, au: $('#theme-au').value };
+        if (p.au < p.du) { message('La fin de la période est avant son début.', true); return; }
+        envoyerProgrammeTheme(programmeTheme.concat([p])).then(function (ok) { if (ok) $('#theme-ajout').reset(); });
+      });
       $('#theme-choix').addEventListener('change', function () { $('#appliquer-theme').disabled = $('#theme-choix').value === themeActuel; });
       $('#appliquer-theme').addEventListener('click', function () {
         $('#appliquer-theme').disabled = true;
         appel('theme', { theme: $('#theme-choix').value }).then(function (x) {
           if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); chargerTheme(); return; }
           afficherTheme(x.r);
-          message('Thème changé : les pages ouvertes le prennent en quelques secondes (l\'accueil se recharge).');
+          message(x.r.periode ? 'Thème choisi enregistré : il reviendra à la fin de la période programmée.' : 'Thème changé : les pages ouvertes le prennent en quelques secondes (l\'accueil se recharge).');
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); chargerTheme(); });
       });
 
@@ -467,8 +548,34 @@
           if (x.statut !== 200) return;
           afficherEvenement(x.r.evenement, x.r.fini);
           afficherBoss(x.r);
+          afficherProgrammeEvenements(x.r);
         });
       }
+      // Événements programmés (serveur/evenement.js, appliquerProgramme) : déclenchés et arrêtés tout seuls.
+      var programmeEvenements = [];
+      function afficherProgrammeEvenements(r) {
+        programmeEvenements = r.programme || [];
+        lignesProgramme(programmeEvenements, $('#evenement-periodes'),
+          function (p) { var f = EVENEMENTS[p.evenement]; return f.emoji + ' ' + p.evenement.replace('noel', 'Noël').replace('halloween', 'Halloween') + ' : du ' + minuteFr(p.debut) + ' au ' + minuteFr(p.fin); },
+          function (p) { return p.arrete ? 'fait' : p.lance ? 'en cours' : p.debut > r.maintenant ? 'à venir' : 'en attente d\'une visite'; },
+          envoyerProgrammeEvenements);
+      }
+      function envoyerProgrammeEvenements(programme) {
+        return appel('evenement', { programme: programme }).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return false; }
+          afficherEvenement(x.r.evenement, x.r.fini);
+          afficherBoss(x.r);
+          afficherProgrammeEvenements(x.r);
+          message('Programme des événements enregistré.');
+          return true;
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); return false; });
+      }
+      $('#evenement-ajout').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var p = { evenement: $('#evenement-ajout-choix').value, debut: $('#evenement-debut').value.slice(0, 16), fin: $('#evenement-fin').value.slice(0, 16) };
+        if (p.fin <= p.debut) { message('La fin de l\'événement doit venir après son début.', true); return; }
+        envoyerProgrammeEvenements(programmeEvenements.concat([p])).then(function (ok) { if (ok) $('#evenement-ajout').reset(); });
+      });
       // Le boss : en attente des personnages attrapés par tous, en combat, ou vaincu (et par qui).
       function afficherBoss(r) {
         var b = r.boss, f = EVENEMENTS[(r.evenement || r.fini || {}).nom] || fiche();
