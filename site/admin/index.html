@@ -137,6 +137,27 @@
     .choix-avatar .pastille { display: inline-grid; place-items: center; width: 2.3em; height: 2.3em; padding: 0; border-radius: 50%; background: var(--avatar-fond, var(--accent-doux)); font-size: 1.15rem; line-height: 1; }
     .choix-avatar .pastille.actuel { outline: 2px solid var(--accent); outline-offset: 2px; }
     .choix-avatar .pastille:disabled { opacity: .45; cursor: default; }
+    /* Activité : petits graphiques en colonnes (SVG), une couleur (l'accent), valeur au survol, chiffres en tableau */
+    .activite-graphiques { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    .graphique { position: relative; margin: 0; padding: 12px 14px 10px; border: 1px solid var(--ligne); border-radius: 14px; background: var(--fond); }
+    .graphique figcaption { display: grid; gap: 0; margin-bottom: 6px; }
+    .graphique figcaption strong { font-size: .95rem; }
+    .graphique .total { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+    .graphique figcaption small { color: var(--doux); font-size: .78rem; }
+    .graphique svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .graphique .barre { fill: var(--accent); }
+    .graphique .barre.actif { fill: color-mix(in srgb, var(--accent) 70%, var(--encre)); }
+    .graphique .grille { stroke: var(--ligne); stroke-width: 1; shape-rendering: crispEdges; }
+    .graphique text { fill: var(--doux); font: 9px "Space Grotesk", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+    .graphique .cible { fill: transparent; outline: none; }
+    .graphique .cible:focus-visible { stroke: var(--accent); stroke-width: 1; }
+    .graphique .infobulle { position: absolute; z-index: 1; padding: 4px 8px; border-radius: 8px; background: var(--encre); color: var(--carte); font-size: .8rem; line-height: 1.3; white-space: nowrap; pointer-events: none; }
+    .graphique .infobulle[hidden] { display: none; }
+    .graphique details { margin-top: 6px; font-size: .85rem; }
+    .graphique summary { color: var(--doux); cursor: pointer; }
+    .graphique table { margin-top: 4px; font-size: .82rem; }
+    .graphique td, .graphique th { padding: 3px 8px; }
+    .graphique caption { padding-top: 4px; caption-side: bottom; color: var(--doux); text-align: left; }
     /* Photos en série */
     .serie summary { cursor: pointer; font-size: 1.15rem; font-weight: 700; }
     .serie[open] summary { margin-bottom: 12px; }
@@ -331,6 +352,11 @@
             <tbody id="lignes-collections"></tbody>
           </table>
         </div>
+      </section>
+      <section class="support" id="activite">
+        <h2>📈 Activité</h2>
+        <p class="vide">La base ne garde pas d'historique jour par jour : un travail ou un élève compte au jour de sa dernière modification ou connexion (jours en heure UTC).</p>
+        <div class="activite-graphiques" id="activite-graphiques">Chargement…</div>
       </section>
       <details class="support serie" id="serie">
         <summary>🖼 Photos de profil en série</summary>
@@ -735,6 +761,7 @@
           comptes = x.r.comptes;
           afficher();
           remplirSerie();
+          chargerActivite();
           chargerSupport();
           chargerRobot();
           chargerCollectionsSite();
@@ -990,6 +1017,140 @@
               + ' (visible dans son logiciel dès qu\'il l\'ouvre ou y revient, avec une petite annonce).');
           charger();
         }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
+      }
+
+      /* Activité (GET /api/admin/activite) : trois petits graphiques en colonnes dessinés en SVG. Le survol ou le focus d'une
+         colonne donne sa valeur ; « Voir les chiffres » les met en tableau. Les jours et semaines sans rien sont remplis ici. */
+      var JOUR = 86400000;
+      var jourIso = function (t) { return new Date(t).toISOString().slice(0, 10); };
+      var jourCourt = function (iso) { return new Date(iso + 'T12:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' }); };
+      var compteDe = function (n, un, plusieurs) { return n + ' ' + (n > 1 ? plusieurs : un); };
+      function chargerActivite() {
+        appel('activite').then(function (x) {
+          var zone = $('#activite-graphiques');
+          if (x.statut !== 200) { zone.textContent = 'Activité indisponible : ' + (x.r.erreur || 'serveur ' + x.statut) + '.'; return; }
+          var parJour = {}, parSemaine = {};
+          (x.r.jours || []).forEach(function (j) { parJour[j.jour] = j; });
+          (x.r.semaines || []).forEach(function (s) { parSemaine[s.semaine] = s; });
+          var jours = [];
+          for (var i = 29; i >= 0; i--) {
+            var d = jourIso(Date.now() - i * JOUR);
+            jours.push(parJour[d] || { jour: d, travaux: 0, eleves: 0 });
+          }
+          var maintenant = new Date();
+          var lundi = Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), maintenant.getUTCDate()) - ((maintenant.getUTCDay() + 6) % 7) * JOUR;
+          var semaines = [];
+          for (var k = 11; k >= 0; k--) {
+            var s = jourIso(lundi - k * 7 * JOUR);
+            semaines.push(parSemaine[s] || { semaine: s, comptes: 0, eleves: 0 });
+          }
+          zone.replaceChildren(
+            graphique('Comptes créés', 'par semaine, sur 12 semaines', semaines.map(function (s) {
+              return { valeur: s.comptes, nom: 'Semaine du ' + jourCourt(s.semaine), axe: jourCourt(s.semaine), detail: s.eleves ? 'dont ' + compteDe(s.eleves, 'élève', 'élèves') : '' };
+            }), 'compte', 'comptes'),
+            graphique('Travaux modifiés', 'par jour de leur dernière modification, 30 jours', jours.map(function (j) {
+              return { valeur: j.travaux, nom: jourCourt(j.jour), axe: jourCourt(j.jour) };
+            }), 'travail', 'travaux'),
+            graphique('Élèves connectés', 'par jour de leur dernière connexion, 30 jours', jours.map(function (j) {
+              return { valeur: j.eleves, nom: jourCourt(j.jour), axe: jourCourt(j.jour) };
+            }), 'élève', 'élèves'));
+        }).catch(function (e) { $('#activite-graphiques').textContent = 'Impossible de joindre le serveur : ' + e.message; });
+      }
+      // Haut de l'axe : 1, 2 ou 5 × 10ⁿ juste au-dessus du maximum.
+      function hautAxe(max) {
+        var p = Math.pow(10, Math.floor(Math.log10(Math.max(1, max))));
+        return [1, 2, 5, 10].map(function (m) { return m * p; }).filter(function (v) { return v >= max; })[0];
+      }
+      // points : [{ valeur, nom (infobulle et tableau), axe (étiquette sous la colonne), detail }].
+      function graphique(titre, sous, points, un, plusieurs) {
+        var NS = 'http://www.w3.org/2000/svg';
+        var svgEl = function (balise, attributs) {
+          var e = document.createElementNS(NS, balise);
+          Object.keys(attributs).forEach(function (a) { e.setAttribute(a, attributs[a]); });
+          return e;
+        };
+        var L = 300, H = 120, G = 22, B = 16; // largeur, hauteur, marge des nombres à gauche, des dates en bas
+        var total = points.reduce(function (t, p) { return t + p.valeur; }, 0);
+        var haut = hautAxe(Math.max.apply(null, points.map(function (p) { return p.valeur; })));
+        var fig = document.createElement('figure');
+        fig.className = 'graphique';
+        var tete = document.createElement('figcaption');
+        var t = document.createElement('strong');
+        t.textContent = titre;
+        var tot = document.createElement('span');
+        tot.className = 'total';
+        tot.textContent = total.toLocaleString('fr-FR');
+        var st = document.createElement('small');
+        st.textContent = sous;
+        tete.append(t, tot, st);
+        var svg = svgEl('svg', { viewBox: '0 0 ' + L + ' ' + H, role: 'img', 'aria-label': titre + ' ' + sous + ' : ' + compteDe(total, un, plusieurs) + ' en tout' });
+        var y = function (v) { return (H - B) - v / haut * (H - B - 6); };
+        [0, haut].forEach(function (v) {
+          svg.append(svgEl('line', { class: 'grille', x1: G, x2: L, y1: y(v), y2: y(v) }));
+          var n = svgEl('text', { x: G - 4, y: y(v) + 3, 'text-anchor': 'end' });
+          n.textContent = v.toLocaleString('fr-FR');
+          svg.append(n);
+        });
+        var place = (L - G) / points.length, large = Math.min(24, Math.max(2, place - 2)); // 2 px d'air entre colonnes
+        var bulle = document.createElement('div');
+        bulle.className = 'infobulle';
+        bulle.hidden = true;
+        points.forEach(function (p, i) {
+          var x = G + i * place + (place - large) / 2, h = (H - B) - y(p.valeur), barre = null;
+          if (h > 0) {
+            var r = Math.min(4, h, large / 2), yh = y(p.valeur), yb = H - B; // bout arrondi, pied carré
+            barre = svgEl('path', { class: 'barre', d: 'M' + x + ',' + yb + 'V' + (yh + r) + 'Q' + x + ',' + yh + ' ' + (x + r) + ',' + yh
+              + 'H' + (x + large - r) + 'Q' + (x + large) + ',' + yh + ' ' + (x + large) + ',' + (yh + r) + 'V' + yb + 'Z' });
+            svg.append(barre);
+          }
+          var texte = p.valeur.toLocaleString('fr-FR') + ' ' + (p.valeur > 1 ? plusieurs : un);
+          var cible = svgEl('rect', { class: 'cible', x: G + i * place, y: 0, width: place, height: H - B, tabindex: 0, 'aria-label': p.nom + ' : ' + texte + (p.detail ? ', ' + p.detail : '') });
+          var montrer = function () {
+            if (barre) barre.classList.add('actif');
+            bulle.replaceChildren();
+            var v = document.createElement('strong');
+            v.textContent = texte;
+            bulle.append(v, ' · ' + p.nom + (p.detail ? ' (' + p.detail + ')' : ''));
+            bulle.hidden = false;
+            // Au-dessus de la colonne, rentrée vers l'intérieur près des bords.
+            var rc = cible.getBoundingClientRect(), rf = fig.getBoundingClientRect(), rs = svg.getBoundingClientRect();
+            bulle.style.left = (rc.left - rf.left + rc.width / 2) + 'px';
+            bulle.style.top = (rs.top - rf.top + y(p.valeur) * rs.width / L - 6) + 'px';
+            bulle.style.transform = 'translate(' + (i < points.length / 4 ? '-12px' : i > points.length * 3 / 4 ? 'calc(-100% + 12px)' : '-50%') + ', -100%)';
+          };
+          var cacher = function () { if (barre) barre.classList.remove('actif'); bulle.hidden = true; };
+          cible.addEventListener('pointerenter', montrer);
+          cible.addEventListener('focus', montrer);
+          cible.addEventListener('pointerleave', cacher);
+          cible.addEventListener('blur', cacher);
+          svg.append(cible);
+        });
+        [0, Math.floor((points.length - 1) / 2), points.length - 1].forEach(function (i, n) {
+          var e = svgEl('text', { x: n === 0 ? G : n === 2 ? L : G + (i + 0.5) * place, y: H - 3, 'text-anchor': n === 0 ? 'start' : n === 2 ? 'end' : 'middle' });
+          e.textContent = points[i].axe;
+          svg.append(e);
+        });
+        // Les mêmes chiffres en tableau (l'infobulle ne doit pas être le seul moyen de les lire).
+        var chiffres = document.createElement('details');
+        var resume = document.createElement('summary');
+        resume.textContent = 'Voir les chiffres';
+        var table = document.createElement('table');
+        var pleins = points.filter(function (p) { return p.valeur > 0; });
+        var legende = document.createElement('caption');
+        legende.textContent = pleins.length ? (pleins.length < points.length ? 'Les autres : 0.' : '') : 'Rien sur la période.';
+        table.append(legende);
+        pleins.slice().reverse().forEach(function (p) {
+          var tr = document.createElement('tr');
+          var a = document.createElement('td'), b = document.createElement('td');
+          a.textContent = p.nom;
+          b.className = 'nombre';
+          b.textContent = p.valeur.toLocaleString('fr-FR') + (p.detail ? ' (' + p.detail + ')' : '');
+          tr.append(a, b);
+          table.append(tr);
+        });
+        chiffres.append(resume, table);
+        fig.append(tete, svg, bulle, chiffres);
+        return fig;
       }
 
       // Rond d'un compte : sa photo sur sa couleur, ou son initiale sur un dégradé de la teinte de son nom (même calcul que

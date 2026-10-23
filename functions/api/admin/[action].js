@@ -3,6 +3,10 @@
 //
 //   GET  /api/admin/comptes                   → { stats, comptes: [{ identifiant, admin, enseignant, nom, badges, avatar, avatar_fond, classe, de, cree, derniere, versions, date, taille }] }
 //                                               (élève : nom = prénom, classe = nom de sa classe, de = identifiant de son enseignant)
+//   GET  /api/admin/activite                  → { semaines: [{ semaine, comptes, eleves }], jours: [{ jour, travaux, eleves }] }
+//                                               carte « 📈 Activité » : comptes créés par semaine (12 semaines, lundi « AAAA-MM-JJ ») ;
+//                                               par jour (30 jours), travaux dont c'est la dernière modification et élèves dont
+//                                               c'est la dernière connexion (la base ne garde pas d'historique jour par jour)
 //   GET  /api/admin/travail?identifiant=…     dernière version du travail d'un compte (gzip, en-têtes X-Version et X-Date) ; 404 s'il n'y en a pas
 //   POST /api/admin/mot-de-passe { identifiant, secret }  nouveau mot de passe (secret dérivé par la page) ; ferme ses sessions → 204
 //   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail (enseignant : aussi
@@ -132,6 +136,28 @@ const actions = {
         + 'GROUP BY c.id ORDER BY c.derniere DESC LIMIT 2000'),
     ]);
     return json({ stats: stats.results[0], comptes: liste.results });
+  },
+
+  // Agrégats SQL seulement (jours en UTC) ; les jours sans rien sont remplis par la page.
+  async activite(request, env) {
+    const il = (jours) => new Date(Date.now() - jours * 86400000).toISOString().slice(0, 10);
+    const [semaines, travaux, eleves] = await env.DB.batch([
+      env.DB.prepare('SELECT date(substr(cree, 1, 10), \'-6 days\', \'weekday 1\') AS semaine, count(*) AS comptes, '
+        + 'sum(classe IS NOT NULL) AS eleves FROM comptes WHERE cree >= ? GROUP BY semaine').bind(il(7 * 12 + 7)),
+      // La dernière version de chaque travail modifié depuis 30 jours (index sur la date).
+      env.DB.prepare('SELECT substr(d, 1, 10) AS jour, count(*) AS n FROM (SELECT max(date) AS d FROM sauvegardes WHERE date >= ? GROUP BY cle) '
+        + 'GROUP BY jour').bind(il(30)),
+      // Un élève jamais connecté a derniere = cree (créé par son enseignant) : pas compté.
+      env.DB.prepare('SELECT substr(derniere, 1, 10) AS jour, count(*) AS n FROM comptes WHERE classe IS NOT NULL AND derniere >= ? '
+        + 'AND derniere <> cree GROUP BY jour').bind(il(30)),
+    ]);
+    const parJour = new Map();
+    for (const r of travaux.results) parJour.set(r.jour, { jour: r.jour, travaux: r.n, eleves: 0 });
+    for (const r of eleves.results) (parJour.get(r.jour) || parJour.set(r.jour, { jour: r.jour, travaux: 0, eleves: 0 }).get(r.jour)).eleves = r.n;
+    return json({
+      semaines: semaines.results.map((r) => ({ semaine: r.semaine, comptes: r.comptes, eleves: r.eleves || 0 })),
+      jours: [...parJour.values()].sort((a, b) => (a.jour < b.jour ? -1 : 1)),
+    });
   },
 
   async travail(request, env) {
@@ -380,7 +406,7 @@ const actions = {
 };
 
 const METHODES = {
-  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'], avatar: ['POST'], avatars: ['POST'],
+  comptes: ['GET'], activite: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'], avatar: ['POST'], avatars: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'], robot: ['GET', 'POST'], 'robot-essai': ['POST'],
   evenement: ['GET', 'POST'], theme: ['GET', 'POST'], classement: ['GET'],
