@@ -227,7 +227,7 @@
         <div class="defile">
           <table>
             <thead>
-              <tr><th>Élève</th><th>Ajouté le</th><th>Dernière connexion</th><th>Dernière sauvegarde</th><th title="Collections réussies (tout juste à la vérification) ; 📌 exercices donnés réussis">Réussies</th><th>Actions</th></tr>
+              <tr><th>Élève</th><th>Ajouté le</th><th>Dernière connexion</th><th>Dernière sauvegarde</th><th title="✅ collections réussies (tout juste à la vérification), 🏆 réussies au niveau expert, 📌 exercices donnés réussis. Survoler une case : le détail et le niveau choisi par l'élève.">Réussies</th><th>Actions</th></tr>
             </thead>
             <tbody id="lignes"></tbody>
           </table>
@@ -615,7 +615,9 @@
       }
 
       // Collections réussies par chaque élève : lues dans son dernier travail sauvegardé (clés
-      // « boites-a-classer:reussi:<id> » posées par le logiciel), quatre élèves à la fois.
+      // « boites-a-classer:reussi:<id> » posées par le logiciel, « expert:<id> » pour un trophée 🏆 réussi au niveau
+      // expert, et le niveau choisi dans « reglage:niveau »), quatre élèves à la fois.
+      var NIVEAUX = { facile: '🌱 facile', normal: '🌿 normal', expert: '🌳 expert' };
       var NOMS = {};
       var nomSite = function (id) { var c = collectionsSite.filter(function (x) { return x.id === id; })[0]; return c ? c.nom : 'collection du site'; };
       (window.COLLECTIONS || []).forEach(function (c) { NOMS[c.id] = c.nom; });
@@ -636,11 +638,16 @@
             .then(function (donnees) {
               var ids = Object.keys(donnees).filter(function (k) { return k.indexOf('boites-a-classer:reussi:') === 0; })
                 .map(function (k) { return k.slice('boites-a-classer:reussi:'.length); });
+              var trophees = Object.keys(donnees).filter(function (k) { return k.indexOf('boites-a-classer:expert:') === 0; }).length;
+              var niveau = NIVEAUX[donnees['boites-a-classer:reglage:niveau']] || NIVEAUX.normal;
               var donnes = (classeChoisie() && classeChoisie().exercices) || [];
               var faits = donnes.filter(function (id) { return ids.indexOf(id) !== -1; }).length;
-              x.cellule.textContent = (ids.length ? '✅ ' + ids.length : '0') + (donnes.length ? ' · 📌 ' + faits + '/' + donnes.length : '');
+              x.cellule.textContent = (ids.length ? '✅ ' + ids.length : '0') + (trophees ? ' · 🏆 ' + trophees : '')
+                + (donnes.length ? ' · 📌 ' + faits + '/' + donnes.length : '');
               x.cellule.title = (ids.length ? 'Réussies : ' + ids.map(function (id) { return NOMS[id] || nomSite(id); }).join(', ') : 'Aucune collection réussie')
-                + (donnes.length ? '\nExercices donnés réussis : ' + faits + ' sur ' + donnes.length : '');
+                + (trophees ? '\nRéussies au niveau expert (🏆) : ' + trophees : '')
+                + (donnes.length ? '\nExercices donnés réussis : ' + faits + ' sur ' + donnes.length : '')
+                + '\nNiveau choisi : ' + niveau;
             })
             .catch(function () { x.cellule.textContent = '?'; })
             .then(suivant);

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.31.0';
+  const VERSION = '3.32.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -209,7 +209,8 @@
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'menu-niveau';
-        b.setAttribute('aria-pressed', String(cle === niveau()));
+        b.setAttribute('role', 'menuitemradio');
+        b.setAttribute('aria-checked', String(cle === niveau()));
         const ico = document.createElement('span');
         ico.className = 'niveau-ico';
         ico.textContent = d.ico;
@@ -369,6 +370,7 @@
     const titre = document.createElement('input');
     titre.className = 'boite-titre';
     titre.placeholder = 'Attribut…';
+    titre.setAttribute('aria-label', 'Attribut de la boîte');
     titre.value = b.texte || '';
     titre.addEventListener('input', () => {
       b.texte = titre.value;
@@ -384,12 +386,15 @@
     btnMenu.className = 'boite-menu ouvre-menu';
     btnMenu.textContent = '▾';
     btnMenu.title = 'Choisir un attribut';
+    btnMenu.setAttribute('aria-label', 'Choisir un attribut');
+    btnMenu.setAttribute('aria-haspopup', 'menu');
     btnMenu.addEventListener('click', (ev) => { ev.stopPropagation(); ouvrirMenu(btnMenu, b); });
 
     const btnSuppr = document.createElement('button');
     btnSuppr.className = 'boite-suppr';
     btnSuppr.textContent = '×';
     btnSuppr.title = 'Supprimer la boîte';
+    btnSuppr.setAttribute('aria-label', 'Supprimer la boîte');
     btnSuppr.addEventListener('click', () => {
       etat.boites = etat.boites.filter((x) => x !== b);
       sauver();
@@ -1498,12 +1503,95 @@
     $('#titre-editeur').textContent = estPerso(c) || estSite(c) ? 'Modifier la collection'
       : c.id.startsWith('site-') ? 'Nouvelle collection du site' : 'Nouvelle collection';
     edNom.value = brouillon.nom;
+    $('#ed-coller-message').textContent = '';
+    $('#ed-coller-bloc').open = false;
     $('#ed-matiere').value = brouillon.matiere || 'sciences';
     rendreAttributs();
     rendreTableau();
     verifierBrouillon();
     fenEditeur.showModal();
     if (nouvelle && !brouillon.nom) edNom.focus();
+  }
+
+  /* Remplir à partir d'un tableur : le tableau copié dans Excel, LibreOffice ou Google Sheets arrive en texte, cases
+     séparées par des tabulations (« ; » ou « , » pour un fichier CSV ouvert dans un éditeur de texte).
+     1re ligne : une case libre (ou « Nom »), une colonne « Dessin » si on veut, puis les attributs.
+     Ensuite une ligne par élément : son nom (un emoji devant si on veut : « 🐇 Lapin »), puis une marque (x, 1, oui…)
+     sous chacun de ses attributs ; une case vide, 0, non, -, ✗ veulent dire « non ». */
+  const EMOJI_DEVANT = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator})(?:[\u{FE0F}\u{200D}\p{Emoji_Modifier}\p{Regional_Indicator}]|\p{Extended_Pictographic})*)\s*(.*)$/u;
+  const MARQUE_NON = /^(0|non|no|n|faux|false|-|✗|✘|❌)$/i;
+
+  function lireTableur(texte) {
+    const lignes = texte.replace(/\r\n?/g, '\n').split('\n').filter((l) => l.trim());
+    if (lignes.length < 2) throw new Error('il faut au moins deux lignes : les attributs, puis un élément');
+    const sep = lignes[0].includes('\t') ? '\t' : lignes[0].includes(';') ? ';' : ',';
+    const cases = (l) => l.split(sep).map((c) => c.trim().replace(/^"(.*)"$/, '$1').trim());
+    const tete = cases(lignes[0]);
+    const dessin = /^(dessins?|emojis?|images?|ic[oô]nes?)$/i.test(tete[1] || '') ? 1 : 0;
+    const debut = 1 + dessin;
+    const attributs = tete.slice(debut).map((n) => n.slice(0, LIMITES.texte));
+    if (!attributs.some(Boolean)) throw new Error('la première ligne doit donner les attributs, à partir de la 2e case');
+    const etres = [];
+    for (const c of lignes.slice(1).map(cases)) {
+      let nom = c[0] || '';
+      let emoji = dessin ? (c[1] || '') : '';
+      const m = EMOJI_DEVANT.exec(nom);
+      if (m && m[2]) { if (!emoji) emoji = m[1]; nom = m[2]; }
+      if (!nom) continue;
+      etres.push({
+        nom: nom.slice(0, LIMITES.texte),
+        emoji: [...emoji].length <= 8 ? emoji : '',
+        marques: attributs.map((a, i) => !!a && !!c[debut + i] && !MARQUE_NON.test(c[debut + i])),
+      });
+    }
+    if (!etres.length) throw new Error('aucun élément trouvé sous la première ligne');
+    return { attributs, etres };
+  }
+
+  // Les attributs et éléments déjà là (même nom) sont mis à jour, les autres ajoutés, dans les limites d'une collection.
+  function collerTableur() {
+    const zone = $('#ed-coller-texte');
+    const msg = $('#ed-coller-message');
+    let t;
+    try { t = lireTableur(zone.value); } catch (e) { msg.textContent = '⚠️ Tableau illisible : ' + e.message + '.'; return; }
+    brouillon.attributs = brouillon.attributs.filter((a) => a.nom.trim());
+    brouillon.etres = brouillon.etres.filter(etreRempli);
+    let trop = 0;
+    const ids = t.attributs.map((nom) => {
+      if (!nom) return null;
+      let a = brouillon.attributs.find((x) => normaliser(x.nom) === normaliser(nom));
+      if (!a) {
+        if (brouillon.attributs.length >= LIMITES.attributs) { trop++; return null; }
+        a = attributVide();
+        a.nom = nom;
+        a.couleur = couleurLibre();
+        brouillon.attributs.push(a);
+      }
+      return a.id;
+    });
+    let ajoutes = 0, majs = 0;
+    for (const e of t.etres) {
+      let cible = brouillon.etres.find((x) => normaliser(x.nom) === normaliser(e.nom));
+      if (!cible) {
+        if (brouillon.etres.length >= LIMITES.etres) { trop++; continue; }
+        cible = etreVide();
+        brouillon.etres.push(cible);
+        ajoutes++;
+      } else majs++;
+      cible.nom = e.nom;
+      if (e.emoji) { cible.emoji = e.emoji; delete cible.image; }
+      cible.attributs = [...new Set([...cible.attributs.filter((id) => !ids.includes(id)), ...ids.filter((id, i) => id && e.marques[i])])];
+    }
+    if (!brouillon.attributs.length) brouillon.attributs.push(attributVide());
+    if (!brouillon.etres.length) brouillon.etres.push(etreVide());
+    rendreAttributs();
+    rendreTableau();
+    changement();
+    zone.value = '';
+    msg.textContent = `✅ ${pluriel(ids.filter(Boolean).length, 'attribut lu', 'attributs lus')}, ${pluriel(ajoutes, 'élément ajouté', 'éléments ajoutés')}`
+      + (majs ? `, ${pluriel(majs, 'mis à jour', 'mis à jour')}` : '')
+      + (trop ? ` (${trop} de trop : une collection a au plus ${LIMITES.attributs} attributs et ${LIMITES.etres} éléments)` : '')
+      + '. Vérifie le tableau ci-dessous, puis enregistre.';
   }
 
   function changement() {
@@ -1550,11 +1638,15 @@
     }));
   }
 
-  function ajouterAttribut() {
-    // Une couleur fixe, la première libre : supprimer un attribut ne change pas la couleur des autres.
+  // Une couleur fixe, la première libre : supprimer un attribut ne change pas la couleur des autres.
+  function couleurLibre() {
     const prises = new Set(brouillon.attributs.map(couleurBrouillon));
+    return PALETTE.find((c) => !prises.has(c)) || PALETTE[brouillon.attributs.length % PALETTE.length];
+  }
+
+  function ajouterAttribut() {
     const a = attributVide();
-    a.couleur = PALETTE.find((c) => !prises.has(c)) || PALETTE[brouillon.attributs.length % PALETTE.length];
+    a.couleur = couleurLibre();
     brouillon.attributs.push(a);
     rendreAttributs();
     rendreTableau();
@@ -1880,6 +1972,7 @@
   $('#ed-matiere').addEventListener('change', () => { brouillon.matiere = $('#ed-matiere').value; changement(); });
   $('#ed-ajout-attr').addEventListener('click', ajouterAttribut);
   $('#ed-ajout-etre').addEventListener('click', ajouterEtre);
+  $('#ed-coller').addEventListener('click', collerTableur);
   $('#ed-enregistrer').addEventListener('click', enregistrerBrouillon);
   edAnnuler.addEventListener('click', annulerEditeur);
   fenEditeur.querySelector('.fermer').addEventListener('click', annulerEditeur);
@@ -1909,8 +2002,13 @@
     menu = document.createElement('div');
     menu.className = 'menu' + (classe ? ' ' + classe : '');
     menu.dataset.cle = cle;
+    menu.setAttribute('role', 'menu');
     remplir(menu);
+    for (const b of menu.querySelectorAll(':scope > button:not([role])')) b.setAttribute('role', 'menuitem');
+    menu.addEventListener('keydown', clavierMenu);
     (ancre.closest('dialog') || document.body).appendChild(menu);
+    ancreMenu = ancre;
+    ancre.setAttribute('aria-expanded', 'true');
 
     const r = ancre.getBoundingClientRect();
     const larg = menu.offsetWidth;
@@ -1918,6 +2016,29 @@
     menu.style.left = borne(r.right - larg, 8, window.innerWidth - larg - 8) + 'px';
     const dessous = r.bottom + 4;
     menu.style.top = (dessous + haut > window.innerHeight - 8 ? Math.max(8, r.top - haut - 4) : dessous) + 'px';
+    // Ouvert au clavier : le focus va au choix en cours (niveau) ou au premier.
+    if (parClavier) {
+      const premier = menu.querySelector('[aria-checked="true"]') || menu.querySelector('button:not(:disabled), input');
+      if (premier) premier.focus();
+    }
+  }
+
+  // Clavier dans un menu : ↑ ↓ (← → dans la grille des dessins), Début et Fin passent d'un choix à l'autre ; Échap
+  // (plus bas) et Tab le referment en rendant le focus au bouton qui l'a ouvert.
+  let parClavier = false;
+  let ancreMenu = null;
+  document.addEventListener('keydown', () => { parClavier = true; }, true);
+  document.addEventListener('pointerdown', () => { parClavier = false; }, true);
+
+  function clavierMenu(ev) {
+    if (ev.key === 'Tab') { ev.preventDefault(); fermerMenu(); return; }
+    if (ev.target.closest('input, textarea, select')) return;
+    const choix = [...menu.querySelectorAll('button')].filter((b) => !b.disabled);
+    const i = choix.indexOf(document.activeElement);
+    const cible = { ArrowDown: i + 1, ArrowRight: i + 1, ArrowUp: i - 1, ArrowLeft: i - 1, Home: 0, End: choix.length - 1 }[ev.key];
+    if (cible === undefined || !choix.length) return;
+    ev.preventDefault();
+    choix[(cible + choix.length) % choix.length].focus();
   }
 
   function entreeMenu(texte, action, couleur) {
@@ -1968,7 +2089,15 @@
   }
 
   function fermerMenu() {
-    if (menu) { menu.remove(); menu = null; }
+    if (!menu) return;
+    const avaitFocus = menu.contains(document.activeElement);
+    menu.remove();
+    menu = null;
+    if (ancreMenu) {
+      ancreMenu.setAttribute('aria-expanded', 'false');
+      if (avaitFocus && ancreMenu.isConnected) ancreMenu.focus({ preventScroll: true });
+      ancreMenu = null;
+    }
   }
 
   document.addEventListener('pointerdown', (ev) => {
@@ -2181,6 +2310,7 @@
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
         titre('Plan de travail'),
+        ...(pleinEcranPossible() ? [entreeMenu(pleinEcran() ? '📺 Quitter le plein écran' : '📺 Plein écran (tableau de la classe)', basculerPleinEcran)] : []),
         entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
         ...(peutCreer() ? [entreeMenu('🧑‍🏫 Montrer la solution (enseignants)', montrerSolution)] : []),
         titre('Imprimer et partager'),
@@ -2195,6 +2325,19 @@
       if (voixPossible) m.appendChild(entreeMenu(voixActive() ? '🔇 Ne plus lire à voix haute' : '🔊 Lire les noms à voix haute', basculerVoix));
     });
   }
+
+  // Plein écran, pour le tableau numérique de la classe (Safari sur iPad : préfixe webkit ; rien sur iPhone).
+  const racine = document.documentElement;
+  const pleinEcranPossible = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  const pleinEcran = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  function basculerPleinEcran() {
+    fermerMenu();
+    const p = pleinEcran()
+      ? (document.exitFullscreen || document.webkitExitFullscreen).call(document)
+      : (racine.requestFullscreen || racine.webkitRequestFullscreen).call(racine);
+    if (p && p.catch) p.catch(() => { info.textContent = 'Le plein écran n\'est pas possible ici : essaie la touche F11.'; });
+  }
+  for (const evt of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(evt, () => { if (pleinEcran()) setTimeout(toutVoir, 120); }); // tout le travail à l'écran
 
   // Aide : montrée d'elle-même à la toute première visite, puis dans 🧰 Outils.
   const CLE_AIDE = 'boites-a-classer-aide:vue';

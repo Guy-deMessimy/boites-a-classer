@@ -493,6 +493,7 @@ body.consultation #exercices { display: none; }
   cursor: pointer;
 }
 .menu button:hover { background: var(--survol); color: var(--accent); }
+.menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--survol); }
 .menu hr { margin: 5px 4px; border: 0; border-top: 1px solid var(--ligne); }
 .menu-titre { margin: 8px 10px 3px; color: var(--doux); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .menu-titre:first-child { margin-top: 4px; }
@@ -503,8 +504,8 @@ body.consultation #exercices { display: none; }
 .menu-niveau .niveau-ico { font-size: 1.35rem; line-height: 1.2; }
 .menu-niveau strong { display: block; }
 .menu-niveau small { display: block; color: var(--doux); font-size: .8rem; line-height: 1.3; }
-.menu-niveau[aria-pressed="true"] { background: var(--fond-accent); }
-.menu-niveau[aria-pressed="true"] strong::after { content: " ✓"; color: var(--accent); }
+.menu-niveau[aria-checked="true"] { background: var(--fond-accent); }
+.menu-niveau[aria-checked="true"] strong::after { content: " ✓"; color: var(--accent); }
 #niveau .niveau-ico { font-size: 1.05rem; line-height: 1; }
 .pastille { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 25%, transparent); }
 
@@ -983,3 +984,7 @@ body.consultation #exercices { display: none; }
 #compte.connecte .avatar { background: var(--surface); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 35%, transparent); }
 .avatar.grand { width: 2.4em; height: 2.4em; font-size: 1.5rem; flex: none; }
 .sv-qui { display: flex; align-items: center; gap: .7rem; }
+
+/* Éditeur : remplir à partir d'un tableur. */
+.ed-coller summary { cursor: pointer; font-weight: 600; }
+.ed-coller textarea { width: 100%; box-sizing: border-box; margin-top: .3rem; padding: .5rem; border: 1px solid var(--ligne); border-radius: 10px; background: var(--surface); color: var(--encre); font: .85rem/1.4 ui-monospace, Menlo, Consolas, monospace; tab-size: 12; resize: vertical; }

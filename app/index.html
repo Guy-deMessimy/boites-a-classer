@@ -77,7 +77,7 @@
       <strong>Vérification</strong>
       <button id="fermer-bilan" aria-label="Fermer">×</button>
     </div>
-    <ul id="bilan-liste"></ul>
+    <ul id="bilan-liste" aria-live="polite"></ul>
   </aside>
 
   <div id="info">Touche ou survole un être vivant pour voir ses caractéristiques.</div>
@@ -122,6 +122,13 @@
       <label class="champ">Matière
         <select id="ed-matiere"></select>
       </label>
+      <details class="ed-bloc ed-coller" id="ed-coller-bloc">
+        <summary>📋 Remplir à partir d'un tableur (Excel, LibreOffice, Google Sheets)</summary>
+        <p class="aide">Dans le tableur : sur la 1<sup>re</sup> ligne, une case vide puis les attributs ; ensuite une ligne par élément, avec son nom (un emoji devant si tu veux : « 🐇&nbsp;Lapin »)&nbsp;et une croix (x, 1 ou oui) sous chacun de ses attributs. Sélectionne le tableau, copie-le, puis colle-le ici.</p>
+        <textarea id="ed-coller-texte" rows="5" spellcheck="false" aria-label="Tableau copié depuis un tableur" placeholder="&#9;plumes&#9;poils&#9;4 pattes&#10;🐦 Merle&#9;x&#9;&#9;&#10;🐇 Lapin&#9;&#9;x&#9;x"></textarea>
+        <div class="sv-boutons"><button type="button" class="btn" id="ed-coller">Remplir la collection avec ce tableau</button></div>
+        <p class="aide" id="ed-coller-message" role="status"></p>
+      </details>
       <section class="ed-bloc">
         <h3>1. Les attributs</h3>
         <p class="aide">Les caractères que l'on donne aux boîtes : plumes, 6 pattes, coquille…</p>
