@@ -147,6 +147,23 @@
     .niveau-ligne select { flex: 1 1 16rem; min-width: 0; max-width: 100%; }
     #etat-niveau { flex-basis: 100%; }
     #etat-niveau:empty { display: none; }
+    /* Bilan d'une collection */
+    #bilan:empty { display: none; }
+    .bilan-resume { margin: 12px 0 6px; font-weight: 600; }
+    .bilan-attrs { margin: 6px 0 14px; padding-left: 1.3rem; line-height: 1.6; }
+    .bilan-attrs small { color: var(--doux); }
+    .bilan-table td.bilan-cartes { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .bilan-barre { display: inline-block; width: 90px; height: 8px; margin-left: 8px; border-radius: 4px; background: var(--ligne); vertical-align: middle; overflow: hidden; }
+    .bilan-barre span { display: block; height: 100%; border-radius: 4px; background: var(--ok); }
+    .bilan-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    @media print {
+      body.imprime-bilan .codes, body.imprime-bilan #message { display: none !important; }
+      body.imprime-bilan .bilan-bloc { display: block !important; border: 0; padding: 0; margin: 0; }
+      body.imprime-bilan .bilan-bloc > p, body.imprime-bilan .bilan-actions { display: none !important; }
+      body.imprime-bilan .bilan-bloc .defile { display: block !important; }
+      body.imprime-bilan .bilan-barre, body.imprime-bilan .bilan-barre span { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body:not(.imprime-bilan) .bilan-bloc { display: none !important; }
+    }
     /* « Nouveaux codes pour toute la classe » peut passer sur deux lignes sur un écran de 320 px. */
     .tete-classe .bouton { max-width: 100%; white-space: normal; }
   </style>
@@ -229,6 +246,17 @@
           <p>Cochez les collections à faire : vos élèves les trouvent en haut de leur liste, dans le logiciel.</p>
           <div id="exercices" class="exercices"></div>
           <div class="ajout"><div><button type="button" class="bouton principal" id="enregistrer-exercices">Enregistrer les exercices</button><p id="etat-exercices"></p></div></div>
+        </section>
+
+        <section class="bloc bilan-bloc" id="bilan-bloc">
+          <h3>📊 Bilan d'une collection</h3>
+          <p>Pour chaque élève, d'après son dernier travail sauvegardé : collection réussie ou non, niveau, cartes bien placées. En haut, les attributs que la classe comprend le moins bien.</p>
+          <p class="niveau-ligne">
+            <label for="bilan-collection">Collection :</label>
+            <select id="bilan-collection"></select>
+            <button type="button" class="bouton principal" id="bilan-voir">Voir le bilan</button>
+          </p>
+          <div id="bilan" aria-live="polite"></div>
         </section>
 
         <section class="bloc ajout-bloc">
@@ -398,7 +426,7 @@
         var c = classeChoisie();
         $('#aucune').hidden = !!c;
         $('#classe').hidden = !c;
-        if (c) { $('#titre-classe').textContent = c.nom; afficherExercices(c); afficherNiveau(c); }
+        if (c) { $('#titre-classe').textContent = c.nom; afficherExercices(c); afficherNiveau(c); remplirBilan(c); }
       }
 
       /* Exercices donnés à la classe : collections fournies (app/collections.js) et collections du site. */
@@ -407,7 +435,7 @@
       var collectionsSite = [];
       fetch('/api/collections').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
         collectionsSite = Array.isArray(l) ? l : [];
-        if (classeChoisie()) afficherExercices(classeChoisie());
+        if (classeChoisie()) { afficherExercices(classeChoisie()); remplirBilan(classeChoisie()); }
       }).catch(function () {});
       function afficherExercices(c) {
         var choisis = c.exercices || [];
@@ -768,6 +796,7 @@
               return new Response(rep.body.pipeThrough(new DecompressionStream('gzip'))).json();
             })
             .then(function (donnees) {
+              travaux[x.e.id] = donnees; // gardé pour le bilan d'une collection
               var ids = Object.keys(donnees).filter(function (k) { return k.indexOf('boites-a-classer:reussi:') === 0; })
                 .map(function (k) { return k.slice('boites-a-classer:reussi:'.length); });
               var trophees = Object.keys(donnees).filter(function (k) { return k.indexOf('boites-a-classer:expert:') === 0; }).length;
@@ -787,6 +816,168 @@
         }
         for (var i = 0; i < 4; i++) suivant();
       }
+
+      /* Bilan d'une collection, calculé dans la page à partir du dernier travail de chaque élève (le même que pour
+         « Réussies ») : cartes bien placées avec la même règle que la vérification du logiciel (analyser dans
+         app/app.js : dans toutes les boîtes de ses attributs et seulement celles-là), erreurs comptées par attribut. */
+      var travaux = {}; // id de l'élève → données de son dernier travail sauvegardé
+      var ETRE = { l: 88, h: 76 }; // taille d'une carte sur le plan de travail du logiciel
+      var sansAccents = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+      function toutesCollections() { return (window.COLLECTIONS || []).concat(collectionsSite); }
+
+      function remplirBilan(c) {
+        var liste = $('#bilan-collection');
+        var avant = liste.value;
+        var groupes = [];
+        var donnes = toutesCollections().filter(function (col) { return (c.exercices || []).indexOf(col.id) !== -1; });
+        if (donnes.length) groupes.push(['📌 Exercices donnés à la classe', donnes]);
+        MATIERES.forEach(function (m) { groupes.push([m[1], (window.COLLECTIONS || []).filter(function (col) { return (col.matiere || 'sciences') === m[0]; })]); });
+        if (collectionsSite.length) groupes.push(['Collections du site', collectionsSite]);
+        liste.replaceChildren.apply(liste, groupes.filter(function (g) { return g[1].length; }).map(function (g) {
+          var og = document.createElement('optgroup');
+          og.label = g[0];
+          g[1].forEach(function (col) { og.appendChild(new Option(col.nom, col.id)); });
+          return og;
+        }));
+        if (avant && toutesCollections().some(function (col) { return col.id === avant; })) liste.value = avant;
+        $('#bilan').replaceChildren();
+      }
+
+      // Le travail d'un élève sur une collection : { justes, places, total, erreurs: { attribut: { n, etres: { nom: n } } } }.
+      function analyserTravail(col, plan) {
+        var attrs = {};
+        col.attributs.forEach(function (a) { attrs[a.id] = a; });
+        var boites = (plan && Array.isArray(plan.boites) ? plan.boites : []).map(function (b) {
+          var id = b && b.attr && attrs[b.attr] ? b.attr : null;
+          if (!id && b) col.attributs.forEach(function (a) { if (sansAccents(b.texte) && sansAccents(a.nom) === sansAccents(b.texte)) id = a.id; });
+          return { x: +b.x || 0, y: +b.y || 0, w: +b.w || 0, h: +b.h || 0, attr: id };
+        });
+        var positions = plan && plan.positions && typeof plan.positions === 'object' ? plan.positions : {};
+        var r = { total: col.etres.length, places: 0, justes: 0, erreurs: {} };
+        col.etres.forEach(function (e) {
+          var p = positions[e.id];
+          if (!p) return;
+          r.places++;
+          var cx = (+p.x || 0) + ETRE.l / 2, cy = (+p.y || 0) + ETRE.h / 2;
+          var dedans = boites.filter(function (b) { return cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h; });
+          var faux = !dedans.length;
+          boites.forEach(function (b) {
+            if (!b.attr || (dedans.indexOf(b) !== -1) === (e.attributs.indexOf(b.attr) !== -1)) return;
+            faux = true;
+            var x = r.erreurs[b.attr] || (r.erreurs[b.attr] = { n: 0, etres: {} });
+            x.n++;
+            x.etres[e.nom] = (x.etres[e.nom] || 0) + 1;
+          });
+          if (!faux) r.justes++;
+        });
+        return r;
+      }
+
+      // Lit les travaux pas encore lus (quatre à la fois), puis appelle fin().
+      function lireTravaux(fin) {
+        var file = eleves.filter(function (e) { return e.versions && !travaux[e.id]; });
+        var total = file.length, faits = 0, actifs = 0;
+        if (!total || typeof DecompressionStream !== 'function') { fin(); return; }
+        $('#bilan').textContent = 'Lecture des travaux… (0 sur ' + total + ')';
+        function suivant() {
+          var e = file.shift();
+          if (!e) { if (!actifs) fin(); return; }
+          actifs++;
+          fetch('/api/classe/travail?eleve=' + encodeURIComponent(e.id), { headers: { Authorization: 'Bearer ' + jeton } })
+            .then(function (rep) { if (!rep.ok) throw new Error(rep.status); return new Response(rep.body.pipeThrough(new DecompressionStream('gzip'))).json(); })
+            .then(function (d) { travaux[e.id] = d; })
+            .catch(function () {})
+            .then(function () { actifs--; faits++; $('#bilan').textContent = 'Lecture des travaux… (' + faits + ' sur ' + total + ')'; suivant(); });
+        }
+        for (var i = 0; i < 4; i++) suivant();
+      }
+
+      function afficherBilan() {
+        var c = classeChoisie();
+        var col = toutesCollections().filter(function (x) { return x.id === $('#bilan-collection').value; })[0];
+        if (!c || !col) return;
+        var el = function (balise, classe, texte) { var n = document.createElement(balise); if (classe) n.className = classe; if (texte !== undefined) n.textContent = texte; return n; };
+        var nomsAttr = {};
+        col.attributs.forEach(function (a) { nomsAttr[a.id] = a.nom; });
+        var parAttr = {}; // attribut → { n, eleves, etres }
+        var reussis = 0, avecTravail = 0, sommeJustes = 0;
+        var lignes = eleves.map(function (e) {
+          var d = travaux[e.id];
+          var tr = document.createElement('tr');
+          tr.appendChild(el('td', 'nom', e.nom));
+          if (!d) {
+            var td = el('td', 'jamais', e.versions ? 'travail illisible' : 'pas encore de travail sauvegardé');
+            td.colSpan = 3;
+            tr.appendChild(td);
+            return tr;
+          }
+          var plan = null;
+          try { plan = JSON.parse(d['boites-a-classer:' + col.id] || 'null'); } catch (err) { plan = null; }
+          var r = analyserTravail(col, plan);
+          var expert = !!d['boites-a-classer:expert:' + col.id], reussie = !!d['boites-a-classer:reussi:' + col.id];
+          if (reussie) reussis++;
+          if (r.places) { avecTravail++; sommeJustes += r.justes; }
+          Object.keys(r.erreurs).forEach(function (a) {
+            var x = parAttr[a] || (parAttr[a] = { n: 0, eleves: 0, etres: {} });
+            x.n += r.erreurs[a].n;
+            x.eleves++;
+            Object.keys(r.erreurs[a].etres).forEach(function (nom) { x.etres[nom] = (x.etres[nom] || 0) + r.erreurs[a].etres[nom]; });
+          });
+          tr.appendChild(el('td', '', expert ? '🏆 réussie (expert)' : reussie ? '✅ réussie' : '—'));
+          tr.appendChild(el('td', '', NIVEAUX[c.niveau || d['boites-a-classer:reglage:niveau']] || NIVEAUX.normal));
+          var cartes = el('td', 'bilan-cartes', r.places ? r.justes + ' / ' + r.total : 'pas commencée');
+          cartes.title = r.places ? r.places + ' carte' + (r.places > 1 ? 's' : '') + ' posée' + (r.places > 1 ? 's' : '') + ' sur ' + r.total + ', dont ' + r.justes + ' bien placée' + (r.justes > 1 ? 's' : '') : '';
+          if (r.places) {
+            var barre = el('span', 'bilan-barre');
+            barre.setAttribute('aria-hidden', 'true');
+            var plein = el('span');
+            plein.style.width = (100 * r.justes / r.total) + '%';
+            barre.appendChild(plein);
+            cartes.appendChild(barre);
+          }
+          tr.appendChild(cartes);
+          return tr;
+        });
+
+        var morceaux = [el('p', 'bilan-resume', '« ' + col.nom + ' » · classe ' + c.nom + ' · ' + reussis + ' élève' + (reussis > 1 ? 's' : '') + ' sur ' + eleves.length + (reussis > 1 ? ' l\'ont réussie' : ' l\'a réussie')
+          + (avecTravail ? ' · en moyenne ' + (Math.round(10 * sommeJustes / avecTravail) / 10).toString().replace('.', ',') + ' carte' + (sommeJustes / avecTravail >= 2 ? 's' : '') + ' bien placée' + (sommeJustes / avecTravail >= 2 ? 's' : '') + ' sur ' + col.etres.length + ' (élèves qui l\'ont commencée)' : ''))];
+        var pires = Object.keys(parAttr).sort(function (a, b) { return parAttr[b].n - parAttr[a].n; }).slice(0, 5);
+        morceaux.push(el('h4', '', pires.length ? 'Attributs les plus souvent mal compris' : 'Aucune erreur sur les cartes déjà placées 🎉'));
+        if (pires.length) {
+          var ol = el('ol', 'bilan-attrs');
+          pires.forEach(function (a) {
+            var x = parAttr[a];
+            var exemples = Object.keys(x.etres).sort(function (p, q) { return x.etres[q] - x.etres[p]; }).slice(0, 3)
+              .map(function (nom) { return nom + (x.etres[nom] > 1 ? ' (' + x.etres[nom] + ')' : ''); });
+            var li = el('li');
+            li.append(el('strong', '', '« ' + nomsAttr[a] + ' »'), ' : ' + x.n + ' erreur' + (x.n > 1 ? 's' : '') + ' chez ' + x.eleves + ' élève' + (x.eleves > 1 ? 's' : '') + ' ',
+              el('small', '', '— surtout ' + exemples.join(', ')));
+            ol.appendChild(li);
+          });
+          morceaux.push(ol);
+        }
+        var table = el('table', 'bilan-table');
+        var tete = el('tr');
+        ['Élève', 'Réussie', 'Niveau', 'Cartes bien placées'].forEach(function (t) { tete.appendChild(el('th', '', t)); });
+        var thead = el('thead'); thead.appendChild(tete);
+        var tbody = el('tbody'); tbody.append.apply(tbody, lignes);
+        table.append(thead, tbody);
+        var defile = el('div', 'defile'); defile.appendChild(table);
+        morceaux.push(defile);
+        var actions = el('div', 'bilan-actions');
+        var imprimer = el('button', 'bouton', '🖨 Imprimer le bilan');
+        imprimer.type = 'button';
+        imprimer.addEventListener('click', function () {
+          document.body.classList.add('imprime-bilan');
+          window.addEventListener('afterprint', function () { document.body.classList.remove('imprime-bilan'); }, { once: true });
+          window.print();
+        });
+        actions.appendChild(imprimer);
+        morceaux.push(actions);
+        $('#bilan').replaceChildren.apply($('#bilan'), morceaux);
+      }
+      $('#bilan-voir').addEventListener('click', function () { lireTravaux(afficherBilan); });
+      $('#bilan-collection').addEventListener('change', function () { $('#bilan').replaceChildren(); });
 
       $('#form-ajout').addEventListener('submit', function (ev) {
         ev.preventDefault();
