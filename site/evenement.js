@@ -87,7 +87,7 @@
   /* Fiches des événements : ce qui change d'un événement à l'autre. */
   var THEMES = {
     halloween: {
-      emoji: '🎃', de: "d'Halloween", police: 'Creepster',
+      emoji: '🎃', de: "d'Halloween", police: 'Creepster', site: 'Boîtes à hanter', // nom du site à son thème (serveur/theme.js)
       petit: { svg: FANTOME, emoji: '👻', un: 'fantôme', des: 'fantômes', attrape: 'Bouh !', coucou: 'Bouh !', vide: 'Ils courent toujours !',
         hauteur: [8, 68], duree: [10, 18] }, // ils flottent partout
       boss: { svg: ROI_FANTOMES, titre: '👑 Le Roi des fantômes', nom: 'le Roi des fantômes', Nom: 'Le Roi des fantômes', emoji: '⚔️',
@@ -101,7 +101,7 @@
       decor: decorHalloween,
     },
     noel: {
-      emoji: '🎄', de: 'de Noël', police: 'Mountains of Christmas',
+      emoji: '🎄', de: 'de Noël', police: 'Mountains of Christmas', site: 'Boîtes à lutins',
       petit: { svg: LUTIN, emoji: '🧝', un: 'lutin', des: 'lutins', attrape: 'Hop !', coucou: 'Coucou !', vide: 'Ils se cachent toujours !',
         hauteur: [38, 78], duree: [7, 12] }, // ils courent en sautillant dans le bas de l'écran
       boss: { svg: PERE_NOEL, titre: '🎅 Le Père Noël', nom: 'le Père Noël', Nom: 'Le Père Noël', emoji: '🎁',
@@ -786,13 +786,12 @@
     classes.forEach(function (c) { racine.classList.remove(c); });
     racine.classList.add('theme-' + nom);
     themePrete = { nom: nom, classes: classes, liens: liens, lien: lien, noms: [] };
-    // Le nom d'un autre événement (« Boîtes à hanter » pour Halloween) n'a pas de sens ici : « Boîtes à classer » le temps
-    // de l'événement.
+    // Le nom du site suit le thème prêté (« Boîtes à lutins » pour Noël) le temps de l'événement.
     var h1 = document.querySelector('h1');
     [[h1, 'textContent'], [document, 'title']].forEach(function (x) {
-      if (!x[0] || !/Boîtes à hanter/.test(x[0][x[1]])) return;
+      if (!x[0] || !/Boîtes à (classer|hanter|lutins)/.test(x[0][x[1]])) return;
       themePrete.noms.push([x[0], x[1], x[0][x[1]]]);
-      x[0][x[1]] = x[0][x[1]].replace(/Boîtes à hanter/g, 'Boîtes à classer');
+      x[0][x[1]] = x[0][x[1]].replace(/Boîtes à (classer|hanter|lutins)/g, THEMES[nom].site);
     });
   }
   function rendreTheme() {

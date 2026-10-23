@@ -180,6 +180,20 @@
         </div>
         <button type="button" class="bouton" id="basculer-site" disabled></button>
       </section>
+      <section class="etat-site evenement" id="etat-theme">
+        <div>
+          <strong id="theme-texte">Thème du site…</strong>
+          <span>Décor et bandeau de l'accueil, couleurs du logiciel et nom du site. Les pages ouvertes suivent en quelques secondes.</span>
+        </div>
+        <div class="evenement-actions">
+          <select id="theme-choix" aria-label="Thème du site">
+            <option value="normal">🔬 Normal : Boîtes à classer</option>
+            <option value="halloween">🎃 Halloween : Boîtes à hanter</option>
+            <option value="noel">🎄 Noël : Boîtes à lutins</option>
+          </select>
+          <button type="button" class="bouton" id="appliquer-theme" disabled>Appliquer</button>
+        </div>
+      </section>
       <section class="etat-site evenement" id="etat-evenement">
         <div>
           <strong id="evenement-texte">Événement…</strong>
@@ -364,7 +378,7 @@
         $('#etat-site').classList.toggle('arrete', arrete);
         $('#etat-texte').textContent = arrete ? '🔒 Le site est arrêté' : '🟢 Le site est ouvert';
         $('#etat-detail').textContent = arrete
-          ? 'Les visiteurs voient « Boîtes à classer revient dans peu de temps… ». Seule cette page reste accessible.'
+          ? 'Les visiteurs voient « ' + nomSite + ' revient dans peu de temps… ». Seule cette page reste accessible.'
           : 'Tout le monde peut utiliser le logiciel.';
         b.className = 'bouton ' + (arrete ? 'rouvrir' : 'arreter');
         b.textContent = arrete ? '🔓 Rouvrir le site' : '🔒 Arrêter le site';
@@ -387,6 +401,32 @@
           afficherEtat(x.r.active);
           message(x.r.active ? 'Site arrêté. Il faut quelques secondes pour que tout le monde voie le message.' : 'Site rouvert.');
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEtat(siteArrete); });
+      });
+
+      /* Thème du site (serveur/theme.js) : normal (sciences), Halloween ou Noël, indépendant des événements. */
+      var nomSite = document.title.replace(/^.*· /, ''), themeActuel = null;
+      function afficherTheme(r) {
+        themeActuel = r.theme;
+        nomSite = r.nom;
+        $('#theme-choix').value = r.theme;
+        $('#theme-texte').textContent = '🎨 Thème : ' + $('#theme-choix').selectedOptions[0].textContent;
+        $('#appliquer-theme').disabled = true;
+        document.title = document.title.replace(/Boîtes à (classer|hanter|lutins)/, r.nom);
+        if (r.theme === 'normal') delete document.documentElement.dataset.theme;
+        else document.documentElement.dataset.theme = r.theme;
+        if (siteArrete !== null) afficherEtat(siteArrete);
+      }
+      function chargerTheme() {
+        appel('theme').then(function (x) { if (x.statut === 200) afficherTheme(x.r); });
+      }
+      $('#theme-choix').addEventListener('change', function () { $('#appliquer-theme').disabled = $('#theme-choix').value === themeActuel; });
+      $('#appliquer-theme').addEventListener('click', function () {
+        $('#appliquer-theme').disabled = true;
+        appel('theme', { theme: $('#theme-choix').value }).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); chargerTheme(); return; }
+          afficherTheme(x.r);
+          message('Thème changé : les pages ouvertes le prennent en quelques secondes (l\'accueil se recharge).');
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); chargerTheme(); });
       });
 
       /* Événements (serveur/evenement.js : Noël, Halloween) : fond animé, personnages à attraper, boss et clip d'intro sur
@@ -494,6 +534,7 @@
           $('#contenu').hidden = false;
           $('#deconnecter').hidden = false;
           chargerEtat();
+          chargerTheme();
           chargerEvenement();
           $('#moi').textContent = 'Compte : ' + identifiant;
           var s = x.r.stats;
