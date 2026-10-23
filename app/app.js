@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.31.0';
+  const VERSION = '3.32.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -14,6 +14,8 @@
   const HISTOIRE_MAX = 50; // étapes gardées pour « Annuler »
 
   const $ = (s) => document.querySelector(s);
+  // Nom du site selon son thème (« Boîtes à hanter »… : serveur/theme.js), posé dans la barre par le serveur.
+  const nomSite = () => $('.titre-long').textContent;
   const espace = $('#espace');
   const toile = $('#toile');
   const calque = $('#calque');
@@ -259,7 +261,7 @@
     majInfoDefaut();
     majBoutonNiveau(); // le niveau a pu arriver avec la sauvegarde en ligne
     plateau.dataset.vide = `Tous les ${elements()[1]} sont placés.`;
-    document.title = `${coll.nom} · Boîtes à classer`; // onglets et favoris
+    document.title = `${coll.nom} · ${nomSite()}`; // onglets et favoris
     ecrire('boites-a-classer:collection', coll.id);
     fermerBilan();
     rendre();
@@ -2227,7 +2229,7 @@
     const lien = 'https://boites-a-classer.pages.dev/app/#collection=' + encodeURIComponent(coll.id)
       + (niveau() === 'normal' ? '' : '&niveau=' + niveau());
     try {
-      if (tactile.matches && navigator.share) await navigator.share({ title: `Boîtes à classer : ${coll.nom}`, url: lien });
+      if (tactile.matches && navigator.share) await navigator.share({ title: `${nomSite()} : ${coll.nom}`, url: lien });
       else await navigator.clipboard.writeText(lien);
       info.textContent = `🔗 Lien de « ${coll.nom} » ${tactile.matches && navigator.share ? 'partagé' : 'copié'} : ${lien}`;
     } catch (e) {
@@ -2349,7 +2351,7 @@
     if (vides.length) notes.push(`Boîtes vides, laissées de côté : ${vides.map((b) => `« ${b.texte || '?'} »`).join(', ')}.`);
     if (racine.enfants.some((f) => f.etre)) notes.push(`Les ${des} posés hors de toute boîte partent directement du tronc.`);
     $('#arbre-notes').replaceChildren(...notes.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
-    $('#arbre-titre').textContent = `Boîtes à classer · ${coll.nom} · ma classification en arbre`;
+    $('#arbre-titre').textContent = `${nomSite()} · ${coll.nom} · ma classification en arbre`;
     $('#fen-arbre').showModal();
   }
 
@@ -2393,7 +2395,7 @@
     const tbody = document.createElement('tbody');
     tbody.append(...lignes);
     t.replaceChildren(thead, tbody);
-    $('#tableau-titre').textContent = `Boîtes à classer · ${coll.nom} · tableau des caractères`;
+    $('#tableau-titre').textContent = `${nomSite()} · ${coll.nom} · tableau des caractères`;
     $('#fen-tableau').showModal();
   }
 
@@ -3817,6 +3819,14 @@
       s.onload = () => { if (window.hanter) window.hanter.suivre(e, fini, r); };
       document.head.appendChild(s);
     };
+    // Thème du site changé par un admin (serveur/theme.js) : couleurs (data-theme, style.css) et nom du site.
+    const suivreTheme = (theme, nom) => {
+      if (!theme || !nom) return;
+      if (theme === 'normal') delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = theme;
+      document.title = document.title.replace(nomSite(), nom);
+      $('.titre-long').textContent = nom;
+    };
     const ecouterSite = async () => {
       if (enCours || document.visibilityState !== 'visible') return;
       enCours = true;
@@ -3826,6 +3836,7 @@
         if (!rep.ok) throw new Error('serveur ' + rep.status);
         const r = await rep.json();
         connu = r.sig || '-';
+        suivreTheme(r.theme, r.nomSite);
         suivreEvenement(r.evenement || null, r.fini || null, r); // boss, et à la fin de l'événement : son classement
         enCours = false;
         ecouterSite();

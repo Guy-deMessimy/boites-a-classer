@@ -133,12 +133,27 @@ Depuis : aide « Comment ça marche ? » à la première visite (`boites-a-class
 
 Records et réglage de la voix sont gardés dans le navigateur, hors de la sauvegarde en ligne (`boites-a-classer-jeu:…`, `boites-a-classer-defi:…`, `boites-a-classer-voix`).
 
+## Thème du site (depuis la 3.32.0)
+
+Choisi dans la page admin (« 🎨 Thème », `POST /api/admin/theme { theme }`, `serveur/theme.js`, clé `theme` de la table `reglages`, pas de migration ; sans réglage : `normal`) :
+
+| Thème | Nom du site | Accueil |
+|---|---|---|
+| `normal` | Boîtes à classer | thème sciences, pas de bandeau |
+| `halloween` | Boîtes à hanter | `site/halloween/theme.css`, bandeau « 🎃 Événement d'Halloween prochainement… » |
+| `noel` | Boîtes à lutins | `site/noel/theme.css`, bandeau « 🎄 Événement de Noël prochainement… » |
+
+- Les fichiers gardent le nom « Boîtes à classer » et le thème sciences (c'est aussi ce que montre l'application de bureau). `functions/_middleware.js` habille chaque page HTML en l'envoyant (sauf les clips `site/halloween/` et `site/noel/`) : `data-theme` sur `<html>` (couleurs du logiciel, `app/style.css`), classe `theme-<nom>` et `<link>` du décor sur une page dont le `<html>` porte `data-decor` (l'accueil), retrait des éléments `data-theme-seul` d'un autre thème (bandeaux de l'accueil), nom du site dans `<title>` et dans les éléments `data-nom-site` (texte et attributs `content`, `title`, `aria-label` ; `data-nom-site="attributs"` : attributs seulement). Pas d'`ETag` sur ces pages : le navigateur les redemande en entier.
+- `GET /api/etat` renvoie `theme` et `nomSite` : le logiciel (`app/app.js`) et les pages du site (`site/arret.js`) les suivent sans recharger ; l'accueil se recharge 6 s après le changement.
+- Pour ajouter un nom ailleurs : écrire « Boîtes à classer » dans le fichier et marquer l'élément `data-nom-site` (dans le logiciel, `nomSite()`). Ne pas marquer le JSON-LD, le manifest, les noms de fichiers ni les cartes imprimées.
+- Pendant un événement, l'accueil prend le thème de l'événement et son nom (« Boîtes à lutins » pour Noël) le temps qu'il dure, quel que soit le thème du site.
+
 ## Noël (depuis la 3.29.0)
 
 Même mécanique qu'Halloween (voir plus bas), avec sa propre fiche dans `site/evenement.js` (moteur commun des événements, qui remplace `site/halloween/hanter.js` ; classes `hanter-…` et `window.hanter` gardées) :
 - **Thème** de l'accueil : `site/noel/theme.css` (nuit d'hiver, lune, motif `fond-noel.svg`, village enneigé `scene-noel.svg`, titres en Mountains of Christmas, `site/polices/mountains-of-christmas-latin.woff2`, licence Apache 2.0). Pas de bandeau avant l'événement : pendant et après, le moteur en crée un (progression, boss, « Voir le classement »).
 - **Événement** : dans la page admin, choisir « 🎄 Noël » dans la liste puis « ✨ Déclencher l'événement » (`POST /api/admin/evenement { nom: "noel" }`). Fond animé (neige, guirlande, traîneau), lutins 🧝 à attraper, clip d'intro `site/noel/index.html` (air de « Jingle Bells », domaine public), boss 🎅 le Père Noël (100 000 PV, −1 000 par clic), classement, badges : 🎅 `noel` + ✔ `verifie` pour celui qui a cliqué le plus sur le Père Noël, ⛄ `participation-noel` pour tous les participants. `VERSION_PAGES` = 4.
-- Après Noël : retirer `class="theme-noel"` et le `<link>` de `site/index.html`.
+- Avant et après Noël : thème du site (page admin) sur « Noël » ou « Normal ».
 
 ## Halloween (3.25.0 à 3.27.2, archivé depuis la 3.28.0)
 
@@ -146,12 +161,12 @@ Remis en mode Halloween (accueil, nom « Boîtes à hanter ») de la 3.30.0 à l
 
 Tout est gardé dans le dépôt (repère Git `halloween-2026` = dernier état actif) mais désactivé depuis la 3.28.0 : site renommé « Boîtes à classer », thème sciences sur l'accueil, bandeau habituel. Les badges gagnés restent sur les comptes et s'affichent toujours ; l'événement, ses points, le boss et le bouton admin marchent encore (le déclencher sans le thème : fantômes et boss partout, mais ni fond animé, ni clip, ni bandeau sur l'accueil).
 
-Pour le réactiver (Halloween prochain) : sur l'accueil (`site/index.html`), remettre `class="theme-halloween"` sur `<html>`, le `<link rel="stylesheet" href="halloween/theme.css">` après le `<style>`, et le bandeau `.annonce` « 🎃 Événement d'Halloween prochainement… » ; renommer en « Boîtes à hanter » si voulu (fichiers concernés : `git grep -l "Boîtes à hanter" halloween-2026 -- app site serveur` ; l'accueil d'alors : `git show halloween-2026:site/index.html`) ; puis déclencher l'événement depuis la page admin (cela remet points et boss à zéro).
+Pour le réactiver (Halloween prochain) : depuis la 3.32.0, choisir le thème « Halloween » dans la page admin (accueil, bandeau et nom « Boîtes à hanter » ; voir § Thème du site), puis déclencher l'événement (cela remet points et boss à zéro).
 
 Détail de ce qui a été fait :
 
 - **Thème** de l'accueil : `site/halloween/theme.css` (nuit, lune, motif `fond-halloween.svg`, silhouettes `scene-halloween.svg`, titres en Creepster, `site/polices/creepster-latin.woff2`, licence OFL). Pour revenir au thème sciences : retirer la classe `theme-halloween` de `<html>` et le `<link>` dans `site/index.html`, et remettre un bandeau `.annonce` ordinaire.
-- **Nom** (retiré en 3.28.0) : pendant Halloween, le site s'appelait « Boîtes à hanter » (titres des pages, accueil, pub, logiciel, page de maintenance ; pas l'adresse, ni les noms de fichiers, ni les cartes imprimées). Pour revenir : `grep -rl "Boîtes à hanter" app site/*.html site/*/index.html serveur | grep -v "site/app/\|nouveautes" | xargs sed -i '' 's/Boîtes à hanter/Boîtes à classer/g'` puis `./build.sh`. Le clip d'intro, lui, montre « classer » qui devient « hanter ».
+- **Nom** : pendant Halloween, le site s'appelait « Boîtes à hanter » (titres des pages, accueil, pub, logiciel, page de maintenance ; pas l'adresse, ni les noms de fichiers, ni les cartes imprimées). Depuis la 3.32.0, c'est le thème du site qui le donne. Le clip d'intro, lui, montre « classer » qui devient « hanter ».
 - **Événement** : bouton « 🎃 Déclencher l'événement » de la page admin (aujourd'hui : choisir « 🎃 Halloween » dans la liste ; `POST /api/admin/evenement { nom: "halloween" | null }`, `serveur/evenement.js`, table `reglages`, pas de migration). `GET /api/etat` renvoie `{ evenement }` ; `site/arret.js` et `app/app.js` (version web) chargent alors `site/halloween/hanter.js` : fond animé sur l'accueil, fantômes sur toutes les pages (on les attrape d'un clic sur le site ; dans le logiciel ils ne gênent pas les clics et 🧰 Outils → « Chasser les fantômes »), bandeau « a commencé », clip d'intro une fois par déclenchement (`site/halloween/index.html`, animation HTML de 18 s avec son Web Audio, aussi visible à https://boites-a-classer.pages.dev/halloween/). Les pages ouvertes attendent la réponse de `/api/etat?attendre=…` jusqu'à ce que l'état change : déclencher ou arrêter l'événement (ou le site) se voit en 3 à 5 s, sans recharger ; les pages d'avant la 3.25.2 reçoivent un 503 pendant l'événement et se rechargent une fois. Mouvements réduits demandés par l'appareil : ni fond animé, ni fantômes, ni clip automatique.
 - **Classement** (depuis la 3.26.0, migration 0010) : chaque fantôme attrapé d'un clic par un compte connecté rapporte un point (`POST /api/evenement/attrape`, un toutes les 2,5 s au plus, table `scores_evenement`). Arrêter l'événement le marque « fini » (`{ nom, depuis, fin }`) : `/api/etat` renvoie `fini`, et les pages ouvertes puis l'accueil montrent une fois le classement (`GET /api/evenement/classement`, 10 premiers ; identifiant, ou prénom pour un élève). La page admin le montre en direct. Redéclencher remet les points à zéro (second appui demandé).
 - **Boss** (depuis la 3.27.0, migration 0011) : quand la somme des points de tous atteint `SEUIL_BOSS` (30), `POST /api/evenement/attrape` crée le boss (`boss_evenement`, 100 000 PV). `/api/etat` envoie son état et un `sig` qui change à chaque coup : la barre de PV suit les coups de tous (3 s au plus). `POST /api/evenement/boss` : −1 000 PV par coup (compte connecté, un toutes les 0,5 s, table `coups_boss`). Le coup qui l'achève donne au compte qui a porté le plus de coups (ex aequo : arrivé le premier) les badges `verifie` et `halloween` (colonne `comptes.badges`, gardés après l'événement ; affichés dans le logiciel à côté du nom, dans les classements et dans la liste admin). Écran de victoire une fois par événement. Badge de participation `participation-halloween` (🧛) : donné dès le premier point ou le premier coup au boss (réponse `badge`, message et relecture du compte dans la page), et à l'arrêt de l'événement à tous ceux qui ont joué. Pendant le combat, plus de petits fantômes ; « Chasser les fantômes » cache aussi le boss.

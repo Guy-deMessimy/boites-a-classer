@@ -5,6 +5,8 @@
 //   temps… ».
 // - Événement déclenché (serveur/evenement.js : Halloween, Noël) : ses effets sont chargés (site/evenement.js), puis
 //   retirés quand l'admin l'arrête ; son classement est alors montré (et reste annoncé sur l'accueil à son thème).
+// - Thème du site changé par un admin (serveur/theme.js) : la page prend ses couleurs (data-theme) et le nom du site ;
+//   l'accueil, dont le décor et le bandeau viennent du serveur, se recharge.
 (function () {
   'use strict';
   if (window.top !== window) return; // dans un cadre (la pub de l'accueil) : la page autour s'en charge
@@ -20,6 +22,24 @@
     s.onload = function () { if (window.hanter) window.hanter.suivre(e, fini, r); };
     document.head.appendChild(s);
   }
+  var NOMS = /Boîtes à (classer|hanter|lutins)/g;
+  function suivreTheme(theme, nom) {
+    var racine = document.documentElement;
+    if (!theme || !nom || (racine.dataset.theme || 'normal') === theme) return;
+    if (racine.hasAttribute('data-decor')) {
+      // Quelques secondes : le temps que toutes les instances du serveur connaissent le nouveau thème.
+      setTimeout(function () { location.reload(); }, 6000);
+      return;
+    }
+    if (theme === 'normal') delete racine.dataset.theme;
+    else racine.dataset.theme = theme;
+    document.title = document.title.replace(NOMS, nom);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nom-site]'), function (e) {
+      ['content', 'title', 'aria-label'].forEach(function (a) { if (e.hasAttribute(a)) e.setAttribute(a, e.getAttribute(a).replace(NOMS, nom)); });
+      var texte = e.textContent.replace(NOMS, nom);
+      if (e.getAttribute('data-nom-site') !== 'attributs' && texte !== e.textContent) e.textContent = texte;
+    });
+  }
   function ecouter() {
     if (enCours || document.visibilityState !== 'visible') return;
     enCours = true;
@@ -28,6 +48,7 @@
       if (!rep.ok) throw new Error('serveur ' + rep.status);
       return rep.json().then(function (r) {
         connu = (r && r.sig) || '-';
+        suivreTheme(r && r.theme, r && r.nomSite);
         suivreEvenement((r && r.evenement) || null, (r && r.fini) || null, r || {});
         return true;
       });

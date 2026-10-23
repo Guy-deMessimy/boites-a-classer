@@ -25,6 +25,9 @@
 //                                                         boss: { pv, max, vaincu, chasseurs, gagnant } | null, total, seuil }
 //   POST /api/admin/evenement    { nom }                  déclenche l'événement (« halloween », classement remis à zéro) ou
 //                                                         l'arrête (null, classement gardé) → comme GET  (serveur/evenement.js)
+//   GET  /api/admin/theme                                 → { theme, nom, themes }  thème du site (serveur/theme.js)
+//   POST /api/admin/theme        { theme }                « halloween », « noel » ou « normal » : décor de l'accueil, couleurs du
+//                                                         logiciel et nom du site, suivis par les pages ouvertes → comme GET
 //   GET  /api/admin/classement                            → { participants, top: [{ nom, identifiant, eleve, points }] }
 //                                                         classement du dernier événement (en direct pendant l'événement)
 //
@@ -34,6 +37,7 @@ import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.j
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
 import { EVENEMENTS, lireEtat, changerEvenement, classement, oublierCache, SEUIL_BOSS } from '../../../serveur/evenement.js';
 import { effacerCompte } from '../../../serveur/classes.js';
+import { THEMES, lireTheme, changerTheme } from '../../../serveur/theme.js';
 
 const FORME_IDENTIFIANT = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const FORME_SECRET = /^[A-Za-z0-9_-]{43}$/;
@@ -268,6 +272,16 @@ const actions = {
     return json({ evenement: v && !v.fin ? v : null, fini: v && v.fin ? v : null, boss, total, seuil: SEUIL_BOSS });
   },
 
+  async theme(request, env) {
+    if (request.method === 'POST') {
+      const { theme } = await lireCorps(request);
+      if (!Object.hasOwn(THEMES, theme || '')) return erreur('« theme » doit valoir ' + Object.keys(THEMES).join(', '), 400);
+      await changerTheme(env, theme);
+    }
+    const theme = await lireTheme(env);
+    return json({ theme, nom: THEMES[theme].nom, themes: THEMES });
+  },
+
   async classement(request, env) {
     const v = (await lireEtat(env)).evenement;
     if (!v) return json({ participants: 0, top: [] });
@@ -285,7 +299,7 @@ const METHODES = {
   comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'], avatar: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'],
-  evenement: ['GET', 'POST'], classement: ['GET'],
+  evenement: ['GET', 'POST'], theme: ['GET', 'POST'], classement: ['GET'],
 };
 
 export async function onRequest({ request, env, params }) {
