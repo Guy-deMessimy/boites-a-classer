@@ -108,6 +108,8 @@ Avant de publier cette version : `npx wrangler d1 migrations apply boites-a-clas
 
 Depuis la 3.9.0, l'enseignant coche aussi des **exercices** pour chaque classe (colonne `classes.exercices`, JSON d'identifiants, `migrations/0009_exercices.sql`, `POST /api/classe/exercices`) : l'état du compte d'un élève les renvoie (`eleve.exercices`) et le logiciel les met en tête de la liste, dans « 📌 Donnés par ton enseignant ».
 
+L'enseignant peut aussi **imposer un niveau** à une classe (🌱 facile, 🌿 normal, 🌳 expert, ou « au choix de chaque élève ») : colonne `classes.niveau` (`migrations/0014_niveau_classe.sql`, à appliquer en `--remote` AVANT de publier), `POST /api/classe/niveau`, renvoyé dans `eleve.niveau`. Le logiciel de l'élève suit ce niveau (`niveauImpose()` dans `app.js`) : bouton du niveau verrouillé 🔒, autres niveaux grisés, lien `&niveau=` sans effet ; le niveau choisi par l'élève revient quand l'enseignant laisse le choix.
+
 ## Photo de profil (depuis la 3.29.1)
 
 Un admin donne à n'importe quel compte (élèves et admins compris) une photo de profil, qui est seulement un emoji : page `site/admin/`, « 🖼 Photo de profil » (20 emojis proposés, ou un autre, ou « Enlever la photo »). `POST /api/admin/avatar { identifiant, avatar | null }` n'accepte que des emojis (`FORME_AVATAR`), colonne `comptes.avatar` (`migrations/0012_avatar.sql`). L'état du compte la renvoie (`avatar`) : le logiciel la montre à la place de 👤 et dans la fenêtre du compte (relue à l'ouverture), et `nomAffiche` (`serveur/evenement.js`) la met devant le nom dans les classements et l'écran de victoire.

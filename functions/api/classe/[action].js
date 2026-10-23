@@ -1,10 +1,11 @@
 // API des classes (page site/classe/), réservée aux enseignants (comptes.est_enseignant, donné par un admin) et aux admins.
 // Voir serveur/classes.js. Un enseignant ne voit et ne modifie que ses classes et leurs élèves.
 //
-//   GET  /api/classe/liste                       → { classes: [{ id, nom, cree, eleves, exercices }] }
+//   GET  /api/classe/liste                       → { classes: [{ id, nom, cree, eleves, exercices, niveau }] }
 //   POST /api/classe/creer         { nom }       → { id, nom }
 //   POST /api/classe/renommer      { classe, nom } → 204
 //   POST /api/classe/exercices     { classe, ids: [id de collection…] } exercices donnés à la classe (30 au plus) → 204
+//   POST /api/classe/niveau        { classe, niveau: 'facile'|'normal'|'expert'|null } niveau imposé dans le logiciel des élèves → 204
 //   POST /api/classe/suppression   { classe }    efface la classe, les comptes de ses élèves et leur travail → 204
 //   GET  /api/classe/eleves?classe=…             → { classe: { id, nom }, eleves: [{ id, nom, avatar, avatar_fond, badges, cree, derniere, versions, date }] }
 //   POST /api/classe/ajouter       { classe, noms: [prénom…] } → { eleves: [{ id, nom, code }] }   codes montrés une seule fois
@@ -17,7 +18,7 @@
 
 import { sessionValide, hasard } from '../../../serveur/comptes.js';
 import { lireBadges } from '../../../serveur/evenement.js';
-import { nouveauCodeEleve, identifiantEleve, empreinteCode, effacerCompte, effacerClasse, lireExercices, FORME_ID_COLLECTION } from '../../../serveur/classes.js';
+import { nouveauCodeEleve, identifiantEleve, empreinteCode, effacerCompte, effacerClasse, lireExercices, FORME_ID_COLLECTION, NIVEAUX } from '../../../serveur/classes.js';
 
 const CLASSES_MAX = 30; // par enseignant
 const ELEVES_MAX = 60; // par classe
@@ -87,9 +88,9 @@ async function avecCodes(fabriquer) {
 
 const actions = {
   async liste(request, env, moi) {
-    const { results } = await env.DB.prepare('SELECT c.id, c.nom, c.cree, c.exercices, count(e.id) AS eleves FROM classes c '
+    const { results } = await env.DB.prepare('SELECT c.id, c.nom, c.cree, c.exercices, c.niveau, count(e.id) AS eleves FROM classes c '
       + 'LEFT JOIN comptes e ON e.classe = c.id WHERE c.enseignant = ? GROUP BY c.id ORDER BY c.nom COLLATE NOCASE').bind(moi).all();
-    return json({ classes: results.map((c) => ({ ...c, exercices: lireExercices(c.exercices) })) });
+    return json({ classes: results.map((c) => ({ ...c, exercices: lireExercices(c.exercices), niveau: NIVEAUX.includes(c.niveau) ? c.niveau : null })) });
   },
 
   async creer(request, env, moi) {
@@ -120,6 +121,16 @@ const actions = {
       return erreur('liste d\'exercices invalide (30 au plus)', 400);
     }
     await env.DB.prepare('UPDATE classes SET exercices = ? WHERE id = ?').bind(JSON.stringify([...new Set(corps.ids)]), c.id).run();
+    return rien();
+  },
+
+  async niveau(request, env, moi) {
+    const corps = await lireCorps(request);
+    const c = await maClasse(env, moi, corps.classe);
+    if (c instanceof Response) return c;
+    const niveau = corps.niveau === null || corps.niveau === '' ? null : corps.niveau;
+    if (niveau !== null && !NIVEAUX.includes(niveau)) return erreur('niveau inconnu', 400);
+    await env.DB.prepare('UPDATE classes SET niveau = ? WHERE id = ?').bind(niveau, c.id).run();
     return rien();
   },
 

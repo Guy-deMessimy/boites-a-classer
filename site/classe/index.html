@@ -207,6 +207,18 @@
         </section>
 
         <section class="bloc exercices-bloc">
+          <h3>🌿 Niveau dans le logiciel</h3>
+          <p>
+            <label>Niveau pour cette classe :
+              <select id="niveau-classe">
+                <option value="">Au choix de chaque élève</option>
+                <option value="facile">🌱 Facile : couleurs des attributs sur les cartes, correction en direct</option>
+                <option value="normal">🌿 Normal : attributs au survol, vérification à la demande</option>
+                <option value="expert">🌳 Expert : attributs cachés, vérification sans le pourquoi</option>
+              </select>
+            </label>
+            <span id="etat-niveau"></span>
+          </p>
           <h3>📌 Exercices donnés à la classe</h3>
           <p>Cochez les collections à faire : vos élèves les trouvent en haut de leur liste, dans le logiciel.</p>
           <div id="exercices" class="exercices"></div>
@@ -380,7 +392,7 @@
         var c = classeChoisie();
         $('#aucune').hidden = !!c;
         $('#classe').hidden = !c;
-        if (c) { $('#titre-classe').textContent = c.nom; afficherExercices(c); }
+        if (c) { $('#titre-classe').textContent = c.nom; afficherExercices(c); afficherNiveau(c); }
       }
 
       /* Exercices donnés à la classe : collections fournies (app/collections.js) et collections du site. */
@@ -415,6 +427,21 @@
         zone.replaceChildren.apply(zone, morceaux);
         $('#etat-exercices').textContent = choisis.length ? choisis.length + ' exercice' + (choisis.length > 1 ? 's' : '') + ' donné' + (choisis.length > 1 ? 's' : '') + '.' : 'Aucun exercice donné pour l\'instant.';
       }
+      // Niveau imposé à la classe (functions/api/classe/[action].js, action « niveau ») : le logiciel des élèves le suit.
+      function afficherNiveau(c) {
+        $('#niveau-classe').value = c.niveau || '';
+        $('#etat-niveau').textContent = '';
+      }
+      $('#niveau-classe').addEventListener('change', function () {
+        var c = classeChoisie();
+        var niveau = $('#niveau-classe').value || null;
+        appel('niveau', { classe: c.id, niveau: niveau }).then(function (x) {
+          if (x.statut !== 204) { echec(x); afficherNiveau(c); return; }
+          c.niveau = niveau;
+          $('#etat-niveau').textContent = '✓ Enregistré : vos élèves le verront à leur prochaine ouverture du logiciel.';
+        }).catch(function (e) { horsLigne(e); afficherNiveau(c); });
+      });
+
       $('#enregistrer-exercices').addEventListener('click', function () {
         var c = classeChoisie();
         var ids = Array.prototype.map.call(document.querySelectorAll('#exercices input:checked'), function (cb) { return cb.value; });
