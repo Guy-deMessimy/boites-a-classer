@@ -27,9 +27,11 @@
       --accent-doux: #e8effc;
       --faux: #c0392b;
       --ok: #1f9d55;
+      color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
       :root {
+        color-scheme: dark;
         --fond: #15171c;
         --carte: #1e2128;
         --encre: #ecedf0;
@@ -43,6 +45,46 @@
       }
     }
     * { box-sizing: border-box; }
+    /* Confort d'une page longue (3.41.3) : sommaire collant, sections repliables, « ↑ Haut », message toujours visible,
+       comptes en cartes sur téléphone, focus clavier visible partout. */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #contenu > section:focus, #contenu > details:focus { outline: none; } /* reçoivent le focus par le sommaire */
+    #contenu > section, #contenu > details { scroll-margin-top: 64px; }
+    .sommaire { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; margin: -8px -16px 20px; padding: 8px 16px; overflow-x: auto;
+      border-bottom: 1px solid var(--ligne); background: color-mix(in srgb, var(--fond) 92%, transparent); backdrop-filter: blur(6px); scrollbar-width: thin; }
+    .sommaire a { flex: none; padding: .3rem .75rem; border: 1px solid var(--ligne); border-radius: 999px; background: var(--carte); color: var(--encre);
+      font-size: .85rem; text-decoration: none; white-space: nowrap; }
+    .sommaire a:hover { border-color: var(--accent); }
+    .sommaire a[aria-current="true"] { border-color: var(--accent); background: var(--accent-doux); color: var(--accent); font-weight: 600; }
+    .sommaire a[hidden] { display: none; }
+    .repliable { position: relative; padding-right: 60px !important; }
+    .replier { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
+      border: 1px solid var(--ligne); border-radius: 50%; background: var(--carte); color: var(--doux); cursor: pointer; }
+    .replier::before { content: ""; width: 8px; height: 8px; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg); }
+    .replie > .replier::before { transform: translateY(2px) rotate(-135deg); }
+    .replier:hover { border-color: var(--accent); color: var(--accent); }
+    .repliable.replie > :not(h2):not(.replier) { display: none !important; }
+    .etat-site.replie > div:first-of-type { display: block !important; }
+    .etat-site.replie > div:first-of-type > :not(strong) { display: none; }
+    .repliable.replie h2 { margin-bottom: 0; }
+    .haut { position: fixed; right: 16px; bottom: 16px; z-index: 6; padding: .5rem 1rem; box-shadow: 0 4px 14px rgb(0 0 0 / .2); }
+    .haut[hidden] { display: none; }
+    #message:not(:empty) { position: sticky; bottom: 12px; z-index: 6; width: fit-content; max-width: min(640px, calc(100% - 110px)); padding: 10px 16px;
+      border: 1px solid var(--ligne); border-radius: 14px; background: var(--carte); box-shadow: 0 6px 20px rgb(0 0 0 / .16); cursor: pointer; }
+    #message:empty { display: none; }
+    .support .chiffres { margin-bottom: 0; }
+    @media (max-width: 700px) {
+      .table-comptes thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      .table-comptes, .table-comptes tbody, .table-comptes tr, .table-comptes td { display: block; width: 100%; }
+      .table-comptes tr { padding: 10px 14px; border-bottom: 1px solid var(--ligne); }
+      .table-comptes tr:last-child { border-bottom: 0; }
+      .table-comptes td { padding: 2px 0; border: 0; text-align: left; }
+      .table-comptes td.nombre { text-align: left; }
+      .table-comptes td[data-libelle]::before { content: attr(data-libelle) " : "; color: var(--doux); font-size: .82rem; }
+      .table-comptes td:first-child { padding-bottom: 6px; font-weight: 600; }
+      .table-comptes td.actions { min-width: 0; padding-top: 8px; }
+      .table-comptes tr.resultat td { padding: 8px 0; }
+    }
     body { margin: 0; background: var(--fond); color: var(--encre); font: 16px/1.5 "Space Grotesk", system-ui, sans-serif; }
     main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
     header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 24px; }
@@ -242,6 +284,7 @@
     </div>
 
     <div id="contenu" hidden>
+      <nav class="sommaire" id="sommaire" aria-label="Sommaire de la page"></nav>
       <section class="etat-site" id="etat-site">
         <div>
           <strong id="etat-texte">État du site…</strong>
@@ -320,7 +363,10 @@
         <p class="aide" id="classement-detail"></p>
         <button type="button" class="bouton" id="classement-actualiser">↻ Actualiser</button>
       </section>
-      <ul class="chiffres" id="chiffres"></ul>
+      <section class="support" id="section-chiffres">
+        <h2>📊 Chiffres</h2>
+        <ul class="chiffres" id="chiffres"></ul>
+      </section>
       <section class="support" id="support">
         <h2>💬 Service client <span class="badge" id="support-badge" hidden></span></h2>
         <p class="robot-etat"><span id="robot-texte">🤖 Robot : …</span> <button type="button" class="bouton" id="robot-basculer" hidden></button></p>
@@ -392,6 +438,8 @@
           <button type="button" class="bouton principal" id="serie-donner" disabled>Donner ces photos</button>
         </div>
       </details>
+      <section class="support" id="comptes">
+      <h2>👥 Comptes</h2>
       <div class="outils">
         <input id="filtre" type="search" placeholder="Chercher un identifiant" aria-label="Chercher un identifiant" autocomplete="off">
         <button type="button" class="bouton" id="actualiser">↻ Actualiser</button>
@@ -415,14 +463,16 @@
         <button type="button" class="bouton" id="exporter-csv">⬇ Exporter en CSV</button>
       </div>
       <div class="defile">
-        <table>
+        <table class="table-comptes">
           <thead>
             <tr><th>Identifiant</th><th>Créé le</th><th>Dernière utilisation</th><th>Dernière sauvegarde</th><th>Taille</th><th>Actions</th></tr>
           </thead>
           <tbody id="lignes"></tbody>
         </table>
       </div>
-      <p class="message" id="message" role="status"></p>
+      </section>
+      <p class="message" id="message" role="status" title="Cliquer pour effacer"></p>
+      <button type="button" class="bouton haut" id="haut" hidden>↑ Haut</button>
     </div>
   </main>
 
@@ -918,12 +968,15 @@
             nom.appendChild(pastille);
           }
           tr.appendChild(nom);
-          [date(c.cree), date(c.derniere), c.versions ? date(c.date) + ' (' + c.versions + ' v.)' : 'aucune'].forEach(function (t) {
+          // data-libelle : le nom de la colonne, montré devant la valeur quand la liste passe en cartes (téléphone).
+          [[date(c.cree), 'Créé le'], [date(c.derniere), 'Dernière utilisation'], [c.versions ? date(c.date) + ' (' + c.versions + ' v.)' : 'aucune', 'Dernière sauvegarde']].forEach(function (t) {
             var td = document.createElement('td');
-            td.textContent = t;
+            td.textContent = t[0];
+            td.dataset.libelle = t[1];
             tr.appendChild(td);
           });
           var tdTaille = document.createElement('td');
+          tdTaille.dataset.libelle = 'Taille';
           tdTaille.className = 'nombre';
           tdTaille.textContent = taille(c.taille);
           tr.appendChild(tdTaille);
@@ -1643,6 +1696,97 @@
 
       // Les nouveaux messages arrivent sans recharger la page.
       setInterval(function () { if (document.visibilityState === 'visible' && !$('#contenu').hidden) chargerSupport(); }, 30000);
+
+      /* Confort de la page : sommaire collant (lien actif selon la section à l'écran), sections repliables dont l'état est
+         gardé dans ce navigateur, « ↑ Haut », message en bas de l'écran (un clic l'efface). */
+      var SECTIONS = [
+        ['etat-site', '🟢 Site'], ['etat-theme', '🎨 Thème'], ['etat-evenement', '✨ Événement'], ['classement-evenement', '🏆 Classement'],
+        ['section-chiffres', '📊 Chiffres'], ['support', '💬 Service client'], ['activite', '📈 Activité'], ['collections-site', '📚 Collections'],
+        ['serie', '🖼 Photos en série'], ['comptes', '👥 Comptes'],
+      ];
+      var CLE_REPLIE = 'boites-a-classer-admin:replie:';
+      var reduire = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      function memoire(id, valeur) {
+        try { if (valeur === undefined) return localStorage.getItem(CLE_REPLIE + id); localStorage.setItem(CLE_REPLIE + id, valeur); } catch (e) { /* stockage indisponible */ }
+        return null;
+      }
+      function deplier(el, ouvert, garder) {
+        if (el.tagName === 'DETAILS') el.open = ouvert;
+        else {
+          el.classList.toggle('replie', !ouvert);
+          var b = el.querySelector(':scope > .replier');
+          b.setAttribute('aria-expanded', String(ouvert));
+          b.setAttribute('aria-label', (ouvert ? 'Replier « ' : 'Déplier « ') + b.dataset.nom + ' »');
+          b.title = ouvert ? 'Replier' : 'Déplier';
+        }
+        if (garder) memoire(el.id, ouvert ? 'ouvert' : 'replie');
+      }
+      var sommaire = $('#sommaire'), liens = {};
+      SECTIONS.forEach(function (s) {
+        var el = document.getElementById(s[0]);
+        if (!el) return;
+        el.tabIndex = -1;
+        var nom = s[1].replace(/^\S+\s/, '');
+        if (el.tagName === 'DETAILS') el.addEventListener('toggle', function () { memoire(el.id, el.open ? 'ouvert' : 'replie'); });
+        else {
+          el.classList.add('repliable');
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'replier';
+          b.dataset.nom = nom;
+          b.setAttribute('aria-controls', el.id);
+          b.addEventListener('click', function () { deplier(el, el.classList.contains('replie'), true); });
+          el.prepend(b);
+        }
+        var garde = memoire(el.id);
+        deplier(el, garde ? garde === 'ouvert' : el.tagName !== 'DETAILS' || el.open, false);
+        var a = document.createElement('a');
+        a.href = '#' + el.id;
+        a.textContent = s[1];
+        a.hidden = el.hidden;
+        a.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          deplier(el, true, true);
+          el.scrollIntoView({ behavior: reduire ? 'auto' : 'smooth', block: 'start' });
+          el.focus({ preventScroll: true });
+          history.replaceState(null, '', '#' + el.id);
+        });
+        liens[el.id] = a;
+        sommaire.appendChild(a);
+        // Le classement n'existe que pendant ou après un événement : son lien suit.
+        new MutationObserver(function () { a.hidden = el.hidden; }).observe(el, { attributes: true, attributeFilter: ['hidden'] });
+      });
+      // Lien actif : la dernière section dont le haut est passé sous le sommaire ; tout en bas de la page, la dernière à l'écran
+      // (une section courte en fin de page ne peut pas remonter jusque-là).
+      var actif = function () {
+        var courant = null, bas = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+        SECTIONS.forEach(function (s) {
+          var el = document.getElementById(s[0]);
+          if (el && !el.hidden && el.getBoundingClientRect().top <= (bas ? window.innerHeight - 80 : 90)) courant = s[0];
+        });
+        Object.keys(liens).forEach(function (id) { if (id === courant) liens[id].setAttribute('aria-current', 'true'); else liens[id].removeAttribute('aria-current'); });
+        // Sur un écran étroit, le sommaire défile de côté : son lien actif reste visible (sans bouger la page).
+        if (courant !== dernierActif) {
+          dernierActif = courant;
+          var l = courant && liens[courant];
+          sommaire.scrollTo({ left: l ? l.offsetLeft - (sommaire.clientWidth - l.offsetWidth) / 2 : 0, behavior: reduire ? 'auto' : 'smooth' });
+        }
+        $('#haut').hidden = window.scrollY < 500;
+      };
+      var dernierActif;
+      window.addEventListener('scroll', actif, { passive: true });
+      $('#haut').addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: reduire ? 'auto' : 'smooth' });
+        (sommaire.querySelector('a:not([hidden])') || sommaire).focus({ preventScroll: true });
+      });
+      $('#message').addEventListener('click', function () { message(''); });
+      // Une adresse avec #section (ex. …/admin/#comptes) y mène une fois la page chargée.
+      new MutationObserver(function (m, obs) {
+        if ($('#contenu').hidden) return;
+        obs.disconnect();
+        var cible = location.hash && document.getElementById(location.hash.slice(1));
+        if (cible && liens[cible.id]) { deplier(cible, true, false); setTimeout(function () { cible.scrollIntoView({ block: 'start' }); actif(); }, 50); }
+      }).observe($('#contenu'), { attributes: true, attributeFilter: ['hidden'] });
 
       $('#filtre').addEventListener('input', afficher);
       ['#filtre-role', '#filtre-classe', '#filtre-photo', '#filtre-badge'].forEach(function (s) { $(s).addEventListener('change', afficher); });
