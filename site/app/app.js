@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.36.0';
+  const VERSION = '3.37.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2279,6 +2279,7 @@
 
   function verifier() {
     noterSuivi('verifs');
+    if (tuto) tuto.verifie = true;
     fermerMenu();
     oublierVerification();
     const analyse = analyser();
@@ -2410,6 +2411,7 @@
         entreeMenu('🖨 Cartes à découper (activité sur papier)', imprimerCartes),
         entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
         titre('Aide'),
+        entreeMenu('🎓 Tutoriel pas à pas', lancerTuto),
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
         entreeMenu('⚙️ Réglages (taille, contraste, couleurs…)', ouvrirReglages),
         // Événement en cours (site/evenement.js) : fantômes ou lutins peuvent gêner une séance de travail.
@@ -2586,6 +2588,122 @@
   }
   $('#aide-ok').addEventListener('click', () => { ecrire(CLE_AIDE, '1'); $('#fen-aide').close(); });
   $('#fen-aide').addEventListener('close', () => ecrire(CLE_AIDE, '1'));
+  $('#aide-tuto').addEventListener('click', () => { $('#fen-aide').close(); lancerTuto(); });
+
+  /* Tutoriel pas à pas : une bulle guide la première partie (collection, boîte, attribut, carte, vérification). Elle
+     se pose près de ce qu'il faut toucher (en haut ou en bas de l'écran sur un téléphone), un anneau l'entoure, et
+     chaque étape passe toute seule quand c'est fait. Sautable, relancé par 🧰 Outils → Aide. Les animations suivent
+     « Moins d'animations » ; le texte est lu à voix haute si la lecture est active. */
+  let tuto = null; // { etape, boites (nombre au début de l'étape « boîte »), boite (id de la boîte du tutoriel), verifie, minuterie }
+  const bulleTuto = $('#tuto');
+  const anneauTuto = $('#tuto-anneau');
+  const boiteDuTuto = () => tuto && etat.boites.find((b) => b.id === tuto.boite);
+  // Une carte rangée dans une boîte qui a un attribut ?
+  const carteRangee = () => coll.etres.some((e) => {
+    const p = etat.positions[e.id];
+    if (!p) return false;
+    const c = centre(p);
+    return etat.boites.some((b) => b.attr && contient(b, c.x, c.y));
+  });
+  const ETAPES_TUTO = [
+    { texte: () => `👋 Bienvenue ! En cinq petites étapes, je te montre comment ranger des ${elements()[1]} dans des boîtes.`, bouton: 'Commencer' },
+    { cible: () => selColl, texte: () => '📚 Ici, tu choisis ce que tu vas classer : des animaux, des mots, des nombres… Garde celle-ci pour essayer.', bouton: 'Suivant' },
+    { cible: () => $('#nouvelle'), texte: () => '📦 Appuie sur « Nouvelle boîte » : une boîte apparaît sur le plan de travail.',
+      debut: () => { tuto.boites = etat.boites.length; },
+      fait: () => { if (etat.boites.length <= tuto.boites) return false; tuto.boite = etat.boites[etat.boites.length - 1].id; return true; } },
+    { cible: () => { const el = tuto.boite && elBoites.get(tuto.boite); return el && el.querySelector('.boite-menu'); },
+      texte: () => (tactile.matches && menu ? '🏷 Donne-lui un attribut : choisis-en un dans la liste.'
+        : '🏷 Donne-lui un attribut : appuie sur ▾ et choisis-en un (tu peux aussi l\'écrire dans la boîte).'),
+      fait: () => { const b = boiteDuTuto(); return !!(b && b.attr); }, retour: () => !boiteDuTuto() },
+    { cible: () => plateau.querySelector('.etre'),
+      texte: () => `✋ Glisse dans la boîte une carte qui possède cet attribut.${niveau() === 'expert' ? '' : ' Survole-la, ou touche-la, pour voir ses attributs.'}`,
+      fait: carteRangee },
+    { cible: () => $('#verifier'), texte: () => '✔ Appuie sur « Vérifier » : les cartes bien rangées deviennent vertes, les autres rouges.',
+      debut: () => { tuto.verifie = false; }, fait: () => tuto.verifie },
+    { cible: () => (bilan.hidden ? null : bilan), bouton: 'Terminer',
+      texte: () => `🎉 Bravo ! Continue : une boîte par attribut, et range tous les ${elements()[1]}. Une boîte peut aller dans une autre. Le tutoriel revient quand tu veux : 🧰 Outils → Aide.` },
+  ];
+
+  function lancerTuto() {
+    fermerMenu();
+    if (tuto) arreterTuto(false);
+    for (const d of document.querySelectorAll('dialog[open]')) d.close();
+    tuto = { etape: 0, boites: 0, boite: null, verifie: false, minuterie: setInterval(suivreTuto, 250) };
+    bulleTuto.hidden = false;
+    montrerEtape();
+  }
+
+  // fini : tout vu ou passé ; dans les deux cas le tutoriel ne revient plus de lui-même.
+  function arreterTuto(fini = true) {
+    if (!tuto) return;
+    clearInterval(tuto.minuterie);
+    tuto = null;
+    bulleTuto.hidden = true;
+    anneauTuto.hidden = true;
+    if (fini) ecrire(CLE_AIDE, '1');
+  }
+
+  function montrerEtape() {
+    const e = ETAPES_TUTO[tuto.etape];
+    if (e.debut) e.debut();
+    $('#tuto-compte').textContent = `Étape ${tuto.etape + 1} sur ${ETAPES_TUTO.length}`;
+    const texte = e.texte();
+    $('#tuto-texte').textContent = texte;
+    const suivant = $('#tuto-suivant');
+    suivant.hidden = !e.bouton;
+    suivant.textContent = e.bouton || '';
+    $('#tuto-passer').hidden = tuto.etape === ETAPES_TUTO.length - 1;
+    placerTuto();
+    if (e.bouton) suivant.focus({ preventScroll: true }); // sinon le focus reste là où l'élève travaille
+    dire(texte.replace(/^\P{L}+/u, ''));
+  }
+
+  function avancerTuto(pas = 1) {
+    tuto.etape = borne(tuto.etape + pas, 0, ETAPES_TUTO.length - 1);
+    montrerEtape();
+  }
+
+  function suivreTuto() {
+    if (!tuto) return;
+    const e = ETAPES_TUTO[tuto.etape];
+    if (e.retour && e.retour()) { avancerTuto(-1); return; } // la boîte du tutoriel a été supprimée
+    if (e.fait && e.fait()) { avancerTuto(); return; }
+    placerTuto();
+  }
+
+  // La bulle près de sa cible (dessous, sinon dessus ; toute la largeur sur un téléphone), ou au milieu de l'écran (en bas
+  // sur un téléphone). Cachée pendant qu'une fenêtre est ouverte (elle passerait dessous).
+  function placerTuto() {
+    const e = ETAPES_TUTO[tuto.etape];
+    const cible = e.cible ? e.cible() : null;
+    const fenetre = !!document.querySelector('dialog[open]');
+    bulleTuto.classList.toggle('cachee', fenetre);
+    const r = cible && cible.isConnected ? cible.getBoundingClientRect() : null;
+    const visible = r && r.width > 0 && r.height > 0 && !fenetre;
+    anneauTuto.hidden = !visible;
+    if (visible) {
+      Object.assign(anneauTuto.style, { left: r.left - 6 + 'px', top: r.top - 6 + 'px', width: r.width + 12 + 'px', height: r.height + 12 + 'px' });
+    }
+    const l = bulleTuto.offsetWidth, h = bulleTuto.offsetHeight;
+    let x, y, cote = '';
+    if (visible) {
+      // Juste sous la cible, sinon juste au-dessus : la bulle ne cache ni la cible ni le haut du plan de travail.
+      x = petitEcran.matches ? 8 : borne(r.left + r.width / 2 - l / 2, 8, window.innerWidth - l - 8);
+      if (r.bottom + 14 + h < window.innerHeight - 8) { y = r.bottom + 14; cote = 'haut'; } else { y = Math.max(8, r.top - 14 - h); cote = 'bas'; }
+      bulleTuto.style.setProperty('--fleche', borne(r.left + r.width / 2 - x, 18, l - 18) + 'px');
+    } else {
+      x = (window.innerWidth - l) / 2;
+      y = petitEcran.matches ? window.innerHeight - h - 8 : (window.innerHeight - h) / 2;
+    }
+    bulleTuto.dataset.fleche = cote;
+    bulleTuto.style.left = Math.round(x) + 'px';
+    bulleTuto.style.top = Math.round(y) + 'px';
+  }
+  window.addEventListener('resize', () => { if (tuto) placerTuto(); });
+  $('#tuto-suivant').addEventListener('click', () => {
+    if (tuto.etape === ETAPES_TUTO.length - 1) { arreterTuto(); info.textContent = '🎓 Tutoriel terminé. Il revient quand tu veux : 🧰 Outils → Aide.'; } else avancerTuto();
+  });
+  $('#tuto-passer').addEventListener('click', () => { arreterTuto(); info.textContent = '🎓 Tutoriel passé. Il revient quand tu veux : 🧰 Outils → Aide.'; });
 
   for (const f of ['#fen-aide', '#fen-arbre', '#fen-tableau', '#fen-jeu', '#fen-parcours', '#fen-reglages']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
 
@@ -4224,7 +4342,8 @@
       history.replaceState(null, '', location.pathname + location.search);
       ouvrirSauvegarde();
     }
-    if (!lire(CLE_AIDE) && !document.body.classList.contains('consultation') && !document.querySelector('dialog[open]')) ouvrirAide();
+    // Toute première visite : le tutoriel pas à pas (« Comment ça marche ? » reste dans 🧰 Outils → Aide).
+    if (!lire(CLE_AIDE) && !document.body.classList.contains('consultation') && !document.querySelector('dialog[open]')) lancerTuto();
     if (recus) info.textContent = `Le site a changé d'adresse : ton travail a suivi (${pluriel(recus, 'élément récupéré', 'éléments récupérés')}).`;
     synchroniser();
   }

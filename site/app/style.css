@@ -1100,3 +1100,50 @@ body.consultation #exercices { display: none; }
 :root.calme *, :root.calme *::before, :root.calme *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 :root.calme .etre.en-main { rotate: none; }
 :root.calme .etre.indice { outline: 3px solid var(--manque); outline-offset: 2px; }
+
+/* Tutoriel pas à pas : la bulle (au-dessus du plan, sous les menus) et l'anneau autour de ce qu'il faut toucher. */
+.tuto {
+  position: fixed;
+  z-index: 2500;
+  width: min(340px, calc(100vw - 16px));
+  box-sizing: border-box;
+  padding: .8rem .9rem .75rem;
+  background: var(--surface);
+  color: var(--encre);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  box-shadow: var(--ombre-3);
+}
+.tuto[hidden] { display: none; }
+.tuto.cachee { visibility: hidden; }
+.tuto-compte { margin: 0 0 .2rem; color: var(--accent); font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.tuto-texte { margin: 0 0 .7rem; font-size: .95rem; line-height: 1.45; }
+.tuto-boutons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+.tuto-boutons .btn { min-height: 34px; padding: .3rem .75rem; }
+.tuto-boutons .btn[hidden] { display: none; }
+#tuto-passer { border-color: transparent; box-shadow: none; background: none; color: var(--doux); }
+.tuto[data-fleche="haut"]::before, .tuto[data-fleche="bas"]::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--fleche, 50%) - 9px);
+  width: 14px;
+  height: 14px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  rotate: 45deg;
+}
+.tuto[data-fleche="haut"]::before { top: -9px; border-right: 0; border-bottom: 0; }
+.tuto[data-fleche="bas"]::before { bottom: -9px; border-left: 0; border-top: 0; }
+.tuto-anneau {
+  position: fixed;
+  z-index: 2400;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent);
+  animation: tuto-pouls 1.4s ease-in-out infinite;
+}
+.tuto-anneau[hidden] { display: none; }
+@keyframes tuto-pouls { 50% { box-shadow: 0 0 0 3px var(--accent), 0 0 0 14px color-mix(in srgb, var(--accent) 0%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .tuto-anneau { animation: none; } }
+@media print { .tuto, .tuto-anneau { display: none !important; } }
+@media (max-width: 700px) { .tuto { width: calc(100vw - 16px); } }
