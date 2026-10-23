@@ -535,13 +535,14 @@
 
       // Petite carte de profil d'un élève (../app/profil.css, comme la carte du logiciel) : photo donnée par l'admin, ou
       // son initiale sur un dégradé de la même teinte que dans le logiciel ; prénom ; médailles gagnées aux événements.
-      // Un clic l'ouvre en grand (montrerCarte). Médaille : id, emoji, titre, famille, nom court et précision (grande carte).
+      // Un clic l'ouvre en grand (montrerCarte). Médaille : id, emoji, titre, famille, nom court et précision (grande carte),
+      // comment la gagner (« Toutes les médailles », comme COMMENT_MEDAILLE dans app/app.js).
       var MEDAILLES = [
-        ['verifie', '✔', 'Vérifié par le site', 'verifie', 'Vérifié', 'par le site'],
-        ['halloween', '🎃', 'Halloween : Roi des fantômes vaincu', 'or', 'Halloween', 'Roi des fantômes vaincu'],
-        ['participation-halloween', '🧛', 'Participation à Halloween', 'argent', 'Participation', 'Halloween'],
-        ['noel', '🎅', 'Noël : Père Noël vaincu', 'or', 'Noël', 'Père Noël vaincu'],
-        ['participation-noel', '⛄', 'Participation à Noël', 'argent', 'Participation', 'Noël'],
+        ['verifie', '✔', 'Vérifié par le site', 'verifie', 'Vérifié', 'par le site', 'Porter le plus de coups au boss d\'un événement'],
+        ['halloween', '🎃', 'Halloween : Roi des fantômes vaincu', 'or', 'Halloween', 'Roi des fantômes vaincu', 'Porter le plus de coups au Roi des fantômes pendant Halloween'],
+        ['participation-halloween', '🧛', 'Participation à Halloween', 'argent', 'Participation', 'Halloween', 'Attraper un fantôme ou frapper le boss pendant Halloween'],
+        ['noel', '🎅', 'Noël : Père Noël vaincu', 'or', 'Noël', 'Père Noël vaincu', 'Porter le plus de coups au Père Noël pendant Noël'],
+        ['participation-noel', '⛄', 'Participation à Noël', 'argent', 'Participation', 'Noël', 'Attraper un lutin ou frapper le Père Noël pendant Noël'],
       ];
       function teinte(nom) { // même calcul que teinte() dans app/app.js
         var h = 7;
@@ -635,6 +636,19 @@
             liste.appendChild(li);
           });
         } else liste = el('p', 'cp-vide', 'Pas encore de médaille : on en gagne pendant les événements du site.');
+        // Toutes les médailles du site (comme dans son logiciel, sans les dates, que seul son appareil connaît).
+        var toutes = el('details', 'cp-toutes');
+        toutes.appendChild(el('summary', '', '🏅 Toutes les médailles · ' + gagnees.length + ' sur ' + MEDAILLES.length));
+        var grille = el('ul', 'cp-grille');
+        MEDAILLES.forEach(function (m) {
+          var a = (e.badges || []).indexOf(m[0]) >= 0;
+          var li = el('li', 'medaille ' + m[3] + (a ? '' : ' manquante'));
+          li.title = m[2] + (a ? '' : ' : pas encore gagnée');
+          li.append(el('span', 'm-ruban'), el('span', 'm-disque', m[1]), el('span', 'm-nom', m[4]), el('span', 'm-detail', m[5]),
+            a ? el('span', 'm-etat', '✓ Gagnée') : el('span', 'm-comment', m[6] || 'Pendant un événement du site'));
+          grille.appendChild(li);
+        });
+        toutes.appendChild(grille);
         var suivi = el('ul', 'cp-suivi');
         var ligne = function (texte) { suivi.appendChild(el('li', '', texte)); };
         var c = classeChoisie();
@@ -657,7 +671,7 @@
         }
         var fermer = bouton('Fermer', function () { fen.close(); }, 'principal');
         pied.appendChild(fermer);
-        carte.append(el('div', 'cp-bandeau'), identite, titre, liste, suivi, pied);
+        carte.append(el('div', 'cp-bandeau'), identite, titre, liste, toutes, suivi, pied);
         fen.setAttribute('aria-label', 'Carte de profil de ' + e.nom);
         fen.replaceChildren(carte);
         if (!fen.open) fen.showModal();

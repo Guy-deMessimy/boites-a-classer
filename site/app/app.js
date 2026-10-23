@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.39.0';
+  const VERSION = '3.40.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -3295,7 +3295,9 @@
   const CLE_BADGES = 'boites-a-classer-compte:badges'; // badges gagnés pendant les événements, en JSON (serveur/evenement.js)
   const CLE_AVATAR = 'boites-a-classer-compte:avatar'; // photo de profil (un emoji choisi par un admin), à la place de 👤
   const CLE_AVATAR_FOND = 'boites-a-classer-compte:avatar-fond'; // couleur de son rond (app/profil.css, [data-fond])
-  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES, CLE_AVATAR, CLE_AVATAR_FOND];
+  // Quand cet appareil a vu chaque badge pour la première fois : { badge: date ISO, ou null s'il était déjà là } (« 🏅 Mes médailles »).
+  const CLE_BADGES_VUS = 'boites-a-classer-compte:badges-vus';
+  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES, CLE_AVATAR, CLE_AVATAR_FOND, CLE_BADGES_VUS];
   const SITE = RACINE_API.slice(0, -'/api'.length); // pages du site (« Mes classes »)
   const FORME_CODE_ELEVE = /^[A-HJKMNP-Z2-9]{8}$/; // code de connexion d'un élève (serveur/classes.js)
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
@@ -3537,6 +3539,7 @@
     if (etat && etat.enseignant) ecrire(CLE_ENSEIGNANT, '1'); else oublier(CLE_ENSEIGNANT);
     if (etat && etat.eleve) ecrire(CLE_ELEVE, JSON.stringify(etat.eleve)); else oublier(CLE_ELEVE);
     if (etat && Array.isArray(etat.badges) && etat.badges.length) ecrire(CLE_BADGES, JSON.stringify(etat.badges)); else oublier(CLE_BADGES);
+    if (etat && Array.isArray(etat.badges)) noterBadgesVus(etat.badges);
     if (etat && typeof etat.avatar === 'string' && etat.avatar) ecrire(CLE_AVATAR, etat.avatar); else oublier(CLE_AVATAR);
     if (etat && etat.avatar && typeof etat.avatar_fond === 'string' && etat.avatar_fond) ecrire(CLE_AVATAR_FOND, etat.avatar_fond); else oublier(CLE_AVATAR_FOND);
   }
@@ -3632,8 +3635,66 @@
       titre.textContent = 'Médailles';
       liste = el('p', 'cp-vide', 'Pas encore de médaille : on en gagne pendant les événements du site.');
     }
-    carte.replaceChildren(el('div', 'cp-bandeau'), identite, titre, liste);
+    carte.replaceChildren(el('div', 'cp-bandeau'), identite, titre, liste, toutesMedailles(medailles));
     carte.hidden = false;
+  }
+  // Le serveur ne garde pas la date des badges : l'appareil note quand il voit chacun pour la première fois. À la première
+  // lecture (connexion, ou appareil d'avant la 3.40.0), ceux déjà là restent sans date : on ne sait pas quand ils ont été gagnés.
+  function noterBadgesVus(badges) {
+    let vus = null;
+    try { vus = JSON.parse(lire(CLE_BADGES_VUS)); } catch (e) { /* illisible : on repart de zéro */ }
+    const debut = !vus || typeof vus !== 'object' || Array.isArray(vus);
+    if (debut) vus = {};
+    let change = debut;
+    for (const b of badges) {
+      if (typeof b !== 'string' || Object.hasOwn(vus, b)) continue;
+      vus[b] = debut ? null : new Date().toISOString();
+      change = true;
+    }
+    if (change) ecrire(CLE_BADGES_VUS, JSON.stringify(vus));
+  }
+  function dateBadge(b) {
+    try { const d = (JSON.parse(lire(CLE_BADGES_VUS)) || {})[b]; return typeof d === 'string' ? d : null; } catch (e) { return null; }
+  }
+  // Comment gagner chaque médaille (« 🏅 Mes médailles ») ; une médaille sans ligne ici le dit d'après son nom.
+  const COMMENT_MEDAILLE = {
+    verifie: 'Porter le plus de coups au boss d\'un événement',
+    halloween: 'Porter le plus de coups au Roi des fantômes pendant Halloween',
+    'participation-halloween': 'Attraper un fantôme ou frapper le boss pendant Halloween',
+    noel: 'Porter le plus de coups au Père Noël pendant Noël',
+    'participation-noel': 'Attraper un lutin ou frapper le Père Noël pendant Noël',
+  };
+  const commentMedaille = (b) => COMMENT_MEDAILLE[b]
+    || (b.startsWith('participation-') ? 'Participer à l\'événement ' + MEDAILLES[b][1] : 'Vaincre le boss de l\'événement ' + MEDAILLES[b][0]);
+  // Toutes les médailles du site, dans l'ordre de BADGES : gagnées en couleur (avec la date si l'appareil la connaît), les
+  // autres grisées avec comment les gagner. Repliée par défaut ; reste ouverte d'un affichage à l'autre.
+  let medaillesOuvertes = false;
+  function toutesMedailles(gagnees) {
+    const el = (balise, classe, texte) => {
+      const e = document.createElement(balise);
+      if (classe) e.className = classe;
+      if (texte) e.textContent = texte;
+      return e;
+    };
+    const toutes = Object.keys(BADGES).filter((b) => MEDAILLES[b]);
+    const boite = el('details', 'cp-toutes');
+    boite.open = medaillesOuvertes;
+    boite.addEventListener('toggle', () => { medaillesOuvertes = boite.open; });
+    boite.append(el('summary', '', `🏅 Toutes les médailles · ${gagnees.length} sur ${toutes.length}`));
+    const grille = el('ul', 'cp-grille');
+    for (const b of toutes) {
+      const [court, detail, famille] = MEDAILLES[b];
+      const a = gagnees.includes(b);
+      const li = el('li', 'medaille ' + famille + (a ? '' : ' manquante'));
+      li.title = BADGES[b][1] + (a ? '' : ' : pas encore gagnée');
+      const quand = a && dateBadge(b);
+      li.append(el('span', 'm-ruban'), el('span', 'm-disque', BADGES[b][0]), el('span', 'm-nom', court), el('span', 'm-detail', detail),
+        a ? el('span', 'm-etat', '✓ Gagnée' + (quand ? ' le ' + new Date(quand).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''))
+          : el('span', 'm-comment', commentMedaille(b)));
+      grille.append(li);
+    }
+    boite.append(grille);
+    return boite;
   }
   // Le compte vient de gagner des badges (site/evenement.js, victoire contre le boss).
   window.addEventListener('hanter:badges', () => rafraichirCompte());

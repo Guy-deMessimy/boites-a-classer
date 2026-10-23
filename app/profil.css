@@ -241,3 +241,18 @@ button.mini-profil:focus-visible { outline: 2px solid var(--accent, #2f6fde); ou
 @keyframes cp-ouvre { from { opacity: 0; transform: translateY(10px) scale(.97); } }
 @media (prefers-reduced-motion: reduce) { .fen-carte { animation: none; } }
 @media (max-width: 420px) { .cp-suivi, .cp-pied { padding-inline: 14px; } }
+
+/* ---------- Toutes les médailles (3.40.0) ----------
+   Repliées sous les médailles gagnées, dans la carte du logiciel (toutesMedailles) et la grande carte de « Mes classes » :
+   gagnées en couleur (« ✓ Gagnée », avec la date si l'appareil la connaît), les autres grisées avec comment les gagner. */
+.cp-toutes { margin: 0 18px 16px; border: 1px solid var(--cp-ligne); border-radius: 14px; background: color-mix(in srgb, var(--cp-ligne) 18%, var(--cp-surface)); }
+.cp-toutes > summary { padding: 10px 14px; border-radius: 14px; color: var(--cp-encre); font-size: .88rem; font-weight: 700; cursor: pointer; }
+.cp-toutes > summary:focus-visible { outline: 2px solid var(--m-bleu); outline-offset: 2px; }
+.cp-toutes[open] > summary { border-bottom: 1px solid var(--cp-ligne); border-radius: 14px 14px 0 0; }
+.cp-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px 8px; margin: 0; padding: 4px 10px 14px; list-style: none; }
+.cp-grille .medaille { width: auto; }
+.medaille.manquante .m-disque, .medaille.manquante .m-ruban { filter: grayscale(1); opacity: .4; }
+.medaille.manquante .m-nom { color: var(--cp-doux); }
+.m-etat { color: var(--ok, #17955a); font-size: .7rem; font-weight: 700; line-height: 1.2; }
+.m-comment { color: var(--cp-doux); font-size: .7rem; font-style: italic; line-height: 1.3; }
+@media (max-width: 420px) { .cp-toutes { margin-inline: 14px; } }
