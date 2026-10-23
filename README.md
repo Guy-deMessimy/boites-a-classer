@@ -142,6 +142,8 @@ Même mécanique qu'Halloween (voir plus bas), avec sa propre fiche dans `site/e
 
 ## Halloween (3.25.0 à 3.27.2, archivé depuis la 3.28.0)
 
+Remis en mode Halloween (accueil, nom « Boîtes à hanter ») de la 3.30.0 à la 3.30.5, puis retour à la normale en 3.30.6 (même procédure qu'en 3.28.0).
+
 Tout est gardé dans le dépôt (repère Git `halloween-2026` = dernier état actif) mais désactivé depuis la 3.28.0 : site renommé « Boîtes à classer », thème sciences sur l'accueil, bandeau habituel. Les badges gagnés restent sur les comptes et s'affichent toujours ; l'événement, ses points, le boss et le bouton admin marchent encore (le déclencher sans le thème : fantômes et boss partout, mais ni fond animé, ni clip, ni bandeau sur l'accueil).
 
 Pour le réactiver (Halloween prochain) : sur l'accueil (`site/index.html`), remettre `class="theme-halloween"` sur `<html>`, le `<link rel="stylesheet" href="halloween/theme.css">` après le `<style>`, et le bandeau `.annonce` « 🎃 Événement d'Halloween prochainement… » ; renommer en « Boîtes à hanter » si voulu (fichiers concernés : `git grep -l "Boîtes à hanter" halloween-2026 -- app site serveur` ; l'accueil d'alors : `git show halloween-2026:site/index.html`) ; puis déclencher l'événement depuis la page admin (cela remet points et boss à zéro).
