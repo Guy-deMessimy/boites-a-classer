@@ -142,6 +142,13 @@
       .cartes { grid-template-columns: repeat(3, 1fr); gap: 0; }
       .carte-code { border-radius: 0; border-color: #888; padding: 14px 16px; }
     }
+    /* Niveau de la classe : la liste prend la place qui reste et passe à la ligne sur un téléphone (jamais plus large que l'écran). */
+    .niveau-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+    .niveau-ligne select { flex: 1 1 16rem; min-width: 0; max-width: 100%; }
+    #etat-niveau { flex-basis: 100%; }
+    #etat-niveau:empty { display: none; }
+    /* « Nouveaux codes pour toute la classe » peut passer sur deux lignes sur un écran de 320 px. */
+    .tete-classe .bouton { max-width: 100%; white-space: normal; }
   </style>
 </head>
 <body>
@@ -208,15 +215,14 @@
 
         <section class="bloc exercices-bloc">
           <h3>🌿 Niveau dans le logiciel</h3>
-          <p>
-            <label>Niveau pour cette classe :
+          <p class="niveau-ligne">
+            <label for="niveau-classe">Niveau pour cette classe :</label>
               <select id="niveau-classe">
                 <option value="">Au choix de chaque élève</option>
                 <option value="facile">🌱 Facile : couleurs des attributs sur les cartes, correction en direct</option>
                 <option value="normal">🌿 Normal : attributs au survol, vérification à la demande</option>
                 <option value="expert">🌳 Expert : attributs cachés, vérification sans le pourquoi</option>
               </select>
-            </label>
             <span id="etat-niveau"></span>
           </p>
           <h3>📌 Exercices donnés à la classe</h3>
