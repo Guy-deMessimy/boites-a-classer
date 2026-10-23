@@ -159,6 +159,8 @@ Choisi dans la page admin (« 🎨 Thème », `POST /api/admin/theme { theme }`,
 | `normal` | Boîtes à classer | thème sciences, pas de bandeau |
 | `halloween` | Boîtes à hanter | `site/halloween/theme.css`, bandeau « 🎃 Événement d'Halloween prochainement… » |
 | `noel` | Boîtes à lutins | `site/noel/theme.css`, bandeau « 🎄 Événement de Noël prochainement… » |
+| `paques` | Boîtes à œufs | `site/paques/theme.css`, bandeau « 🐣 Événement de Pâques prochainement… » |
+| `printemps` | Boîtes à fleurs | `site/printemps/theme.css`, bandeau « 🌸 Événement du printemps prochainement… » |
 
 - Les fichiers gardent le nom « Boîtes à classer » et le thème sciences (c'est aussi ce que montre l'application de bureau). `functions/_middleware.js` habille chaque page HTML en l'envoyant (sauf les clips `site/halloween/` et `site/noel/`) : `data-theme` sur `<html>` (couleurs du logiciel, `app/style.css`), classe `theme-<nom>` et `<link>` du décor sur une page dont le `<html>` porte `data-decor` (l'accueil), retrait des éléments `data-theme-seul` d'un autre thème (bandeaux de l'accueil), nom du site dans `<title>` et dans les éléments `data-nom-site` (texte et attributs `content`, `title`, `aria-label` ; `data-nom-site="attributs"` : attributs seulement). Pas d'`ETag` sur ces pages : le navigateur les redemande en entier.
 - `GET /api/etat` renvoie `theme` et `nomSite` : le logiciel (`app/app.js`) et les pages du site (`site/arret.js`) les suivent sans recharger ; l'accueil se recharge 6 s après le changement.
@@ -174,6 +176,21 @@ Pendant le thème Noël (`data-theme="noel"`, § Thème du site), `app/avent.js`
 - Logiciel : bouton 🎄 dans la barre (pastille quand la case du jour attend), Outils → Jouer → « Calendrier de l'Avent », `#avent` ou `#avent=<jour>` dans l'adresse.
 - Accueil : section `.avent` (`data-theme-seul="noel"`, comme son `<script>` et son `<link>`), chaque case ouverte mène au logiciel.
 - Essais en local seulement : date simulée dans `localStorage`, clé `boites-a-classer-avent:date` (« AAAA-MM-JJ »).
+
+## Pâques et Printemps (depuis la 3.42.0)
+
+Deux événements de jour sur le modèle de Noël (fiches `paques` et `printemps` de `site/evenement.js`, `nuit: false` : ni étoiles ni lune), à déclencher depuis la page admin, à la main ou programmés :
+
+| | Pâques 🐣 | Printemps 🌸 |
+|---|---|---|
+| Thème (`site/<nom>/`) | `theme.css`, `fond-paques.svg`, `scene-paques.svg`, titres en Sniglet (`site/polices/sniglet-latin.woff2`, OFL) | `theme.css`, `fond-printemps.svg`, `scene-printemps.svg`, titres en Pacifico (`site/polices/pacifico-latin.woff2`, OFL) |
+| Nom du site | Boîtes à œufs | Boîtes à fleurs |
+| Petits personnages | œufs décorés 🥚, qui roulent en bas de l'écran | papillons 🦋, qui volettent partout |
+| Boss | 🐰 le Lapin de Pâques : il s'en va en laissant tomber des œufs | 🐝 la Reine des abeilles : elle s'envole en laissant tomber pétales et miel |
+| Badges | 🐰 `paques` + ✔ `verifie` au gagnant, 🥚 `participation-paques` | 🌷 `printemps` + ✔ `verifie` au gagnant, 🦋 `participation-printemps` |
+| Clip d'intro | `site/paques/index.html`, air de « Frère Jacques » (domaine public) | `site/printemps/index.html`, début du « Printemps » de Vivaldi (domaine public) |
+
+Le départ du boss (bulle et pluie d'objets) vient de la fiche (`boss.salut`, `boss.cadeaux`), comme pour le Père Noël. Les badges sont listés dans `app/app.js` (BADGES, MEDAILLES), `site/evenement.js` (BADGES), `site/admin/index.html` (LIBELLES) et `site/classe/index.html` (MEDAILLES) ; le fond du plan de travail du logiciel dans `app/style.css`.
 
 ## Noël (depuis la 3.29.0)
 

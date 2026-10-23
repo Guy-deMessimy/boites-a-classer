@@ -1,4 +1,4 @@
-// Effets des événements du site (serveur/evenement.js : Halloween, Noël), chargés par site/arret.js et app/app.js
+// Effets des événements du site (serveur/evenement.js : Halloween, Noël, Pâques, Printemps), chargés par site/arret.js et app/app.js
 // quand un admin en a déclenché un (page site/admin/). Chaque événement a sa fiche dans THEMES (petits personnages à
 // attraper, boss, textes, couleurs, décor). Préfixe « hanter » (classes, window.hanter) : historique, Halloween d'abord.
 // - accueil : s'il ne porte pas déjà le thème de l'événement (classe « theme-<nom> » sur <html>,
@@ -7,7 +7,8 @@
 // - partout : les petits personnages (fantômes, lutins) traversent la page ; un clic les attrape, et chacun rapporte
 //   un point à un compte connecté (functions/api/evenement/[action].js). « Chasser les … » les renvoie (choix gardé
 //   dans le navigateur ; dans le logiciel, l'entrée est dans 🧰 Outils) ;
-// - quand tous ensemble en ont attrapé 30, le boss (Roi des fantômes, Père Noël) apparaît chez tout le monde : chaque
+// - quand tous ensemble en ont attrapé 30, le boss (Roi des fantômes, Père Noël, Lapin de Pâques, Reine des abeilles)
+//   apparaît chez tout le monde : chaque
 //   clic (compte connecté) lui retire 1 000 PV, la barre suit les clics de tous ; celui qui a cliqué le plus gagne les
 //   badges « vérifié par le site » et celui de l'événement (écran de victoire, une fois) ; tout participant gagne le
 //   badge de participation ;
@@ -84,6 +85,109 @@
     + '<path d="M28 34q2-9 12-9h14q5 0 7-5l3-7 2 1-2 7 6-5 1 2-7 6q-2 7-9 8l2 14h-4l-3-12h-12l-4 12h-4l2-14q-5 0-6 2z"/>'
     + '</g><path d="M66 26l36 2M124 22l26 8" stroke="#0b1426" stroke-width="1.6" fill="none"/></svg>';
 
+  var OEUF = '<svg viewBox="0 0 100 124" aria-hidden="true">'
+    + '<path d="M50 8C72 8 92 46 92 78C92 104 74 120 50 120S8 104 8 78C8 46 28 8 50 8z" style="fill:var(--hanter-paques-coque,#ffd3e6)"/>'
+    + '<path d="M19.6 33L30 27 40 33 50 27 60 33 70 27 80.4 33 82.4 37 85 43 80 43 70 37 60 43 50 37 40 43 30 37 20 43 15 43 17.6 37z" style="fill:var(--hanter-paques-zigzag,#b99cf2)"/>'
+    + '<path d="M8.6 86H91.4L91 88 90 92 88.6 96H11.4L10 92 9 88z" style="fill:var(--hanter-paques-bande,#9fe0b0)"/>'
+    + '<path d="M13.3 100H86.7L85.5 102 84.8 103H15.2L14.5 102z" style="fill:var(--hanter-paques-zigzag,#b99cf2)"/>'
+    + '<g style="fill:var(--hanter-paques-points,#ffd84d)"><circle cx="40" cy="20" r="3.4"/><circle cx="60" cy="20" r="3.4"/><circle cx="50" cy="13.5" r="2.8"/>'
+    + '<circle cx="34" cy="110" r="3.4"/><circle cx="50" cy="113" r="3.4"/><circle cx="66" cy="110" r="3.4"/></g>'
+    + '<path d="M50 8C72 8 92 46 92 78C92 104 74 120 50 120S8 104 8 78C8 46 28 8 50 8z" fill="none" stroke="#8d4f9e" stroke-opacity=".6" stroke-width="2.6"/>'
+    + '<ellipse cx="39" cy="61" rx="4.4" ry="5.4" fill="#3a2350"/><ellipse cx="61" cy="61" rx="4.4" ry="5.4" fill="#3a2350"/>'
+    + '<circle cx="40.6" cy="59" r="1.7" fill="#fff"/><circle cx="62.6" cy="59" r="1.7" fill="#fff"/>'
+    + '<ellipse cx="29" cy="70" rx="5.5" ry="3.6" fill="#ff7fae" opacity=".55"/><ellipse cx="71" cy="70" rx="5.5" ry="3.6" fill="#ff7fae" opacity=".55"/>'
+    + '<path d="M43 70q7 7 14 0" stroke="#3a2350" stroke-width="2.8" fill="none" stroke-linecap="round"/></svg>';
+  var LAPIN_PAQUES = '<svg viewBox="0 0 200 240" aria-hidden="true">'
+    + '<g fill="#fffdfb" stroke="#a98bd0" stroke-width="3.5" stroke-linejoin="round">'
+    + '<path d="M76 92C60 64 52 22 64 10c12-12 28 22 30 80z"/><path d="M106 90c2-46 14-80 32-78 18 2 8 46-16 84z"/>'
+    + '<ellipse cx="100" cy="190" rx="54" ry="46"/><ellipse cx="68" cy="229" rx="23" ry="10"/><ellipse cx="132" cy="229" rx="23" ry="10"/>'
+    + '<ellipse cx="100" cy="114" rx="50" ry="42"/></g>'
+    + '<path d="M78 84C68 62 63 32 68 22c6-8 18 18 20 62zM112 84c3-36 12-62 24-62 10 2 2 34-14 66z" fill="#ffc3db"/>'
+    + '<ellipse cx="100" cy="196" rx="34" ry="32" fill="#fff0f6"/>'
+    + '<ellipse cx="82" cy="108" rx="6.2" ry="7.6" fill="#3a2350"/><ellipse cx="118" cy="108" rx="6.2" ry="7.6" fill="#3a2350"/>'
+    + '<circle cx="84.4" cy="105" r="2.5" fill="#fff"/><circle cx="120.4" cy="105" r="2.5" fill="#fff"/>'
+    + '<ellipse cx="69" cy="126" rx="9" ry="5.5" fill="#ff9cc2" opacity=".75"/><ellipse cx="131" cy="126" rx="9" ry="5.5" fill="#ff9cc2" opacity=".75"/>'
+    + '<path d="M93 119q7-5 14 0q-2 7-7 8q-5-1-7-8z" fill="#ff7fae"/>'
+    + '<path d="M100 127v4m0 0q-6 6-11 1m11-1q6 6 11 1" stroke="#6b4a7a" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+    + '<path d="M96 134h8v6q-4 2-8 0z" fill="#fff" stroke="#c9b3e6" stroke-width="1.4"/>'
+    + '<path d="M64 120l-20-5M64 127l-20 2M136 120l20-5M136 127l20 2" stroke="#b9a3d9" stroke-width="2" stroke-linecap="round"/>'
+    + '<path d="M100 155l-19-10v20zM100 155l19-10v20z" fill="#9a5ce0"/><circle cx="100" cy="155" r="5.5" fill="#7b3fc4"/>'
+    + '<path d="M60 184C62 148 138 148 140 184" stroke="#c98a44" stroke-width="7" fill="none" stroke-linecap="round"/>'
+    + '<ellipse cx="78" cy="178" rx="12" ry="15" fill="#ffb3d4" stroke="#d67aa6" stroke-width="2"/><path d="M67 176l5-4 6 4 6-4 5 4" stroke="#fff" stroke-width="3" fill="none"/>'
+    + '<ellipse cx="122" cy="178" rx="12" ry="15" fill="#a9e6b9" stroke="#5fb47a" stroke-width="2"/><path d="M111 174h22" stroke="#7b3fc4" stroke-width="4"/>'
+    + '<ellipse cx="100" cy="172" rx="13" ry="16" fill="#ffe680" stroke="#d9b21a" stroke-width="2"/><g fill="#ff7fae"><circle cx="95" cy="168" r="2.6"/><circle cx="105" cy="168" r="2.6"/><circle cx="100" cy="176" r="2.6"/></g>'
+    + '<path d="M54 186h92l-11 40q-35 9-70 0z" fill="#e3a960" stroke="#b97a35" stroke-width="2.5" stroke-linejoin="round"/>'
+    + '<path d="M57 199h86M61 212h78M75 188l3 38M100 188v40M125 188l-3 38" stroke="#b97a35" stroke-width="2" opacity=".7"/>'
+    + '<rect x="50" y="180" width="100" height="11" rx="5.5" fill="#cf9148" stroke="#b97a35" stroke-width="2"/>'
+    + '<g fill="#fffdfb" stroke="#a98bd0" stroke-width="3"><ellipse cx="56" cy="186" rx="12" ry="10"/><ellipse cx="144" cy="186" rx="12" ry="10"/></g>'
+    + '<g fill="#ffc3db"><ellipse cx="62" cy="231" rx="6" ry="3.5"/><ellipse cx="138" cy="231" rx="6" ry="3.5"/></g></svg>';
+  // Cloche de Pâques volante (tradition : elles reviennent de Rome le matin de Pâques en semant des œufs), avec son ruban.
+  var CLOCHE_PAQUES = '<svg viewBox="0 0 120 120" aria-hidden="true">'
+    + '<g fill="#fff" stroke="#c4b0e6" stroke-width="1.6" stroke-linejoin="round">'
+    + '<path class="hanter-paques-aile g" d="M36 52C22 38 6 40 2 50c8 0 10 4 6 8 8 0 10 4 6 8 10 0 18-4 24-8z"/>'
+    + '<path class="hanter-paques-aile d" d="M84 52c14-14 30-12 34-2-8 0-10 4-6 8-8 0-10 4-6 8-10 0-18-4-24-8z"/></g>'
+    + '<path d="M60 24C42 24 34 38 34 56v18c0 8-8 12-12 18h76c-4-6-12-10-12-18V56c0-18-8-32-26-32z" fill="#ffcf4d" stroke="#d99a1a" stroke-width="2"/>'
+    + '<path d="M34.5 64h51v8h-51z" fill="#c9a6ff"/><g fill="#fff"><circle cx="44" cy="68" r="2"/><circle cx="60" cy="68" r="2"/><circle cx="76" cy="68" r="2"/></g>'
+    + '<path d="M45 36q-6 14-4 30" stroke="#fff6cf" stroke-width="5" fill="none" stroke-linecap="round" opacity=".9"/>'
+    + '<rect x="18" y="90" width="84" height="9" rx="4.5" fill="#f2b733" stroke="#d99a1a" stroke-width="2"/>'
+    + '<circle cx="60" cy="105" r="7" fill="#e0a020" stroke="#b97c10" stroke-width="2"/>'
+    + '<g fill="#ff8cc2" stroke="#e0559a" stroke-width="1.5" stroke-linejoin="round">'
+    + '<path d="M56 24L46 46l6-2 2 6 6-24zM64 24l10 22-6-2-2 6-6-24z"/>'
+    + '<path d="M60 22C48 6 32 10 38 24c4 6 14 2 22-2zM60 22c12-16 28-12 22 2-4 6-14 2-22-2z"/></g>'
+    + '<circle cx="60" cy="22.5" r="5" fill="#e0559a"/></svg>';
+  // Petit œuf décoré, sans visage (décor de l'accueil : on ne peut pas l'attraper), couleurs en variables.
+  var OEUF_CACHE = '<svg viewBox="0 0 40 50" aria-hidden="true">'
+    + '<path d="M20 2c9 0 17 16 17 29 0 11-7 17-17 17S3 42 3 31C3 18 11 2 20 2z" style="fill:var(--hanter-paques-coque,#ffd3e6)"/>'
+    + '<path d="M6.5 19l4.5-3 4.5 3 4.5-3 4.5 3 4.5-3 4.5 3 .9 5-4.4-3-4.5 3-4.5-3-4.5 3-4.5-3-4.5 3-4.4 3z" style="fill:var(--hanter-paques-zigzag,#b99cf2)"/>'
+    + '<path d="M3.2 33h33.6l-.4 4H3.6z" style="fill:var(--hanter-paques-bande,#9fe0b0)"/>'
+    + '<g style="fill:var(--hanter-paques-points,#ffd84d)"><circle cx="14" cy="10" r="1.6"/><circle cx="26" cy="10" r="1.6"/><circle cx="12" cy="43" r="1.6"/><circle cx="20" cy="44.5" r="1.6"/><circle cx="28" cy="43" r="1.6"/></g>'
+    + '<path d="M20 2c9 0 17 16 17 29 0 11-7 17-17 17S3 42 3 31C3 18 11 2 20 2z" fill="none" stroke="#8d4f9e" stroke-opacity=".5" stroke-width="1.4"/></svg>';
+
+  var PAPILLON = '<svg viewBox="0 0 100 124" aria-hidden="true">'
+    + '<g class="hanter-printemps-ailes" stroke-width="2.5" stroke-linejoin="round">'
+    + '<path d="M47 60C40 30 16 10 6 22c-9 12 0 42 41 44zM53 60C60 30 84 10 94 22c9 12 0 42-41 44z" style="fill:var(--papillon-haut,#ff8a3d);stroke:var(--papillon-bord-haut,#c2410c)"/>'
+    + '<path d="M47 66C30 64 12 78 18 96c5 14 24 10 29-20zM53 66C70 64 88 78 82 96c-5 14-24 10-29-20z" style="fill:var(--papillon-bas,#ff5fa2);stroke:var(--papillon-bord-bas,#c0266a)"/>'
+    + '<circle cx="22" cy="32" r="7" fill="#ffe066"/><circle cx="78" cy="32" r="7" fill="#ffe066"/>'
+    + '<circle cx="33" cy="50" r="4.5" fill="#fff"/><circle cx="67" cy="50" r="4.5" fill="#fff"/>'
+    + '<circle cx="29" cy="88" r="5" fill="#fff3a6"/><circle cx="71" cy="88" r="5" fill="#fff3a6"/></g>'
+    + '<path d="M45 28q-5-16-16-19M55 28q5-16 16-19" stroke="#4b2f7a" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    + '<circle cx="28" cy="9" r="4.5" fill="#ff5fa2"/><circle cx="72" cy="9" r="4.5" fill="#ff5fa2"/>'
+    + '<rect x="43.5" y="50" width="13" height="54" rx="6.5" fill="#4b2f7a"/>'
+    + '<path d="M46 66h8M46 76h8M46 86h8" stroke="#8d6fd1" stroke-width="3" stroke-linecap="round"/>'
+    + '<circle cx="50" cy="38" r="15" fill="#5b3a94"/>'
+    + '<ellipse cx="44" cy="37" rx="4.2" ry="5.2" fill="#fff"/><ellipse cx="56" cy="37" rx="4.2" ry="5.2" fill="#fff"/>'
+    + '<circle cx="44.6" cy="38" r="2.6" fill="#1d1030"/><circle cx="56.6" cy="38" r="2.6" fill="#1d1030"/>'
+    + '<circle cx="45.4" cy="36.8" r="1" fill="#fff"/><circle cx="57.4" cy="36.8" r="1" fill="#fff"/>'
+    + '<ellipse cx="39" cy="45" rx="3" ry="2" fill="#ff9cc7"/><ellipse cx="61" cy="45" rx="3" ry="2" fill="#ff9cc7"/>'
+    + '<path d="M45.5 45q4.5 4 9 0" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>';
+  // La Reine des abeilles (même cadre que PERE_NOEL) : couronne, sceptre fleuri, ailes qui vrombissent.
+  var REINE_ABEILLES = '<svg viewBox="0 0 200 240" aria-hidden="true">'
+    + '<g class="hanter-printemps-aile-g" fill="#e4f4ff" fill-opacity=".9" stroke="#86bfe8" stroke-width="3">'
+    + '<ellipse cx="42" cy="118" rx="44" ry="26" transform="rotate(-32 42 118)"/><ellipse cx="44" cy="160" rx="32" ry="18" transform="rotate(-6 44 160)"/></g>'
+    + '<g class="hanter-printemps-aile-d" fill="#e4f4ff" fill-opacity=".9" stroke="#86bfe8" stroke-width="3">'
+    + '<ellipse cx="158" cy="118" rx="44" ry="26" transform="rotate(32 158 118)"/><ellipse cx="156" cy="160" rx="32" ry="18" transform="rotate(6 156 160)"/></g>'
+    + '<ellipse cx="100" cy="172" rx="56" ry="56" fill="#ffc93c" stroke="#d99a00" stroke-width="3"/>'
+    + '<path d="M54 140Q100 149 146 140A56 56 0 0 1 153 154Q100 163 47 154A56 56 0 0 1 54 140zM44 170Q100 179 156 170A56 56 0 0 1 154.7 184Q100 193 45.3 184A56 56 0 0 1 44 170zM50.4 198Q100 207 149.6 198A56 56 0 0 1 141.1 210Q100 219 58.9 210A56 56 0 0 1 50.4 198z" fill="#3a2a1a"/>'
+    + '<path d="M90 225q10 5 20 0l-10 15z" fill="#3a2a1a"/>'
+    + '<path d="M52 166q-24-2-34-26" stroke="#3a2a1a" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="18" cy="140" r="7" fill="#3a2a1a"/>'
+    + '<path d="M170 196l15-92" stroke="#c98a12" stroke-width="5" stroke-linecap="round"/>'
+    + '<g transform="translate(186 96)" fill="#ff6fa8"><circle cy="-8" r="6"/><circle cx="7.6" cy="-2.5" r="6"/><circle cx="4.7" cy="6.5" r="6"/><circle cx="-4.7" cy="6.5" r="6"/><circle cx="-7.6" cy="-2.5" r="6"/><circle r="4.5" fill="#ffe066"/></g>'
+    + '<path d="M148 166q22 0 30-18" stroke="#3a2a1a" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="178" cy="148" r="7" fill="#3a2a1a"/>'
+    + '<path d="M78 62q-8-22-26-32M122 62q8-22 26-32" stroke="#3a2a1a" stroke-width="5" fill="none" stroke-linecap="round"/>'
+    + '<circle cx="51" cy="29" r="7" fill="#ff6fa8"/><circle cx="149" cy="29" r="7" fill="#ff6fa8"/>'
+    + '<circle cx="100" cy="96" r="44" fill="#ffd95a" stroke="#d99a00" stroke-width="3"/>'
+    + '<ellipse cx="83" cy="98" rx="8" ry="10" fill="#2a1a12"/><ellipse cx="117" cy="98" rx="8" ry="10" fill="#2a1a12"/>'
+    + '<circle cx="86" cy="94" r="3.2" fill="#fff"/><circle cx="120" cy="94" r="3.2" fill="#fff"/>'
+    + '<path d="M76 90l-7-4M77 85l-5-7M124 90l7-4M123 85l5-7" stroke="#2a1a12" stroke-width="3" stroke-linecap="round"/>'
+    + '<ellipse cx="68" cy="114" rx="8" ry="5" fill="#ff8fb0" opacity=".8"/><ellipse cx="132" cy="114" rx="8" ry="5" fill="#ff8fb0" opacity=".8"/>'
+    + '<path d="M88 115q12 14 24 0q-12 4-24 0z" fill="#b5304f"/>'
+    + '<path d="M64 66l4-32 17 16 15-28 15 28 17-16 4 32q-36-10-72 0z" fill="#ffcf33" stroke="#b8860b" stroke-width="3" stroke-linejoin="round"/>'
+    + '<circle cx="100" cy="52" r="5" fill="#ff4f9a"/><circle cx="81" cy="58" r="3.5" fill="#4dabff"/><circle cx="119" cy="58" r="3.5" fill="#4dabff"/>'
+    + '<circle cx="68" cy="34" r="3.5" fill="#fff3b0"/><circle cx="100" cy="22" r="4" fill="#fff3b0"/><circle cx="132" cy="34" r="3.5" fill="#fff3b0"/></svg>';
+  // Ce que la Reine laisse tomber quand elle est attrapée (pluieDeCadeaux) : un pétale de cerisier, une goutte de miel.
+  var PETALE_CERISIER = '<i class="hanter-printemps-petale-chute"></i>';
+  var GOUTTE_MIEL = '<i class="hanter-printemps-miel"></i>';
+
   /* Fiches des événements : ce qui change d'un événement à l'autre. */
   var THEMES = {
     halloween: {
@@ -108,11 +212,50 @@
         apparu: "🎅 Le Père Noël est arrivé ! Tout le monde l'attrape : clique dessus !", agir: "l'attraper",
         vaincu: 'attrapé', victoire: '🎁 Bravo !', coup: ['clic', 'clics'], coupPorte: ['clic', 'clics'], plus: "l'a attrapé le plus de fois",
         rien: "Tu n'as pas attrapé le Père Noël cette fois-ci.", connecte: 'Connecte-toi la prochaine fois pour attraper le Père Noël !',
-        enCours: "🎅 Le Père Noël est là : tout le monde l'attrape ! ", lePlus: 'le plus de clics' },
+        enCours: "🎅 Le Père Noël est là : tout le monde l'attrape ! ", lePlus: 'le plus de clics',
+        salut: 'Ho ho ho !', cadeaux: ['🎁', '🎁', '🍬', '⭐', '🧸'] },
       badge: ['noel', '🎅', 'badge Noël'],
       couleurs: ['#e8364f', '#ffffff', 'linear-gradient(180deg,#16305a,#0b1730)', '#2c4670', '#bccbe4', '#ffffff', 'rgb(255 255 255 / .35)',
         'rgb(232 54 79 / .16)', '#6fc3ff', '#ffe08a', 'rgb(12 25 50 / .94)', '#ff7a8a', '#2c4670', 'rgb(255 255 255 / .55)', 'rgb(255 255 255 / .5)', '#1f5d36', 'rgb(4 10 24 / .8)', 700],
       decor: decorNoel,
+    },
+    printemps: {
+      emoji: '🌸', de: 'du printemps', police: 'Pacifico', site: 'Boîtes à fleurs',
+      petit: { svg: PAPILLON, emoji: '🦋', un: 'papillon', des: 'papillons', attrape: 'Hop !', coucou: 'Bonjour !', vide: 'Ils volent toujours !',
+        hauteur: [8, 68], duree: [11, 19] }, // ils volettent partout
+      boss: { svg: REINE_ABEILLES, titre: '🐝 La Reine des abeilles', nom: 'la Reine des abeilles', Nom: 'La Reine des abeilles', emoji: '🍯',
+        apparu: "🐝 La Reine des abeilles est arrivée ! Tout le monde l'attrape : clique sur elle !", agir: "l'attraper",
+        vaincu: 'attrapée', victoire: '🌷 Bravo !', coup: ['clic', 'clics'], coupPorte: ['clic', 'clics'], plus: "l'a attrapée le plus de fois",
+        rien: "Tu n'as pas attrapé la Reine des abeilles cette fois-ci.", connecte: 'Connecte-toi la prochaine fois pour attraper la Reine des abeilles !',
+        enCours: "🐝 La Reine des abeilles est là : tout le monde l'attrape ! ", lePlus: 'le plus de clics',
+        salut: 'Bzzz !', cadeaux: [PETALE_CERISIER, GOUTTE_MIEL, '🌸', PETALE_CERISIER, GOUTTE_MIEL, '🌼', PETALE_CERISIER, '🌷'] }, // elle s'envole en laissant tomber pétales et miel
+      badge: ['printemps', '🌷', 'badge Printemps'],
+      // accent, accent-encre, carte, bord, doux, titre, titre-ombre, surligne, moi, moi-texte, sombre, barre-titre,
+      // barre-bord, aura-boss, aura-petit, bulle, voile, poids : classement et barre de PV sur fond vert foncé (le texte
+      // y est clair), bouton rose, titres jaune soleil, bulles roses sur blanc.
+      couleurs: ['#d6336c', '#ffffff', 'linear-gradient(180deg,#22633b,#143f26)', '#4c9a62', '#cfead5', '#ffe066', 'rgb(255 224 102 / .45)',
+        'rgb(255 224 102 / .15)', '#ff9cc7', '#fff1b0', 'rgb(20 62 38 / .94)', '#ffe066', '#4c9a62', 'rgb(255 214 64 / .85)', 'rgb(255 250 225 / .85)', '#c2185b', 'rgb(10 38 22 / .74)', 400],
+      decor: decorPrintemps,
+      nuit: false, // thème de jour : ni étoiles ni lune (le soleil est dans le décor)
+    },
+    paques: {
+      emoji: '🐣', de: 'de Pâques', police: 'Sniglet', site: 'Boîtes à œufs',
+      petit: { svg: OEUF, emoji: '🥚', un: 'œuf', des: 'œufs', attrape: 'Croc !', coucou: 'Coucou !', vide: 'Ils roulent toujours !',
+        hauteur: [45, 76], duree: [8, 13] }, // ils roulent en rebondissant dans le bas de l'écran
+      boss: { svg: LAPIN_PAQUES, titre: '🐰 Le Lapin de Pâques', nom: 'le Lapin de Pâques', Nom: 'Le Lapin de Pâques', emoji: '🧺',
+        apparu: "🐰 Le Lapin de Pâques est arrivé ! Tout le monde l'attrape : clique dessus !", agir: "l'attraper",
+        vaincu: 'attrapé', victoire: '🧺 Bravo !', coup: ['clic', 'clics'], coupPorte: ['clic', 'clics'], plus: "l'a attrapé le plus de fois",
+        rien: "Tu n'as pas attrapé le Lapin de Pâques cette fois-ci.", connecte: 'Connecte-toi la prochaine fois pour attraper le Lapin de Pâques !',
+        enCours: "🐰 Le Lapin de Pâques est là : tout le monde l'attrape ! ", lePlus: 'le plus de clics',
+        salut: 'Coucou !', cadeaux: ['🥚', '🥚', '🐣', '🍫', '🌷'] }, // attrapé : il dit coucou et s'en va en laissant tomber des œufs
+      badge: ['paques', '🐰', 'badge Pâques'],
+      // accent, accent-encre, carte, bord, doux, titre, titre-ombre, surligne, moi, moi-texte, sombre, barre-titre, barre-bord,
+      // aura-boss, aura-petit, bulle, voile, poids. La carte du classement et le fond « sombre » restent foncés (textes clairs
+      // écrits en dur dans STYLE) : un violet de lavande profond, avec du jaune poussin, du rose et du vert tendre.
+      couleurs: ['#7b3fc4', '#ffffff', 'linear-gradient(180deg,#5a2f96,#3b1d66)', '#a888e0', '#e3d6f7', '#ffe066', 'rgb(255 214 90 / .45)',
+        'rgb(255 170 210 / .2)', '#9fe3b0', '#ffd1e6', 'rgb(64 32 104 / .94)', '#ffb3d9', '#a888e0', 'rgb(255 150 205 / .85)', 'rgb(150 100 220 / .5)', '#c0266f', 'rgb(52 26 86 / .62)', 800],
+      decor: decorPaques,
+      nuit: false, // thème de jour : ni étoiles ni lune dans creerFond (le décor a son soleil)
     },
   };
   var accueilDe = function (nom) { return racine.classList.contains('theme-' + nom); };
@@ -127,9 +270,104 @@
       + noms.map(function (n, i) { return '--ev-' + n + ':' + c[i]; }).join(';') + '}';
   }
 
+  var STYLE_PAQUES = [
+    // Pâques : soleil, pétales, cloches volantes, œufs dans l'herbe
+    '.hanter-paques-soleil{position:absolute;left:86%;top:11%;width:340px;height:340px;margin:-170px 0 0 -170px;border-radius:50%;background:radial-gradient(circle,rgb(255 246 200 / .75) 0 15%,rgb(255 226 120 / .24) 36%,transparent 66%);animation:hanter-paques-halo 5s ease-in-out infinite alternate}',
+    '@keyframes hanter-paques-halo{from{transform:scale(.9);opacity:.7}to{transform:scale(1.1);opacity:1}}',
+    '.hanter-paques-rayons{position:absolute;left:86%;top:11%;width:600px;height:600px;margin:-300px 0 0 -300px;border-radius:50%;background:repeating-conic-gradient(rgb(255 232 140 / .32) 0 7deg,transparent 7deg 20deg);-webkit-mask:radial-gradient(circle,#000 10%,transparent 62%);mask:radial-gradient(circle,#000 10%,transparent 62%);animation:hanter-paques-tourne 90s linear infinite}',
+    '@keyframes hanter-paques-tourne{to{transform:rotate(360deg)}}',
+    '.hanter-paques-petale{position:absolute;top:0;left:var(--x);width:var(--t);height:calc(var(--t) * .62);border-radius:80% 0 80% 0;background:var(--c);opacity:.8;animation:hanter-paques-chute var(--d) linear var(--r) infinite,hanter-paques-balance 2.8s ease-in-out var(--r) infinite alternate;will-change:transform}',
+    '.hanter-paques-petale.rond{width:calc(var(--t) * .6);border-radius:50%}',
+    '@keyframes hanter-paques-chute{from{transform:translate(0,-6vh) rotate(0)}to{transform:translate(var(--dx),106vh) rotate(var(--a))}}',
+    '@keyframes hanter-paques-balance{from{translate:-2.5vw 0}to{translate:2.5vw 0}}',
+    '.hanter-paques-vol{position:absolute;left:0;top:var(--y);width:min(15vw,110px);animation:hanter-paques-vol 30s linear infinite both;will-change:transform}', // both : hors de l'écran pendant l'attente du départ,
+    '.hanter-paques-vol.retour{animation-direction:reverse}',
+    '@keyframes hanter-paques-vol{0%{transform:translateX(-120%)}38%,100%{transform:translateX(calc(100vw + 20%))}}',
+    '.hanter-paques-vol>div{animation:hanter-paques-flotte 2.2s ease-in-out infinite alternate}',
+    '@keyframes hanter-paques-flotte{from{transform:translateY(-14px)}to{transform:translateY(14px)}}',
+    '.hanter-paques-vol svg{display:block;width:100%;transform-origin:50% 16%;animation:hanter-paques-sonne .8s ease-in-out infinite alternate;filter:drop-shadow(0 4px 6px rgb(110 70 160 / .28))}',
+    '@keyframes hanter-paques-sonne{from{transform:rotate(-16deg)}to{transform:rotate(16deg)}}',
+    '.hanter-paques-aile{transform-box:fill-box;animation:hanter-paques-aile .24s ease-in-out infinite alternate}',
+    '.hanter-paques-aile.g{transform-origin:100% 30%}',
+    '.hanter-paques-aile.d{transform-origin:0 30%}',
+    '@keyframes hanter-paques-aile{to{transform:scaleY(.5)}}',
+    '.hanter-paques-oeuf{position:absolute;left:var(--x);bottom:calc(min(34vh,300px) * .03);width:var(--t);margin-left:calc(var(--t) / -2)}',
+    '.hanter-paques-saute{display:block;transform-origin:50% 100%;animation:hanter-paques-hop var(--d) ease-in-out var(--r) infinite}',
+    '.hanter-paques-oeuf svg{display:block;width:100%}',
+    '.hanter-paques-oeuf .hanter-paques-touffe{position:absolute;left:-40%;bottom:-3px;width:180%}',
+    '@keyframes hanter-paques-hop{0%,50%,100%{transform:none}58%{transform:scale(1.14,.84)}70%{transform:translateY(-30px) scale(.94,1.06) rotate(-8deg)}82%{transform:scale(1.1,.9)}90%{transform:rotate(5deg)}}',
+    // Les œufs roulent (rotation) en rebondissant ; ceux qui vont à gauche tournent dans l'autre sens, et n'ont pas les mêmes couleurs.
+    ':root[data-evenement="paques"] .hanter-fantome:not(.coucou):not(.pouf)>div{animation:hanter-paques-rebond .48s cubic-bezier(.2,.7,.4,1) infinite alternate}',
+    '@keyframes hanter-paques-rebond{from{transform:translateY(0)}to{transform:translateY(-28px)}}',
+    ':root[data-evenement="paques"] .hanter-fantome:not(.coucou):not(.pouf) svg{animation:hanter-paques-roule 1.7s linear infinite}',
+    ':root[data-evenement="paques"] .hanter-fantome.gauche:not(.coucou):not(.pouf) svg{animation-direction:reverse}',
+    '@keyframes hanter-paques-roule{to{transform:rotate(360deg)}}',
+    ':root[data-evenement="paques"] .hanter-fantome.gauche{--hanter-paques-coque:#d4f2d0;--hanter-paques-zigzag:#ff9cc8;--hanter-paques-points:#b99cf2;--hanter-paques-bande:#ffd84d}',
+    ':root[data-evenement="paques"] .hanter-fantome.coucou{--hanter-paques-coque:#fff1a8;--hanter-paques-zigzag:#8fdca6;--hanter-paques-points:#ff9cc8;--hanter-paques-bande:#c7a8ff}',
+    // Le Lapin de Pâques attrapé : il se tasse, fait un bond, retombe, puis s'en va d'un grand saut en laissant tomber des œufs.
+    ':root[data-evenement="paques"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-paques-bond 1.6s cubic-bezier(.45,0,.6,1) forwards}',
+    '@keyframes hanter-paques-bond{0%{transform:translate(-50%,-50%)}16%{transform:translate(-50%,-44%) scale(1.12,.84)}36%{transform:translate(-50%,-80%) scale(.92,1.1) rotate(-6deg)}52%{transform:translate(-50%,-50%) scale(1.1,.88)}62%{transform:translate(-50%,-56%) scale(1) rotate(-4deg)}100%{transform:translate(45vw,-115vh) scale(.4) rotate(16deg);opacity:.4}}',
+    // Les œufs (pluieDeCadeaux) tombent, rebondissent une fois sur le bas de l'écran et s'effacent.
+    ':root[data-evenement="paques"] .hanter-cadeau{animation-name:hanter-paques-tombe;animation-timing-function:linear}',
+    '@keyframes hanter-paques-tombe{0%{transform:none;animation-timing-function:cubic-bezier(.5,0,1,1)}'
+      + '55%{transform:translate(calc(var(--dx) * .5),calc(108vh - var(--t) - 10px)) rotate(calc(var(--a) * .5));animation-timing-function:cubic-bezier(0,0,.5,1)}'
+      + '70%{transform:translate(calc(var(--dx) * .7),calc(96vh - var(--t))) rotate(calc(var(--a) * .7));animation-timing-function:cubic-bezier(.5,0,1,1)}'
+      + '85%{transform:translate(calc(var(--dx) * .9),calc(108vh - var(--t) - 10px)) rotate(calc(var(--a) * .9));opacity:1}'
+      + '100%{transform:translate(var(--dx),calc(108vh - var(--t) - 10px)) rotate(var(--a));opacity:0}}',
+    '@media (prefers-reduced-motion:reduce){[class*="hanter-paques-"],:root[data-evenement="paques"] .hanter-fantome>div,:root[data-evenement="paques"] .hanter-fantome svg{animation:none!important}.hanter-paques-petale,.hanter-paques-vol{display:none}}',
+  ];
+
+  var STYLE_PRINTEMPS = [
+    // Printemps : soleil, pétales, abeilles, fleurs
+    '.hanter-printemps-soleil{position:absolute;left:88%;top:10%;width:360px;height:360px;margin:-180px 0 0 -180px;border-radius:50%;background:radial-gradient(circle,rgb(255 246 180 / .6) 0 14%,rgb(255 230 120 / .2) 34%,transparent 62%);animation:hanter-printemps-halo 4s ease-in-out infinite alternate}',
+    '.hanter-printemps-soleil::before{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(rgb(255 226 100 / .6) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle closest-side,transparent 0 30%,#000 33%,transparent 82%);mask:radial-gradient(circle closest-side,transparent 0 30%,#000 33%,transparent 82%);animation:hanter-printemps-rayons 50s linear infinite}',
+    '@keyframes hanter-printemps-halo{from{transform:scale(.92);opacity:.75}to{transform:scale(1.08);opacity:1}}',
+    '@keyframes hanter-printemps-rayons{to{transform:rotate(1turn)}}',
+    '.hanter-printemps-petale{position:absolute;top:0;left:var(--x);animation:hanter-printemps-chute var(--d) linear var(--r) infinite;will-change:transform}',
+    '.hanter-printemps-petale i{display:block;width:var(--t);height:calc(var(--t) * .72);border-radius:80% 15% 80% 15%;background:linear-gradient(135deg,#fff3f8,var(--c));animation:hanter-printemps-tournoie var(--v) ease-in-out infinite alternate}',
+    '@keyframes hanter-printemps-chute{from{transform:translate(0,-6vh)}to{transform:translate(var(--dx),106vh)}}',
+    '@keyframes hanter-printemps-tournoie{from{transform:translateX(-22px) rotate(-30deg) rotateX(10deg)}to{transform:translateX(22px) rotate(80deg) rotateX(170deg)}}',
+    '.hanter-printemps-abeille{position:absolute;left:0;top:var(--y);width:var(--t);animation:hanter-printemps-passe var(--d) linear var(--r) infinite;will-change:transform}',
+    '.hanter-printemps-abeille.retour{animation-name:hanter-printemps-passe-g}',
+    '.hanter-printemps-abeille>div{animation:hanter-printemps-zigzag 1.3s ease-in-out infinite alternate}',
+    '.hanter-printemps-abeille svg{display:block;width:100%;overflow:visible}',
+    '.hanter-printemps-abeille.retour svg{transform:scaleX(-1)}',
+    '@keyframes hanter-printemps-passe{0%{transform:translateX(-120%)}55%,100%{transform:translateX(calc(100vw + 20%))}}',
+    '@keyframes hanter-printemps-passe-g{0%{transform:translateX(calc(100vw + 20%))}55%,100%{transform:translateX(-120%)}}',
+    '@keyframes hanter-printemps-zigzag{0%{transform:translateY(-18px) rotate(-4deg)}50%{transform:translateY(8px) rotate(5deg)}100%{transform:translateY(-4px) rotate(-6deg)}}',
+    '.hanter-printemps-ailes-abeille{transform-origin:28px 22px;animation:hanter-printemps-vrombit .06s linear infinite alternate}',
+    '@keyframes hanter-printemps-vrombit{to{transform:scaleY(.5)}}',
+    '.hanter-printemps-pre{position:absolute;left:0;right:0;bottom:0;height:130px}',
+    '.hanter-printemps-fleur{position:absolute;bottom:-8px;left:var(--x);width:calc(var(--h) * .4);height:var(--h);transform-origin:50% 100%;animation:hanter-printemps-pousse 2.2s cubic-bezier(.2,1.3,.4,1) var(--r) both}',
+    '.hanter-printemps-fleur svg{display:block;width:100%;height:100%;overflow:visible;transform-origin:50% 100%;animation:hanter-printemps-balance var(--b) ease-in-out var(--r) infinite alternate}',
+    '@keyframes hanter-printemps-pousse{from{transform:scaleY(0)}}',
+    '@keyframes hanter-printemps-balance{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}',
+    // Papillons : ailes qui battent, vol en zigzag, et d'autres couleurs pour certains
+    '.hanter-printemps-ailes{transform-origin:50px 62px;animation:hanter-printemps-bat .22s ease-in-out infinite alternate}',
+    '@keyframes hanter-printemps-bat{to{transform:scaleX(.3)}}',
+    ':root[data-evenement="printemps"] .hanter-fantome:not(.coucou):not(.pouf)>div{animation:hanter-printemps-volette 2.2s ease-in-out infinite}',
+    '@keyframes hanter-printemps-volette{0%,100%{transform:translate(0,0) rotate(-6deg)}25%{transform:translate(10px,-30px) rotate(8deg)}50%{transform:translate(-6px,-6px) rotate(-3deg)}75%{transform:translate(8px,-42px) rotate(10deg)}}',
+    ':root[data-evenement="printemps"] .hanter-fantome:nth-child(3n+2){--papillon-haut:#49b6f2;--papillon-bord-haut:#1d6fb8;--papillon-bas:#8bd65a;--papillon-bord-bas:#3f8f2a}',
+    ':root[data-evenement="printemps"] .hanter-fantome:nth-child(3n){--papillon-haut:#ffd23f;--papillon-bord-haut:#c98a00;--papillon-bas:#ff8a3d;--papillon-bord-bas:#c2410c}',
+    // La Reine des abeilles : ailes qui vrombissent ; attrapée, elle fait un tour et s'envole (salut « Bzzz ! », cadeaux)
+    '.hanter-printemps-aile-g{transform-origin:80px 136px;animation:hanter-printemps-aile-g .09s linear infinite alternate}',
+    '.hanter-printemps-aile-d{transform-origin:120px 136px;animation:hanter-printemps-aile-d .09s linear infinite alternate}',
+    '@keyframes hanter-printemps-aile-g{to{transform:rotate(12deg)}}',
+    '@keyframes hanter-printemps-aile-d{to{transform:rotate(-12deg)}}',
+    ':root[data-evenement="printemps"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-printemps-reine 1.6s ease-in-out forwards}',
+    '@keyframes hanter-printemps-reine{0%{transform:translate(-50%,-50%)}10%{transform:translate(-22%,-64%) rotate(-40deg)}20%{transform:translate(-34%,-96%) rotate(-140deg)}30%{transform:translate(-72%,-94%) rotate(-230deg)}40%{transform:translate(-80%,-60%) rotate(-320deg)}48%{transform:translate(-50%,-50%) rotate(-360deg) scale(1.06)}to{transform:translate(-50vw,-115vh) rotate(-385deg) scale(.3);opacity:.4}}',
+    '.hanter-printemps-petale-chute{display:inline-block;width:.8em;height:.56em;border-radius:80% 15% 80% 15%;background:linear-gradient(135deg,#fff3f8,#ff9fc6);box-shadow:0 1px 3px rgb(200 60 110 / .3)}',
+    '.hanter-printemps-miel{display:inline-block;width:.5em;height:.5em;border-radius:0 50% 50% 50%;background:radial-gradient(circle at 62% 62%,#ffe7a0,#f5b301 55%,#c98500);transform:rotate(45deg);box-shadow:0 0 6px rgb(255 190 40 / .6)}',
+    '@keyframes hanter-printemps-fondu{to{opacity:0}}',
+    '@media (prefers-reduced-motion:reduce){.hanter-printemps-ailes,.hanter-printemps-aile-g,.hanter-printemps-aile-d,.hanter-printemps-ailes-abeille{animation:none}'
+      + ':root[data-evenement="printemps"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-printemps-fondu 1.4s forwards}}',
+  ];
+
   var STYLE = [
     '@font-face{font-family:"Creepster";font-display:swap;src:url(' + BASE + 'polices/creepster-latin.woff2) format("woff2")}',
     '@font-face{font-family:"Mountains of Christmas";font-weight:700;font-display:swap;src:url(' + BASE + 'polices/mountains-of-christmas-latin.woff2) format("woff2")}',
+    '@font-face{font-family:"Sniglet";font-weight:800;font-display:swap;src:url(' + BASE + 'polices/sniglet-latin.woff2) format("woff2")}',
+    '@font-face{font-family:"Pacifico";font-display:swap;src:url(' + BASE + 'polices/pacifico-latin.woff2) format("woff2")}',
     Object.keys(THEMES).map(function (k) { return variables(THEMES[k]); }).join('\n'),
     '.hanter-en-cours .panneau{-webkit-backdrop-filter:none;backdrop-filter:none}', // le flou suivrait chaque image du fond animé
     '.hanter-fond{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}',
@@ -248,7 +486,7 @@
     '.hanter-intro iframe{display:block;width:100%;height:100%;border:0}',
     '.hanter-passer{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;padding:.5rem 1rem;border:1px solid rgb(255 255 255 / .5);border-radius:999px;background:rgb(0 0 0 / .55);color:#fff;font:600 15px/1.2 system-ui,sans-serif;cursor:pointer}',
     '.hanter-revoir{padding:0;border:0;background:none;color:#fff;font:600 .95rem "Space Grotesk",system-ui,sans-serif;letter-spacing:0;text-decoration:underline;cursor:pointer;white-space:nowrap}',
-  ].join('\n');
+  ].concat(STYLE_PAQUES, STYLE_PRINTEMPS).join('\n'); // fiches de saison : leurs règles à elles
 
   function lire(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function ecrire(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
@@ -324,10 +562,99 @@
     }
     f.append(g, el('div', 'hanter-traineau', TRAINEAU));
   }
+  function decorPaques(f) {
+    f.append(el('div', 'hanter-paques-rayons'), el('div', 'hanter-paques-soleil'));
+    var COULEURS = ['#ff9ccb', '#c7a8ff', '#ffd84d', '#8fdca6', '#ffb38a', '#9fd0ff'];
+    for (var i = 0; i < 36; i++) {
+      var p = el('i', 'hanter-paques-petale' + (i % 3 === 2 ? ' rond' : '')), d = hasard(11, 20);
+      p.style.setProperty('--x', hasard(0, 100) + 'vw');
+      p.style.setProperty('--t', hasard(8, 15) + 'px');
+      p.style.setProperty('--c', COULEURS[i % COULEURS.length]);
+      p.style.setProperty('--dx', hasard(-10, 10) + 'vw');
+      p.style.setProperty('--a', hasard(-540, 540) + 'deg');
+      p.style.setProperty('--d', d + 's');
+      p.style.setProperty('--r', -hasard(0, d) + 's'); // déjà en train de tomber
+      f.appendChild(p);
+    }
+    // Deux cloches traversent le ciel de temps en temps (une dans chaque sens), en sonnant.
+    for (var j = 0; j < 2; j++) {
+      var c = el('div', 'hanter-paques-vol' + (j ? ' retour' : ''), '<div>' + CLOCHE_PAQUES + '</div>');
+      c.style.setProperty('--y', (j ? hasard(18, 28) : hasard(4, 12)) + 'vh');
+      c.style.animationDelay = (j ? hasard(14, 18) : hasard(2, 4)) + 's';
+      f.appendChild(c);
+    }
+    // Des œufs cachés dans l'herbe (une touffe devant chacun), qui sautillent : sur les côtés, hors du contenu (les deux du
+    // milieu ne se voient que sur les grands écrans). Le décor passe devant la prairie du thème (site/paques/theme.css).
+    var TOUFFE = '<svg class="hanter-paques-touffe" viewBox="0 0 68 24" aria-hidden="true">'
+      + '<path d="M0 24L4 12 8 24 12 7 17 24 22 10 27 24 31 4 36 24 41 9 46 24 50 6 55 24 59 11 63 24 68 13V24z" fill="#86cf6f"/>'
+      + '<path d="M2 24L7 15 11 24 16 11 20 24 26 14 30 24 35 10 39 24 44 15 48 24 53 12 57 24 62 16 66 24z" fill="#6cb957"/></svg>';
+    var TEINTES = [['#ffd3e6', '#b99cf2', '#ffd84d', '#9fe0b0'], ['#d4f2d0', '#ff9cc8', '#b99cf2', '#ffd84d'],
+      ['#fff1a8', '#9fe0b0', '#ff9cc8', '#b99cf2'], ['#dcebff', '#ffb38a', '#ff9cc8', '#c7a8ff'], ['#eadcff', '#ffd84d', '#8fdca6', '#ff9cc8']];
+    [3, 8.5, 14, 86, 91.5, 97].forEach(function (x, k) {
+      var o = el('div', 'hanter-paques-oeuf', '<i class="hanter-paques-saute">' + OEUF_CACHE + '</i>' + TOUFFE), t = TEINTES[k % TEINTES.length];
+      o.style.setProperty('--x', x + 'vw');
+      o.style.setProperty('--t', Math.round(hasard(30, 44)) + 'px');
+      o.style.setProperty('--d', hasard(2.6, 4.2) + 's');
+      o.style.setProperty('--r', -hasard(0, 4) + 's');
+      ['coque', 'zigzag', 'points', 'bande'].forEach(function (n, m) { o.style.setProperty('--hanter-paques-' + n, t[m]); });
+      f.appendChild(o);
+    });
+  }
+
+  function decorPrintemps(f) {
+    var ABEILLE = '<svg viewBox="0 0 60 46" aria-hidden="true">'
+      + '<g class="hanter-printemps-ailes-abeille" fill="#eef8ff" fill-opacity=".9" stroke="#8cc4e8" stroke-width="1.5"><ellipse cx="22" cy="13" rx="8" ry="11" transform="rotate(-20 22 13)"/><ellipse cx="33" cy="13" rx="7" ry="10" transform="rotate(18 33 13)"/></g>'
+      + '<path d="M10 28l-7-3v6z" fill="#3a2a1a"/><ellipse cx="28" cy="28" rx="18" ry="13" fill="#ffc928" stroke="#d99a00" stroke-width="1.5"/>'
+      + '<path d="M20 16.4Q23 28 20 39.6A18 13 0 0 0 25 40.8Q28 28 25 15.2A18 13 0 0 0 20 16.4zM31 15.2Q34 28 31 40.8A18 13 0 0 0 36 39.6Q39 28 36 16.4A18 13 0 0 0 31 15.2z" fill="#3a2a1a"/>'
+      + '<path d="M48 16q1-8 7-11" stroke="#3a2a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="55" cy="5" r="2.2" fill="#3a2a1a"/>'
+      + '<circle cx="47" cy="25" r="10" fill="#ffd95a" stroke="#d99a00" stroke-width="1.5"/><circle cx="50" cy="23" r="2.2" fill="#2a1a12"/>'
+      + '<path d="M46.5 29q3 3 6 0" stroke="#2a1a12" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="54" cy="28" r="1.8" fill="#ff8fb0"/></svg>';
+    var TIGE = '<path d="M20 100V36" stroke="#3f9a35" stroke-width="4"/><path d="M20 86q-17-6-15-32q8 13 15 20z" fill="#4cb03f"/>';
+    var tulipe = function (c) { return '<svg viewBox="0 0 40 100" aria-hidden="true">' + TIGE + '<path d="M8 14q0 26 12 26t12-26l-6 8-6-13-6 13z" fill="' + c + '"/></svg>'; };
+    var marguerite = '<svg viewBox="0 0 40 100" aria-hidden="true">' + TIGE + '<g transform="translate(20 24)" fill="#fff" stroke="#e3e3e3" stroke-width=".6">';
+    for (var m = 0; m < 10; m++) marguerite += '<ellipse rx="3.6" ry="9" cy="-9" transform="rotate(' + m * 36 + ')"/>';
+    marguerite += '<circle r="6" fill="#ffc928" stroke="none"/></g></svg>';
+    var coquelicot = '<svg viewBox="0 0 40 100" aria-hidden="true"><path d="M20 100q-6-34 2-64" stroke="#3f9a35" stroke-width="4" fill="none"/>'
+      + '<g transform="translate(22 28)"><circle cx="-7" cy="2" r="10" fill="#e63b2e"/><circle cx="7" cy="2" r="10" fill="#e63b2e"/><circle cy="-6" r="10" fill="#f2553f"/><circle r="4.6" fill="#2a1a12"/></g></svg>';
+    var FLEURS = [tulipe('#e8364f'), marguerite, tulipe('#ffc928'), coquelicot, tulipe('#ff6fa8'), marguerite, tulipe('#ff8a3d')];
+    var ROSES = ['#ffb0d1', '#ff9fc6', '#ffd1e4'];
+
+    f.appendChild(el('div', 'hanter-printemps-soleil')); // le disque est dans le fond du thème (theme.css), au même endroit
+    for (var i = 0; i < 34; i++) {
+      var p = el('div', 'hanter-printemps-petale', '<i></i>'), d = hasard(10, 18);
+      p.style.setProperty('--x', hasard(-10, 96) + 'vw');
+      p.style.setProperty('--t', hasard(10, 18) + 'px');
+      p.style.setProperty('--dx', hasard(4, 16) + 'vw'); // un peu de vent vers la droite
+      p.style.setProperty('--c', ROSES[i % ROSES.length]);
+      p.style.setProperty('--v', hasard(1.4, 3) + 's');
+      p.style.setProperty('--d', d + 's');
+      p.style.setProperty('--r', -hasard(0, d) + 's'); // déjà en train de tomber
+      f.appendChild(p);
+    }
+    for (var j = 0; j < 3; j++) {
+      var a = el('div', 'hanter-printemps-abeille' + (j === 1 ? ' retour' : ''), '<div>' + ABEILLE + '</div>'), d2 = hasard(16, 24);
+      a.style.setProperty('--y', hasard(12, 55) + 'vh');
+      a.style.setProperty('--t', hasard(34, 50) + 'px');
+      a.style.setProperty('--d', d2 + 's');
+      a.style.setProperty('--r', -(j * d2 / 3 + hasard(0, 3)) + 's'); // les abeilles passent l'une après l'autre
+      f.appendChild(a);
+    }
+    var pre = el('div', 'hanter-printemps-pre');
+    for (var k = 0; k < 15; k++) {
+      var fl = el('div', 'hanter-printemps-fleur', FLEURS[k % FLEURS.length]);
+      fl.style.setProperty('--x', (k + hasard(.1, .8)) * 100 / 15 + 'vw');
+      fl.style.setProperty('--h', hasard(56, 104) + 'px');
+      fl.style.setProperty('--r', hasard(0, 1.5) + 's');
+      fl.style.setProperty('--b', hasard(2.4, 4) + 's');
+      pre.appendChild(fl);
+    }
+    f.appendChild(pre);
+  }
+
   function creerFond() {
     var f = el('div', 'hanter-fond');
     f.setAttribute('aria-hidden', 'true');
-    f.append(etoiles('hanter-etoiles'), etoiles('hanter-etoiles b'), el('div', 'hanter-lune'));
+    if (T.nuit !== false) f.append(etoiles('hanter-etoiles'), etoiles('hanter-etoiles b'), el('div', 'hanter-lune')); // Pâques, printemps : de jour
     T.decor(f);
     return f;
   }
@@ -426,6 +753,10 @@
     'participation-halloween': ['🧛', 'Participation à Halloween', 'hanter-badge'],
     noel: ['🎅', 'Badge Noël', 'hanter-badge'],
     'participation-noel': ['⛄', 'Participation à Noël', 'hanter-badge'],
+    paques: ['🐰', 'Badge Pâques', 'hanter-badge'],
+    'participation-paques': ['🥚', 'Participation à Pâques', 'hanter-badge'],
+    printemps: ['🌷', 'Badge Printemps', 'hanter-badge'],
+    'participation-printemps': ['🦋', 'Participation au printemps', 'hanter-badge'],
   };
   // Couleurs du rond choisies par l'admin (FONDS_AVATAR, functions/api/admin/[action].js), teintes sombres de app/profil.css.
   var FONDS = { bleu: '#213a63', vert: '#1d4430', jaune: '#4d4117', orange: '#55331b', rouge: '#56242a', rose: '#522443', violet: '#3a2b5c', nuit: '#0f0e22' };
@@ -593,10 +924,9 @@
     var z = bossZone;
     afficherPv();
     z.classList.add('vaincu');
-    if (T.nom === 'noel') {
-      bossEl.appendChild(el('span', 'hanter-bulle', 'Ho ho ho !'));
-      if (!reduit) pluieDeCadeaux();
-    }
+    // Boss qui s'en va plutôt que de disparaître (Père Noël…) : il salue et laisse tomber de quoi fêter ça.
+    if (T.boss.salut) bossEl.appendChild(el('span', 'hanter-bulle', T.boss.salut));
+    if (T.boss.cadeaux && !reduit) pluieDeCadeaux();
     setTimeout(function () {
       z.remove();
       if (bossZone === z) bossZone = bossEl = barre = null;
@@ -611,7 +941,7 @@
     var p = el('div', 'hanter-cadeaux');
     p.setAttribute('aria-hidden', 'true');
     for (var i = 0; i < 18; i++) {
-      var c = el('span', 'hanter-cadeau', ['🎁', '🎁', '🍬', '⭐', '🧸'][i % 5]);
+      var c = el('span', 'hanter-cadeau', T.boss.cadeaux[i % T.boss.cadeaux.length]);
       c.style.setProperty('--x', hasard(5, 92) + 'vw');
       c.style.setProperty('--t', hasard(26, 48) + 'px');
       c.style.setProperty('--dx', hasard(-12, 12) + 'vw');
@@ -814,9 +1144,9 @@
     // Le nom du site suit le thème prêté (« Boîtes à lutins » pour Noël) le temps de l'événement.
     var h1 = document.querySelector('h1');
     [[h1, 'textContent'], [document, 'title']].forEach(function (x) {
-      if (!x[0] || !/Boîtes à (classer|hanter|lutins)/.test(x[0][x[1]])) return;
+      if (!x[0] || !/Boîtes à (classer|hanter|lutins|œufs|fleurs)/.test(x[0][x[1]])) return;
       themePrete.noms.push([x[0], x[1], x[0][x[1]]]);
-      x[0][x[1]] = x[0][x[1]].replace(/Boîtes à (classer|hanter|lutins)/g, THEMES[nom].site);
+      x[0][x[1]] = x[0][x[1]].replace(/Boîtes à (classer|hanter|lutins|œufs|fleurs)/g, THEMES[nom].site);
     });
   }
   function rendreTheme() {

@@ -1,4 +1,5 @@
-// Thème du site, choisi par un admin (page site/admin/, POST /api/admin/theme) : Halloween, Noël ou normal (sciences).
+// Thème du site, choisi par un admin (page site/admin/, POST /api/admin/theme) : Halloween, Noël, Pâques, Printemps ou
+// normal (sciences).
 // Il donne le décor de l'accueil (classe theme-<nom> de <html> et site/<nom>/theme.css, sur les pages dont le <html>
 // porte data-decor), son bandeau (éléments data-theme-seul), les couleurs du logiciel (attribut data-theme de <html>,
 // app/style.css) et le nom du site (THEMES ; dans <title> et dans les éléments data-nom-site : texte et attributs
@@ -17,10 +18,12 @@ import { jourParis, dateValide, lireListe, PERIODES_MAX } from './programme.js';
 export const THEMES = {
   halloween: { nom: 'Boîtes à hanter' },
   noel: { nom: 'Boîtes à lutins' },
+  paques: { nom: 'Boîtes à œufs' },
+  printemps: { nom: 'Boîtes à fleurs' },
   normal: { nom: 'Boîtes à classer' },
 };
 export const THEME_DEFAUT = 'normal';
-const NOMS = /Boîtes à (classer|hanter|lutins)/g;
+const NOMS = /Boîtes à (classer|hanter|lutins|œufs|fleurs)/g;
 
 // Chaque instance du serveur garde les réglages quelques secondes (ils sont lus à chaque page envoyée) ; le thème du
 // jour, lui, est recalculé à chaque fois : il change à minuit (Paris) sans attendre.

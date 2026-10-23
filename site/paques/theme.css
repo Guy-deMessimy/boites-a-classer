@@ -1,0 +1,85 @@
+/* Thème de Pâques de la page d'accueil (classe « theme-paques » sur <html>, feuille chargée après le style de la page) :
+   matin de printemps pastel (thème clair), ciel bleu très clair vers la prairie, soleil doux, motif fond-paques.svg,
+   prairie scene-paques.svg, titres en Sniglet. Pour revenir au thème sciences après Pâques : retirer la classe et le
+   <link> de site/index.html.
+   Pendant l'événement (site/evenement.js, fiche « paques »), le fond s'anime en plus (pétales, cloches, œufs). */
+
+/* Police Sniglet (SIL Open Font License, voir polices/OFL-sniglet.txt), hébergée avec le site. */
+@font-face {
+  font-family: "Sniglet";
+  font-weight: 800;
+  font-display: swap;
+  src: url(../polices/sniglet-latin.woff2) format("woff2");
+}
+
+:root.theme-paques {
+  color-scheme: light;
+  --fond: #f4f8ff;
+  --carte: rgb(255 255 255 / .95);
+  --encre: #33204a;
+  --doux: #5c4a70;
+  --ligne: #e6d8f2;
+  --accent: #7b3fc4;
+  --accent-encre: #ffffff;
+  --accent-doux: rgb(255 226 240 / .92);
+  --code: #f1e8fb;
+  --voile: rgb(255 255 255 / .86);
+  --ombre: 0 8px 24px rgb(110 70 160 / .16);
+  --motif-opacite: .4;
+  --titre: "Sniglet", "Space Grotesk", system-ui, sans-serif;
+}
+
+.theme-paques body {
+  background:
+    radial-gradient(circle at 86% 11%, #fff8d2 0, #ffe680 34px, #ffd84a 44px, rgb(255 228 130 / .55) 46px, rgb(255 234 160 / .28) 80px, rgb(255 240 190 / .1) 150px, transparent 260px) fixed,
+    linear-gradient(180deg, #b9dfff 0%, #dcefff 32%, #f4f2ff 62%, #fdf0f7 82%, #e8f6dc 100%) fixed;
+}
+/* Motif et prairie un cran plus bas que d'habitude (-2) : le décor animé de l'événement (-1 : pétales, cloches, œufs
+   dans l'herbe) passe devant la prairie, et toujours derrière le contenu. */
+.theme-paques body::before {
+  z-index: -2;
+  background: url(fond-paques.svg) 0 0 / 320px 320px;
+  /* pas de motif sur le soleil */
+  -webkit-mask: radial-gradient(circle at 86% 11%, transparent 0 80px, #000 150px);
+  mask: radial-gradient(circle at 86% 11%, transparent 0 80px, #000 150px);
+}
+/* Prairie en bas de l'écran, derrière le contenu. */
+.theme-paques body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(34vh, 300px);
+  z-index: -2;
+  background: url(scene-paques.svg) center bottom / auto 100% repeat-x;
+  pointer-events: none;
+}
+
+.theme-paques h1,
+.theme-paques h2,
+.theme-paques .carte h3,
+.theme-paques .annonce p {
+  font-family: var(--titre);
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+.theme-paques h1 { color: #7b3fc4; text-shadow: 0 3px 0 #ffc2dc, 0 0 16px rgb(255 255 255 / .9); }
+.theme-paques main h2 { color: #a3245f; font-size: 2rem; text-shadow: 0 2px 0 #fff, 0 0 12px #fff, 0 0 22px rgb(255 255 255 / .9); }
+.theme-paques .carte h3 { color: #6a2fb0; font-size: 1.45rem; }
+.theme-paques .auteur { color: #b0266a; }
+
+.theme-paques .annonce p {
+  background: linear-gradient(90deg, #c4357b, #8a4fd6);
+  color: #fff;
+  font-size: 1.35rem;
+  text-shadow: 0 1px 3px rgb(60 10 50 / .4);
+  box-shadow: 0 0 22px rgb(255 255 255 / .7), var(--ombre);
+}
+.theme-paques .annonce a {
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: .95rem;
+}
+.theme-paques .fonctions li::before { background: #e0478f; }
+.theme-paques footer { margin-bottom: 120px; } /* au-dessus de la prairie */

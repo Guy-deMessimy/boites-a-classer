@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Printemps · Boîtes à classer</title>
+  <meta name="description" content="Le clip d'intro de l'événement du printemps de Boîtes à classer : au printemps, tout se réveille… même les boîtes, d'où s'échappent les papillons !">
+  <meta property="og:title" content="L'événement du printemps de Boîtes à classer">
+  <meta property="og:image" content="https://boites-a-classer.pages.dev/icone.png">
+  <link rel="icon" href="../icone.png">
+  <style>
+    /* Clip d'intro de l'événement du printemps (environ 20 s), montré en plein écran par site/evenement.js quand un admin
+       déclenche l'événement (?integre=1 : démarre seul, sans le son, et prévient la page à la fin), ou ouvert
+       directement (bouton « Lancer », avec le son). Tout est dessiné en HTML, CSS et SVG ; le son est fabriqué avec Web
+       Audio (début de l'Allegro du « Printemps » des Quatre Saisons d'A. Vivaldi, 1725, domaine public, et chants
+       d'oiseaux). Même déroulé que site/noel/index.html.
+       La classification montrée est juste : « a des pétales » est dans « est une plante » ; le cerf-volant n'a aucun
+       des attributs. */
+    @font-face {
+      font-family: "Pacifico";
+      font-weight: 400;
+      font-display: swap;
+      src: url(../polices/pacifico-latin.woff2) format("woff2");
+    }
+    @font-face {
+      font-family: "Space Grotesk";
+      font-weight: 300 700;
+      font-display: swap;
+      src: url(../polices/space-grotesk-latin.woff2) format("woff2");
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: #000; color: #fff; font-family: "Space Grotesk", system-ui, sans-serif; }
+    #scene { position: fixed; inset: 0; overflow: hidden; background: #000; }
+
+    /* Le jour se lève : aube, puis ciel bleu. */
+    #aube { position: absolute; inset: 0; background: linear-gradient(180deg, #27336e 0%, #9a5f9e 55%, #ffb38a 100%); opacity: 0; transition: opacity 1s; }
+    #ciel { position: absolute; inset: 0; background: linear-gradient(180deg, #2f9ff0 0%, #6cc1f6 45%, #bfe7fb 100%); opacity: 0; transition: opacity 2.6s; }
+    .aube #aube, .jour #ciel { opacity: 1; }
+
+    #soleil { position: absolute; right: 9%; top: 7%; width: 18vmin; height: 18vmin; transform: translateY(85vh); transition: transform 2.8s cubic-bezier(.2, .7, .2, 1); }
+    .leve #soleil { transform: none; }
+    #soleil .rayons {
+      position: absolute; inset: -55%; border-radius: 50%;
+      background: repeating-conic-gradient(rgb(255 230 100 / .8) 0 8deg, transparent 8deg 24deg);
+      -webkit-mask: radial-gradient(circle closest-side, transparent 0 46%, #000 50%, transparent 92%);
+      mask: radial-gradient(circle closest-side, transparent 0 46%, #000 50%, transparent 92%);
+      animation: tourne-rayons 26s linear infinite;
+    }
+    @keyframes tourne-rayons { to { transform: rotate(1turn); } }
+    #soleil .disque {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle at 38% 36%, #fffbe2, #ffe24d 48%, #ffc21a);
+      box-shadow: 0 0 5vmin 1.5vmin rgb(255 226 90 / .65), 0 0 16vmin 6vmin rgb(255 236 150 / .3);
+    }
+    #soleil svg { display: block; width: 100%; height: 100%; }
+    #soleil .ouverts, .reveil #soleil .fermes { opacity: 0; }
+    .reveil #soleil .ouverts { opacity: 1; }
+
+    .nuage { position: absolute; left: var(--x); top: var(--y); width: var(--t); opacity: 0; transition: opacity 2s; animation: nuage var(--d) linear var(--r) infinite; }
+    .jour .nuage { opacity: .95; }
+    @keyframes nuage { from { transform: translateX(calc(-1 * var(--x) - 35vmin)); } to { transform: translateX(calc(100vw - var(--x) + 5vmin)); } }
+    .nuage svg { display: block; width: 100%; filter: drop-shadow(0 .6vmin 0 rgb(120 170 220 / .35)); }
+
+    /* Pétales de cerisier : tirés au hasard (script), ils tombent en tournoyant. */
+    #petales { position: absolute; inset: 0; opacity: 0; transition: opacity 2s; }
+    .prairie #petales { opacity: 1; }
+    .petale { position: absolute; top: 0; left: var(--x); animation: tombe var(--d) linear var(--r) infinite; }
+    @keyframes tombe { from { transform: translate(0, -6vh); } to { transform: translate(var(--dx), 106vh); } }
+    .petale i, .rafale i {
+      display: block; width: var(--t); height: calc(var(--t) * .72); border-radius: 80% 15% 80% 15%;
+      background: linear-gradient(135deg, #fff3f8, var(--c, #ff9fc6)); animation: tournoie var(--v, 2s) ease-in-out infinite alternate;
+    }
+    @keyframes tournoie { from { transform: translateX(-2vmin) rotate(-30deg) rotateX(10deg); } to { transform: translateX(2vmin) rotate(80deg) rotateX(170deg); } }
+
+    #prairie {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 36vh;
+      background: url(scene-printemps.svg) 30% 100% / auto 100% repeat-x;
+      transform: translateY(100%); transition: transform 1.3s cubic-bezier(.2, .8, .2, 1);
+    }
+    .prairie #prairie { transform: none; }
+
+    /* Des hirondelles passent devant le soleil. */
+    .oiseau { position: absolute; left: 0; top: var(--y); width: var(--t); opacity: 0; }
+    .envol .oiseau { animation: oiseau 4.2s cubic-bezier(.4, .1, .6, 1) var(--r) forwards; }
+    @keyframes oiseau { 0% { opacity: 1; transform: translate(-12vw, 8vh); } 100% { opacity: 1; transform: translate(108vw, -6vh); } }
+    .oiseau svg { display: block; width: 100%; transform-origin: 50% 60%; animation: bat-oiseau .22s ease-in-out infinite alternate; }
+    @keyframes bat-oiseau { to { transform: scaleY(-.5); } }
+
+    /* Coup de vent : une volée de pétales traverse l'écran (à la place de l'étoile filante de Noël). */
+    .rafale { position: absolute; left: 0; top: var(--y); opacity: 0; }
+    #rafales.passe .rafale { animation: rafale 2s cubic-bezier(.45, .1, .55, 1) var(--r) forwards; }
+    @keyframes rafale { 0% { opacity: 1; transform: translate(-8vw, 0); } 50% { transform: translate(50vw, var(--dy)); } 100% { opacity: 1; transform: translate(110vw, 0); } }
+
+    #texte {
+      position: absolute; left: 4%; right: 4%; top: 40%; margin: 0; text-align: center;
+      font: 400 6.4vmin/1.3 "Pacifico", cursive; color: #fff;
+      text-shadow: 0 .45vmin 0 #d1306b, 0 0 2.4vmin rgb(20 70 150 / .55);
+      opacity: 0; transform: translateY(2vmin); transition: opacity .55s, transform .55s;
+    }
+    #texte span { display: block; }
+    #texte .suite { opacity: 0; transform: translateY(1.5vmin); transition: opacity .55s 1.1s, transform .55s 1.1s; }
+    #texte[data-place="haut"] { top: 5%; right: 30%; font-size: 5.6vmin; } /* à gauche du soleil */
+    #texte.visible, #texte.visible .suite { opacity: 1; transform: none; }
+
+    /* La classification, comme dans le logiciel. */
+    #table { position: absolute; left: 50%; top: 52%; width: min(90vw, 100vmin); aspect-ratio: 100 / 55; transform: translate(-50%, -50%); }
+    .boite {
+      position: absolute; border: .55vmin solid var(--c); border-radius: 1.8vmin; background: var(--f);
+      box-shadow: 0 1vmin 2.4vmin rgb(20 70 40 / .18);
+      opacity: 0; transform: scale(.6); transition: transform .45s cubic-bezier(.3, 1.6, .5, 1), opacity .3s, border-top-color .2s;
+    }
+    .couvercle {
+      position: absolute; left: -.55vmin; right: -.55vmin; top: -.55vmin; height: .55vmin; border-radius: 1.8vmin 1.8vmin .4vmin .4vmin;
+      background: var(--c); transform-origin: 0 100%; transition: transform .55s cubic-bezier(.3, 1.6, .5, 1), height .25s;
+    }
+    .boite b {
+      position: absolute; left: 1.4vmin; top: -1.9vmin; padding: .35vmin 1.3vmin; border-radius: 1vmin;
+      background: var(--c); color: #fff; font-size: 2.3vmin; font-weight: 700; white-space: nowrap;
+    }
+    .boite.montree { opacity: 1; transform: none; }
+    #b-plante { left: 2%; top: 8%; width: 56%; height: 84%; --c: #23863d; --f: rgb(236 250 232 / .85); }
+    #b-petales { left: 24%; top: 32%; width: 31%; height: 52%; --c: #d1306b; --f: rgb(255 236 244 / .92); }
+    #b-insecte { left: 63%; top: 22%; width: 35%; height: 60%; --c: #1f6fc5; --f: rgb(232 242 255 / .88); }
+    .tremble { animation: tremble .12s linear 6 alternate; }
+    @keyframes tremble { from { transform: translate(-.6vmin, .3vmin) rotate(-1deg); } to { transform: translate(.6vmin, -.3vmin) rotate(1deg); } }
+    /* Les boîtes s'ouvrent : le couvercle se soulève, les fleurs éclosent. */
+    .ouvre .boite { border-top-color: transparent; }
+    .ouvre .couvercle { height: 1.3vmin; transform: translateY(-1.6vmin) rotate(-2.5deg); }
+    .fleur {
+      position: absolute; bottom: 3%; left: var(--x); width: 6.4vmin; height: 16vmin; margin-left: -3.2vmin;
+      transform: scale(0); transform-origin: 50% 100%; transition: transform .8s cubic-bezier(.3, 1.5, .5, 1) var(--r);
+    }
+    .fleur svg { display: block; width: 100%; height: 100%; overflow: visible; transform-origin: 50% 100%; }
+    .ouvre .fleur { transform: none; }
+    .ouvre .fleur svg { animation: balance 1.4s ease-in-out var(--r) infinite alternate; }
+    @keyframes balance { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+    .carte {
+      position: absolute; left: var(--x); top: var(--y); width: 11vmin; height: 11vmin; margin: -5.5vmin 0 0 -5.5vmin;
+      display: grid; place-content: center; justify-items: center; gap: .2vmin;
+      border-radius: 1.8vmin; background: #fffdf7; color: #1b3022; font-size: 1.8vmin; font-weight: 600; text-align: center; line-height: 1.15;
+      box-shadow: 0 1vmin 2vmin rgb(20 60 40 / .3); opacity: 0;
+      transition: left .7s cubic-bezier(.4, 0, .2, 1), top .7s cubic-bezier(.4, 0, .2, 1), opacity .4s, transform .3s;
+    }
+    .carte span { font-size: 5.4vmin; line-height: 1.1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+    .sans-transition, .sans-transition * { transition: none !important; }
+    .table .carte { opacity: 1; }
+    .ouvre .carte { opacity: 0; transform: scale(.5); }
+    .hesite { animation: hesite .5s ease-in-out 2; }
+    @keyframes hesite { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+    #verdict {
+      position: absolute; left: 50%; bottom: -24%; transform: translateX(-50%) scale(.6); opacity: 0;
+      padding: .8vmin 2.4vmin; border-radius: 99vmin; background: #1f8a4c; color: #fff; font-size: 3vmin; font-weight: 700; white-space: nowrap;
+      box-shadow: 0 .8vmin 2vmin rgb(20 60 40 / .3);
+      transition: opacity .3s, transform .4s cubic-bezier(.3, 1.6, .5, 1);
+    }
+    #verdict.visible { opacity: 1; transform: translateX(-50%); }
+    .efface .boite, .efface .carte, .efface #verdict { opacity: 0 !important; transition: opacity .6s; }
+
+    /* Les papillons s'échappent des boîtes. */
+    .papillon { position: absolute; left: var(--sx); top: var(--sy); width: 9vmin; margin: -6vmin 0 0 -4.5vmin; opacity: 0; }
+    .evasion .papillon { animation: evasion 2.8s cubic-bezier(.3, .1, .4, 1) var(--r) forwards; }
+    @keyframes evasion {
+      0% { opacity: 0; transform: translate(0, 0) scale(.2); }
+      12% { opacity: 1; }
+      50% { transform: translate(calc(var(--dx) * .4vmin), calc(var(--dy) * .4vmin - 8vmin)) scale(calc(var(--s) * .55)) rotate(calc(var(--a) * -1)); }
+      88% { opacity: 1; }
+      100% { opacity: 0; transform: translate(calc(var(--dx) * 1vmin), calc(var(--dy) * 1vmin)) scale(var(--s)) rotate(var(--a)); }
+    }
+    .papillon svg, .reine-svg { display: block; width: 100%; filter: drop-shadow(0 .4vmin .8vmin rgb(30 60 40 / .3)); }
+    .ailes { transform-origin: 50px 62px; animation: bat .2s ease-in-out infinite alternate; }
+    @keyframes bat { to { transform: scaleX(.3); } }
+
+    #titre { position: absolute; inset: 0; display: grid; place-content: center; gap: 1.6vmin; padding: 3vmin 5vmin 13vmin; text-align: center; pointer-events: none; }
+    #titre h1 {
+      margin: 0; font: 400 11vmin/1.3 "Pacifico", cursive; color: #fff;
+      text-shadow: 0 .8vmin 0 #d1306b, 0 0 3vmin rgb(255 255 255 / .5);
+      opacity: 0; transform: scale(.5); transition: opacity .8s, transform 1.1s cubic-bezier(.2, 1.5, .4, 1);
+    }
+    /* « Boîtes à classer » devient « Boîtes à fleurs ». */
+    .mot { display: inline-grid; }
+    .mot > span { grid-area: 1 / 1; justify-self: start; transition: opacity .45s, transform .8s cubic-bezier(.3, 1.7, .5, 1); }
+    .mot .nouveau { color: #ffe14d; opacity: 0; transform: scale(.2) rotate(-25deg); }
+    .fleurir .mot .ancien { opacity: 0; transform: translateY(-45%) scale(.5) rotate(14deg); }
+    .fleurir .mot .nouveau { opacity: 1; transform: none; }
+    #titre p { margin: 0; opacity: 0; transform: translateY(2vmin); transition: opacity .7s, transform .7s; }
+    #titre .sous { font: 400 5.4vmin/1.3 "Pacifico", cursive; color: #fff; text-shadow: 0 .4vmin 0 #23803a, 0 0 2vmin rgb(0 70 40 / .4); }
+    /* Les règles du jeu, une par une, puis la Reine des abeilles arrive : « Bzzz ! ». */
+    #titre .regles { display: grid; gap: 1.2vmin; margin: 1vmin auto 0; padding: 0; list-style: none; text-align: left; font-size: 2.9vmin; font-weight: 500; color: #1b3022; }
+    #titre .regles li {
+      padding: 1vmin 2vmin; border-radius: 1.6vmin; background: rgb(255 255 255 / .9); box-shadow: 0 .6vmin 1.6vmin rgb(20 70 40 / .18);
+      opacity: 0; transform: translateX(-3vmin); transition: opacity .5s, transform .5s;
+    }
+    #titre .regles li.vue { opacity: 1; transform: none; }
+    .titre #titre h1 { opacity: 1; transform: none; }
+    .sous-titre #titre .sous { opacity: 1; transform: none; }
+    #reine { position: absolute; z-index: 2; right: 4%; bottom: 4%; width: min(24vmin, 190px); transform: translate(75vw, -40vh) rotate(-25deg); transition: transform 1.3s cubic-bezier(.25, .9, .3, 1.15); }
+    .reine #reine { transform: none; }
+    #reine .corps { animation: plane 1.3s ease-in-out infinite alternate; }
+    @keyframes plane { from { transform: translateY(-1.4vmin) rotate(-4deg); } to { transform: translateY(1.4vmin) rotate(3deg); } }
+    .reine-svg { filter: drop-shadow(0 0 2vmin rgb(255 214 64 / .75)); }
+    .aile-g { transform-origin: 80px 136px; animation: aile-g .09s linear infinite alternate; }
+    .aile-d { transform-origin: 120px 136px; animation: aile-d .09s linear infinite alternate; }
+    @keyframes aile-g { to { transform: rotate(12deg); } }
+    @keyframes aile-d { to { transform: rotate(-12deg); } }
+    #reine b {
+      position: absolute; right: 82%; top: 30%; padding: .3vmin 1.8vmin .6vmin; border-radius: 2vmin; background: #fff; color: #c2185b;
+      font: 400 3.8vmin/1.4 "Pacifico", cursive; white-space: nowrap; box-shadow: 0 .5vmin 1.5vmin rgb(0 0 0 / .2); opacity: 0; transition: opacity .3s 1s;
+    }
+    .reine #reine b { opacity: 1; }
+    .titre .astre { opacity: 1; }
+    .astre { position: absolute; opacity: 0; transition: opacity 1s; animation: orbite 6s linear infinite; font-size: 5vmin; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+    .astre:nth-of-type(2) { animation-duration: 7.5s; animation-direction: reverse; }
+    @keyframes orbite { from { transform: rotate(0) translateX(34vmin) rotate(0); } to { transform: rotate(360deg) translateX(34vmin) rotate(-360deg); } }
+    #astres { position: absolute; left: 50%; top: 42%; z-index: 0; }
+    #titre > :not(#astres) { position: relative; z-index: 1; } /* les fleurs qui tournent passent derrière le texte */
+
+    #fondu { position: absolute; inset: 0; background: #fffdf2; opacity: 0; transition: opacity .8s; pointer-events: none; }
+    .fin #fondu { opacity: 1; }
+
+    .commandes { position: absolute; left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 8px; z-index: 2; }
+    .commandes button, .commandes a {
+      padding: .5rem .95rem; border: 1px solid rgb(255 255 255 / .55); border-radius: 999px; background: rgb(10 40 25 / .62);
+      color: #fff; font: 600 15px/1.2 system-ui, sans-serif; text-decoration: none; cursor: pointer;
+    }
+    .commandes [hidden] { display: none; }
+    button:focus-visible, a:focus-visible { outline: 3px solid #d1306b; outline-offset: 2px; }
+
+    #depart {
+      position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 24px;
+      background: url(scene-printemps.svg) 30% 100% / auto 32vh repeat-x, linear-gradient(180deg, #2f9ff0, #bfe7fb);
+    }
+    #depart > div { display: grid; gap: 20px; max-width: 520px; padding: 28px 28px 30px; border-radius: 26px; background: rgb(255 255 255 / .92); text-align: center; box-shadow: 0 12px 32px rgb(20 70 120 / .25); }
+    #depart h1 { margin: 0; font: 400 clamp(40px, 9vmin, 84px)/1.3 "Pacifico", cursive; color: #d1306b; text-shadow: 0 3px 0 #ffe066; }
+    #depart p { margin: 0; color: #1b3022; font-size: 17px; line-height: 1.45; }
+    #depart button { justify-self: center; padding: .8rem 1.6rem; border: 0; border-radius: 999px; background: #23803a; color: #fff; font: 700 20px/1.2 system-ui, sans-serif; cursor: pointer; }
+    #depart[hidden] { display: none; }
+
+    @media (orientation: portrait) {
+      #titre .regles { font-size: 3.8vmin; }
+      #soleil { top: 4%; width: 15vmin; height: 15vmin; }
+      #texte[data-place="haut"] { top: 15%; right: 4%; }
+      #astres { top: 36%; }
+    }
+    /* Moins d'animations si l'appareil le demande : ni pétales ni papillons en vol, rien qui tourne ou bat des ailes. */
+    @media (prefers-reduced-motion: reduce) {
+      #petales, #rafales, #oiseaux, #papillons, #astres { display: none; }
+      .nuage, .rayons, .ailes, .aile-g, .aile-d, .fleur svg, #reine .corps, .tremble, .hesite { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene" aria-live="polite">
+    <div id="aube"></div>
+    <div id="ciel"></div>
+    <div id="nuages" aria-hidden="true"></div>
+    <div id="soleil" aria-hidden="true">
+      <div class="rayons"></div>
+      <div class="disque"><svg viewBox="0 0 100 100">
+        <g class="fermes" stroke="#b5651d" stroke-width="4" fill="none" stroke-linecap="round"><path d="M28 48q8 6 16 0M56 48q8 6 16 0"/></g>
+        <g class="ouverts"><ellipse cx="37" cy="45" rx="5" ry="6.5" fill="#6b3a12"/><ellipse cx="63" cy="45" rx="5" ry="6.5" fill="#6b3a12"/><circle cx="39" cy="42.5" r="2" fill="#fff"/><circle cx="65" cy="42.5" r="2" fill="#fff"/></g>
+        <circle cx="27" cy="60" r="7" fill="#ff9e80" opacity=".6"/><circle cx="73" cy="60" r="7" fill="#ff9e80" opacity=".6"/>
+        <path d="M38 62q12 12 24 0" stroke="#b5651d" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </svg></div>
+    </div>
+    <div id="oiseaux" aria-hidden="true"></div>
+    <div id="petales" aria-hidden="true"></div>
+    <div id="prairie"></div>
+    <div id="table">
+      <div class="boite" id="b-plante"><span class="couvercle"><b>est une plante</b></span></div>
+      <div class="boite" id="b-petales"><span class="couvercle"><b>a des pétales</b></span></div>
+      <div class="boite" id="b-insecte"><span class="couvercle"><b>est un insecte</b></span></div>
+      <div class="carte" data-nom="tulipe" style="--x: 12%; --y: 112%" data-cx="32%" data-cy="60%"><span>🌷</span>tulipe</div>
+      <div class="carte" data-nom="marguerite" style="--x: 31%; --y: 112%" data-cx="47%" data-cy="60%"><span>🌼</span>marguerite</div>
+      <div class="carte" data-nom="pousse" style="--x: 50%; --y: 112%" data-cx="12.5%" data-cy="55%"><span>🌱</span>pousse</div>
+      <div class="carte" data-nom="coccinelle" style="--x: 69%; --y: 112%" data-cx="80.5%" data-cy="55%"><span>🐞</span>coccinelle</div>
+      <div class="carte" data-nom="cerf-volant" style="--x: 88%; --y: 112%"><span>🪁</span>cerf-volant</div>
+      <div id="verdict">✔ Bravo ! Classification correcte</div>
+      <div id="papillons" aria-hidden="true"></div>
+    </div>
+    <div id="rafales" aria-hidden="true"></div>
+    <p id="texte"></p>
+    <div id="titre">
+      <div id="astres" aria-hidden="true"><span class="astre">🌸</span><span class="astre">🌼</span></div>
+      <h1>Boîtes à <span class="mot"><span class="ancien">classer</span><span class="nouveau">fleurs</span></span></h1>
+      <p class="sous">L'événement du printemps commence !</p>
+      <ul class="regles">
+        <li>🦋 Les papillons volent sur le site : attrape-les d'un clic !</li>
+        <li>🐝 Quand tout le monde ensemble en a attrapé 30, la Reine des abeilles arrive : clique sur elle pour l'attraper !</li>
+        <li>🏆 Celle ou celui qui l'attrape le plus gagne le badge 🌷, et chaque participant gagne 🦋</li>
+      </ul>
+    </div>
+    <div id="reine" aria-hidden="true"><div class="corps"></div><b>Bzzz !</b></div>
+    <div id="fondu"></div>
+  </div>
+
+  <div class="commandes">
+    <button type="button" id="son">🔇 Activer le son</button>
+    <button type="button" id="rejouer" hidden>↻ Revoir</button>
+    <a href="/" id="retour" hidden>← Retour au site</a>
+  </div>
+
+  <div id="depart" hidden>
+    <div>
+      <h1>🌸 Printemps</h1>
+      <p>Le clip d'intro de l'événement du printemps de Boîtes à classer (20 secondes).</p>
+      <button type="button" id="lancer">▶ Lancer le clip</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+      var $ = function (s) { return document.querySelector(s); };
+      var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+      var integre = /[?&]integre=1/.test(location.search) && window.parent !== window;
+      var scene = $('#scene');
+      var minuteurs = [];
+      var debut = 0;
+      var hasard = function (a, b) { return a + Math.random() * (b - a); };
+
+      // Mêmes dessins que la fiche « printemps » de site/evenement.js (papillon, Reine des abeilles).
+      var PAPILLON = '<svg viewBox="0 0 100 124"><g class="ailes" stroke-width="2.5" stroke-linejoin="round">'
+        + '<path d="M47 60C40 30 16 10 6 22c-9 12 0 42 41 44zM53 60C60 30 84 10 94 22c9 12 0 42-41 44z" style="fill:var(--papillon-haut,#ff8a3d);stroke:var(--papillon-bord-haut,#c2410c)"/>'
+        + '<path d="M47 66C30 64 12 78 18 96c5 14 24 10 29-20zM53 66C70 64 88 78 82 96c-5 14-24 10-29-20z" style="fill:var(--papillon-bas,#ff5fa2);stroke:var(--papillon-bord-bas,#c0266a)"/>'
+        + '<circle cx="22" cy="32" r="7" fill="#ffe066"/><circle cx="78" cy="32" r="7" fill="#ffe066"/><circle cx="33" cy="50" r="4.5" fill="#fff"/><circle cx="67" cy="50" r="4.5" fill="#fff"/>'
+        + '<circle cx="29" cy="88" r="5" fill="#fff3a6"/><circle cx="71" cy="88" r="5" fill="#fff3a6"/></g>'
+        + '<path d="M45 28q-5-16-16-19M55 28q5-16 16-19" stroke="#4b2f7a" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="28" cy="9" r="4.5" fill="#ff5fa2"/><circle cx="72" cy="9" r="4.5" fill="#ff5fa2"/>'
+        + '<rect x="43.5" y="50" width="13" height="54" rx="6.5" fill="#4b2f7a"/><path d="M46 66h8M46 76h8M46 86h8" stroke="#8d6fd1" stroke-width="3" stroke-linecap="round"/>'
+        + '<circle cx="50" cy="38" r="15" fill="#5b3a94"/><ellipse cx="44" cy="37" rx="4.2" ry="5.2" fill="#fff"/><ellipse cx="56" cy="37" rx="4.2" ry="5.2" fill="#fff"/>'
+        + '<circle cx="44.6" cy="38" r="2.6" fill="#1d1030"/><circle cx="56.6" cy="38" r="2.6" fill="#1d1030"/><circle cx="45.4" cy="36.8" r="1" fill="#fff"/><circle cx="57.4" cy="36.8" r="1" fill="#fff"/>'
+        + '<ellipse cx="39" cy="45" rx="3" ry="2" fill="#ff9cc7"/><ellipse cx="61" cy="45" rx="3" ry="2" fill="#ff9cc7"/><path d="M45.5 45q4.5 4 9 0" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>';
+      var REINE = '<svg class="reine-svg" viewBox="0 0 200 240">'
+        + '<g class="aile-g" fill="#e4f4ff" fill-opacity=".9" stroke="#86bfe8" stroke-width="3"><ellipse cx="42" cy="118" rx="44" ry="26" transform="rotate(-32 42 118)"/><ellipse cx="44" cy="160" rx="32" ry="18" transform="rotate(-6 44 160)"/></g>'
+        + '<g class="aile-d" fill="#e4f4ff" fill-opacity=".9" stroke="#86bfe8" stroke-width="3"><ellipse cx="158" cy="118" rx="44" ry="26" transform="rotate(32 158 118)"/><ellipse cx="156" cy="160" rx="32" ry="18" transform="rotate(6 156 160)"/></g>'
+        + '<ellipse cx="100" cy="172" rx="56" ry="56" fill="#ffc93c" stroke="#d99a00" stroke-width="3"/>'
+        + '<path d="M54 140Q100 149 146 140A56 56 0 0 1 153 154Q100 163 47 154A56 56 0 0 1 54 140zM44 170Q100 179 156 170A56 56 0 0 1 154.7 184Q100 193 45.3 184A56 56 0 0 1 44 170zM50.4 198Q100 207 149.6 198A56 56 0 0 1 141.1 210Q100 219 58.9 210A56 56 0 0 1 50.4 198z" fill="#3a2a1a"/>'
+        + '<path d="M90 225q10 5 20 0l-10 15z" fill="#3a2a1a"/>'
+        + '<path d="M52 166q-24-2-34-26" stroke="#3a2a1a" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="18" cy="140" r="7" fill="#3a2a1a"/>'
+        + '<path d="M170 196l15-92" stroke="#c98a12" stroke-width="5" stroke-linecap="round"/>'
+        + '<g transform="translate(186 96)" fill="#ff6fa8"><circle cy="-8" r="6"/><circle cx="7.6" cy="-2.5" r="6"/><circle cx="4.7" cy="6.5" r="6"/><circle cx="-4.7" cy="6.5" r="6"/><circle cx="-7.6" cy="-2.5" r="6"/><circle r="4.5" fill="#ffe066"/></g>'
+        + '<path d="M148 166q22 0 30-18" stroke="#3a2a1a" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="178" cy="148" r="7" fill="#3a2a1a"/>'
+        + '<path d="M78 62q-8-22-26-32M122 62q8-22 26-32" stroke="#3a2a1a" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="51" cy="29" r="7" fill="#ff6fa8"/><circle cx="149" cy="29" r="7" fill="#ff6fa8"/>'
+        + '<circle cx="100" cy="96" r="44" fill="#ffd95a" stroke="#d99a00" stroke-width="3"/>'
+        + '<ellipse cx="83" cy="98" rx="8" ry="10" fill="#2a1a12"/><ellipse cx="117" cy="98" rx="8" ry="10" fill="#2a1a12"/><circle cx="86" cy="94" r="3.2" fill="#fff"/><circle cx="120" cy="94" r="3.2" fill="#fff"/>'
+        + '<path d="M76 90l-7-4M77 85l-5-7M124 90l7-4M123 85l5-7" stroke="#2a1a12" stroke-width="3" stroke-linecap="round"/>'
+        + '<ellipse cx="68" cy="114" rx="8" ry="5" fill="#ff8fb0" opacity=".8"/><ellipse cx="132" cy="114" rx="8" ry="5" fill="#ff8fb0" opacity=".8"/><path d="M88 115q12 14 24 0q-12 4-24 0z" fill="#b5304f"/>'
+        + '<path d="M64 66l4-32 17 16 15-28 15 28 17-16 4 32q-36-10-72 0z" fill="#ffcf33" stroke="#b8860b" stroke-width="3" stroke-linejoin="round"/>'
+        + '<circle cx="100" cy="52" r="5" fill="#ff4f9a"/><circle cx="81" cy="58" r="3.5" fill="#4dabff"/><circle cx="119" cy="58" r="3.5" fill="#4dabff"/>'
+        + '<circle cx="68" cy="34" r="3.5" fill="#fff3b0"/><circle cx="100" cy="22" r="4" fill="#fff3b0"/><circle cx="132" cy="34" r="3.5" fill="#fff3b0"/></svg>';
+      var NUAGE = '<svg viewBox="0 0 120 60"><path d="M22 54H100A15 15 0 0 0 100 24A22 22 0 0 0 60 13A18 18 0 0 0 28 25A14 14 0 0 0 22 54Z" fill="#fff"/></svg>';
+      var HIRONDELLE = '<svg viewBox="0 0 60 30"><path d="M30 18Q18 3 2 6q14 4 20 14 4 4 8 2 4 2 8-2 6-10 20-14Q42 3 30 18z" fill="#24456e"/></svg>';
+      var TIGE = '<path d="M20 100V36" stroke="#3f9a35" stroke-width="4"/><path d="M20 86q-17-6-15-32q8 13 15 20z" fill="#4cb03f"/>';
+      var tulipe = function (c) { return '<svg viewBox="0 0 40 100">' + TIGE + '<path d="M8 14q0 26 12 26t12-26l-6 8-6-13-6 13z" fill="' + c + '"/></svg>'; };
+      var MARGUERITE = '<svg viewBox="0 0 40 100">' + TIGE + '<g transform="translate(20 24)" fill="#fff" stroke="#e3e3e3" stroke-width=".6">';
+      for (var m = 0; m < 10; m++) MARGUERITE += '<ellipse rx="3.6" ry="9" cy="-9" transform="rotate(' + m * 36 + ')"/>';
+      MARGUERITE += '<circle r="6" fill="#ffc928" stroke="none"/></g></svg>';
+      var COQUELICOT = '<svg viewBox="0 0 40 100"><path d="M20 100q-6-34 2-64" stroke="#3f9a35" stroke-width="4" fill="none"/>'
+        + '<g transform="translate(22 28)"><circle cx="-7" cy="2" r="10" fill="#e63b2e"/><circle cx="7" cy="2" r="10" fill="#e63b2e"/><circle cy="-6" r="10" fill="#f2553f"/><circle r="4.6" fill="#2a1a12"/></g></svg>';
+      // Couleurs d'ailes : orange et rose (dessin), bleu et vert, jaune et orange, violet et rose.
+      var AILES = [null, ['#49b6f2', '#1d6fb8', '#8bd65a', '#3f8f2a'], ['#ffd23f', '#c98a00', '#ff8a3d', '#c2410c'], ['#b48cff', '#6f45c9', '#ff9cc7', '#c0266a']];
+      var ROSES = ['#ffb0d1', '#ff9fc6', '#ffd1e4'];
+
+      function petale(classe, t) {
+        var p = document.createElement('div');
+        p.className = classe;
+        p.innerHTML = '<i></i>';
+        p.style.setProperty('--t', t.toFixed(1) + 'px');
+        p.style.setProperty('--c', ROSES[Math.floor(hasard(0, 3))]);
+        p.style.setProperty('--v', hasard(1.2, 2.6).toFixed(2) + 's');
+        return p;
+      }
+
+      // Décor tiré au hasard : nuages, pétales, hirondelles, fleurs et papillons des boîtes.
+      $('#reine .corps').innerHTML = REINE;
+      [[8, 12, 30, 70], [46, 6, 20, 90], [70, 28, 24, 80], [-10, 34, 16, 100]].forEach(function (n, i) {
+        var e = document.createElement('div');
+        e.className = 'nuage';
+        e.innerHTML = NUAGE;
+        e.style.setProperty('--x', n[0] + 'vw');
+        e.style.setProperty('--y', n[1] + '%');
+        e.style.setProperty('--t', n[2] + 'vmin');
+        e.style.setProperty('--d', n[3] + 's');
+        e.style.setProperty('--r', (-n[3] * (i + 1) / 5).toFixed(1) + 's');
+        $('#nuages').appendChild(e);
+      });
+      for (var i = 0; i < 46; i++) {
+        var p = petale('petale', hasard(1.2, 2.4) * Math.min(innerWidth, innerHeight) / 100), d = hasard(7, 13);
+        p.style.setProperty('--x', hasard(-10, 96).toFixed(1) + 'vw');
+        p.style.setProperty('--dx', hasard(4, 16).toFixed(1) + 'vw');
+        p.style.setProperty('--d', d.toFixed(1) + 's');
+        p.style.setProperty('--r', (-hasard(0, d)).toFixed(1) + 's');
+        $('#petales').appendChild(p);
+      }
+      for (var r = 0; r < 18; r++) {
+        var q = petale('rafale', hasard(1.4, 2.8) * Math.min(innerWidth, innerHeight) / 100);
+        q.style.setProperty('--y', hasard(12, 70).toFixed(1) + '%');
+        q.style.setProperty('--dy', hasard(-12, 12).toFixed(1) + 'vh');
+        q.style.setProperty('--r', hasard(0, .7).toFixed(2) + 's');
+        $('#rafales').appendChild(q);
+      }
+      [[16, 7, 0], [22, 5.5, .35], [12, 4.5, .7]].forEach(function (o) {
+        var e = document.createElement('div');
+        e.className = 'oiseau';
+        e.innerHTML = HIRONDELLE;
+        e.style.setProperty('--y', o[0] + '%');
+        e.style.setProperty('--t', o[1] + 'vmin');
+        e.style.setProperty('--r', o[2] + 's');
+        $('#oiseaux').appendChild(e);
+      });
+      // Fleurs de chaque boîte : [boîte, position (% de la boîte), dessin, délai en s].
+      [['plante', 10, tulipe('#e8364f'), 0], ['plante', 27, MARGUERITE, .15],
+        ['petales', 20, tulipe('#ff6fa8'), .1], ['petales', 50, COQUELICOT, .25], ['petales', 80, tulipe('#ffc928'), .05],
+        ['insecte', 22, MARGUERITE, .2], ['insecte', 50, tulipe('#ff8a3d'), 0], ['insecte', 78, COQUELICOT, .3]].forEach(function (f) {
+        var e = document.createElement('i');
+        e.className = 'fleur';
+        e.innerHTML = f[2];
+        e.style.setProperty('--x', f[1] + '%');
+        e.style.setProperty('--r', f[3] + 's');
+        $('#b-' + f[0]).appendChild(e);
+      });
+      // Les papillons partent des fleurs (positions en % de la table), vers l'extérieur.
+      [[8, 40], [17, 42], [30, 56], [40, 52], [49, 58], [71, 44], [80, 40], [90, 46], [36, 30], [62, 34]].forEach(function (s, j) {
+        var e = document.createElement('div'), c = AILES[j % AILES.length];
+        e.className = 'papillon';
+        e.innerHTML = PAPILLON;
+        if (c) ['haut', 'bord-haut', 'bas', 'bord-bas'].forEach(function (k, n) { e.style.setProperty('--papillon-' + k, c[n]); });
+        var angle = Math.atan2(s[1] - 50, s[0] - 50) + hasard(-.35, .35);
+        e.style.setProperty('--sx', s[0] + '%');
+        e.style.setProperty('--sy', s[1] + '%');
+        e.style.setProperty('--dx', (Math.cos(angle) * hasard(70, 110)).toFixed(1));
+        e.style.setProperty('--dy', (Math.sin(angle) * hasard(50, 80) - 20).toFixed(1));
+        e.style.setProperty('--s', hasard(2, 3.6).toFixed(2));
+        e.style.setProperty('--a', hasard(-30, 30).toFixed(0) + 'deg');
+        e.style.setProperty('--r', hasard(0, .7).toFixed(2) + 's');
+        $('#papillons').appendChild(e);
+      });
+
+      function carte(nom) { return $('.carte[data-nom="' + nom + '"]'); }
+      // t : le texte ; « | » le coupe en deux lignes, la seconde arrive un peu après.
+      function dire(t, place) {
+        var e = $('#texte');
+        e.classList.remove('visible');
+        e.textContent = '';
+        t.split('|').forEach(function (morceau, i) {
+          var s = document.createElement('span');
+          if (i) s.className = 'suite';
+          s.textContent = morceau;
+          e.appendChild(s);
+        });
+        e.dataset.place = place;
+        void e.offsetWidth; // les nouvelles lignes partent cachées : la seconde arrive après la première
+        e.classList.add('visible');
+      }
+      function taire() { $('#texte').classList.remove('visible'); }
+      function rafale() { var e = $('#rafales'); e.classList.remove('passe'); void e.offsetWidth; e.classList.add('passe'); }
+      function boite(id) { $('#b-' + id).classList.add('montree'); }
+      function regle(i) { $$('#titre .regles li')[i].classList.add('vue'); }
+      function ranger(nom) {
+        var c = carte(nom);
+        c.style.setProperty('--x', c.dataset.cx);
+        c.style.setProperty('--y', c.dataset.cy);
+      }
+
+      /* Son (Web Audio) : brise et oiseaux, l'Allegro du « Printemps » (violons et clavecin), la Reine des abeilles. */
+      var son = (function () {
+        var ctx = null, sortie = null, actif = false;
+        function contexte() {
+          if (ctx) return ctx;
+          var C = window.AudioContext || window.webkitAudioContext;
+          if (!C) return null;
+          ctx = new C();
+          sortie = ctx.createGain();
+          sortie.gain.value = .8;
+          sortie.connect(ctx.destination);
+          return ctx;
+        }
+        function relier() { for (var i = 0; i < arguments.length - 1; i++) arguments[i].connect(arguments[i + 1]); }
+        function bruit(duree) {
+          var n = Math.floor(ctx.sampleRate * duree), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0), x = 0;
+          for (var i = 0; i < n; i++) { x = (x + .02 * (Math.random() * 2 - 1)) / 1.02; d[i] = x * 3.5; }
+          return b;
+        }
+        function bip(type, f, t, duree, volume, vers) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = type;
+          o.frequency.setValueAtTime(f, t);
+          if (vers) o.frequency.exponentialRampToValueAtTime(vers, t + duree);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(volume, t + .02);
+          g.gain.exponentialRampToValueAtTime(.0001, t + duree);
+          relier(o, g, sortie);
+          o.start(t);
+          o.stop(t + duree + .05);
+        }
+        // Violons : deux dents de scie un peu désaccordées, adoucies par un filtre, avec un léger vibrato.
+        function violon(t, f, duree, volume) {
+          var filtre = ctx.createBiquadFilter(), g = ctx.createGain(), vib = ctx.createOscillator(), prof = ctx.createGain();
+          filtre.type = 'lowpass';
+          filtre.frequency.value = Math.min(6000, f * 4);
+          filtre.Q.value = .7;
+          vib.frequency.value = 5.5;
+          prof.gain.value = f * .005;
+          vib.connect(prof);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(volume, t + .03);
+          g.gain.setValueAtTime(volume * .85, t + Math.max(.04, duree - .04));
+          g.gain.exponentialRampToValueAtTime(.0001, t + duree + .15);
+          [-6, 6].forEach(function (desaccord) {
+            var o = ctx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.value = f;
+            o.detune.value = desaccord;
+            prof.connect(o.frequency);
+            o.connect(filtre);
+            o.start(t);
+            o.stop(t + duree + .2);
+          });
+          relier(filtre, g, sortie);
+          vib.start(t);
+          vib.stop(t + duree + .2);
+        }
+        // Clavecin : une corde pincée, brève et brillante (les accords du continuo).
+        function clavecin(t, f, volume) {
+          var o = ctx.createOscillator(), filtre = ctx.createBiquadFilter(), g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.value = f;
+          filtre.type = 'lowpass';
+          filtre.frequency.setValueAtTime(4200, t);
+          filtre.frequency.exponentialRampToValueAtTime(700, t + .3);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(volume, t + .004);
+          g.gain.exponentialRampToValueAtTime(.0001, t + .45);
+          relier(o, filtre, g, sortie);
+          o.start(t);
+          o.stop(t + .5);
+        }
+        // Début de l'Allegro du « Printemps », en mi majeur : [note, durée en temps], un temps = pas secondes.
+        var B2 = 123.47, E3 = 164.81, Fs3 = 185, Gs3 = 207.65, B3 = 246.94, Ds4 = 311.13, E4 = 329.63, B4 = 493.88,
+          Ds5 = 622.25, E5 = 659.25, Fs5 = 739.99, Gs5 = 830.61, A5 = 880, B5 = 987.77;
+        var PHRASE = [[Gs5, .5], [Gs5, .5], [Gs5, .5], [Fs5, .25], [E5, .25], [B5, 1.5], [B5, .25], [A5, .25]];
+        var THEME = [[E5, .5]].concat(PHRASE, PHRASE, [[Gs5, .5], [A5, .25], [B5, .25], [A5, .5], [Gs5, .5], [Fs5, 1], [Ds5, .5], [B4, .5], [E5, 2]]);
+        // Continuo, un accord par temps après la levée : mi majeur, puis si majeur avant de conclure.
+        var MI = [E3, Gs3, B3, E4], SI = [B2, Fs3, B3, Ds4];
+        var ACCORDS = [MI, MI, MI, MI, MI, MI, MI, MI, MI, MI, SI, SI, MI];
+        function air(t, pas, volume) {
+          var u = t;
+          THEME.forEach(function (n) { violon(u, n[0], n[1] * pas * .92, volume); u += n[1] * pas; });
+          ACCORDS.forEach(function (a, i) {
+            var b = t + (.5 + i) * pas;
+            clavecin(b, a[1], .03);
+            clavecin(b + .012, a[2], .026);
+            clavecin(b + .024, a[3], .026);
+            bip('triangle', a[0], b, pas * .45, .13);
+            if (i < ACCORDS.length - 1) bip('triangle', a[0], b + pas / 2, pas * .45, .1);
+          });
+        }
+        // Oiseaux : petits cris (montée puis descente rapide) et trilles, comme les oiseaux du « Printemps ».
+        function piou(t, f, volume) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(f, t);
+          o.frequency.exponentialRampToValueAtTime(f * 1.45, t + .035);
+          o.frequency.exponentialRampToValueAtTime(f * .85, t + .09);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(volume, t + .008);
+          g.gain.exponentialRampToValueAtTime(.0001, t + .1);
+          relier(o, g, sortie);
+          o.start(t);
+          o.stop(t + .12);
+        }
+        function chant(t, f, n, volume) { for (var i = 0; i < n; i++) piou(t + i * .12 + Math.random() * .03, f * hasard(.94, 1.08), volume); }
+        function trille(t, f, duree, volume) {
+          var o = ctx.createOscillator(), lfo = ctx.createOscillator(), prof = ctx.createGain(), g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.value = f;
+          lfo.type = 'square';
+          lfo.frequency.value = 14;
+          prof.gain.value = f * .06;
+          relier(lfo, prof, o.frequency);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(volume, t + .03);
+          g.gain.setValueAtTime(volume, t + duree - .06);
+          g.gain.exponentialRampToValueAtTime(.0001, t + duree);
+          relier(o, g, sortie);
+          o.start(t);
+          lfo.start(t);
+          o.stop(t + duree + .02);
+          lfo.stop(t + duree + .02);
+        }
+        function souffle(t, duree, volume, de, vers) {
+          var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+          s.buffer = bruit(Math.min(duree, 3));
+          s.loop = true;
+          f.type = 'bandpass';
+          f.frequency.setValueAtTime(de, t);
+          f.frequency.exponentialRampToValueAtTime(vers, t + duree);
+          f.Q.value = .6;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(volume, t + Math.min(1.5, duree / 3));
+          g.gain.setValueAtTime(volume, t + Math.max(duree / 3, duree - 1));
+          g.gain.linearRampToValueAtTime(0, t + duree);
+          relier(s, f, g, sortie);
+          s.start(t);
+          s.stop(t + duree);
+        }
+        // « Bzzz ! » : une dent de scie grave qui vibre, passée dans un filtre.
+        function bzzz(t, duree) {
+          var o = ctx.createOscillator(), lfo = ctx.createOscillator(), prof = ctx.createGain(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.setValueAtTime(190, t);
+          o.frequency.linearRampToValueAtTime(235, t + duree * .4);
+          o.frequency.linearRampToValueAtTime(175, t + duree);
+          lfo.frequency.value = 32;
+          prof.gain.value = 14;
+          relier(lfo, prof, o.frequency);
+          f.type = 'bandpass';
+          f.frequency.value = 900;
+          f.Q.value = 1.4;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(.35, t + .06);
+          g.gain.setValueAtTime(.35, t + duree - .15);
+          g.gain.exponentialRampToValueAtTime(.001, t + duree);
+          relier(o, f, g, sortie);
+          o.start(t);
+          lfo.start(t);
+          o.stop(t + duree + .05);
+          lfo.stop(t + duree + .05);
+        }
+        var pop = function (t) { bip('sine', 520, t, .14, .16, 900); };
+        var range = function (t) { bip('triangle', 700, t, .12, .12, 420); };
+        var rafale = function (t) { souffle(t, 1.8, .16, 300, 2400); };
+        var SONS = [
+          [900, function (t) { air(t, .36, .045); }],
+          [2200, function (t) { chant(t, 2600, 3, .045); }],
+          [3600, function (t) { chant(t, 3200, 4, .035); }],
+          [4500, function (t) { chant(t, 2800, 5, .05); chant(t + .6, 3500, 3, .04); }],
+          [5300, rafale],
+          [6200, pop], [6550, pop], [6900, pop],
+          [7300, range], [7750, range], [8200, range], [8650, range],
+          [9900, function (t) { [E5, Gs5, B5, E5 * 2].forEach(function (f, i) { clavecin(t + i * .09, f, .07); }); }],
+          [11000, function (t) { for (var i = 0; i < 6; i++) bip('triangle', 180 + (i % 2) * 40, t + i * .12, .08, .12); }],
+          [11500, function (t) { [E5, Fs5, Gs5, B5, E5 * 1.5, E5 * 2].forEach(function (f, i) { bip('sine', f, t + i * .08, .25, .07, f * 1.5); }); }],
+          [12000, function (t) {
+            for (var i = 0; i < 5; i++) bip('sine', 500 + i * 110, t + i * .1, .5, .06, 1600 + i * 220);
+            trille(t + .3, 3100, .8, .03);
+            trille(t + .8, 2600, .7, .028);
+            chant(t + 1.4, 3000, 4, .04);
+          }],
+          [13300, rafale],
+          [13500, function (t) { air(t, .34, .045); }],
+          [14300, function (t) { bip('sine', 1200, t, .35, .06, 2600); bip('sine', 1800, t + .1, .3, .04, 3200); }],
+          [15600, pop], [16400, pop], [17200, pop],
+          [18900, function (t) { bzzz(t, .9); }],
+          [19700, function (t) { chant(t, 2900, 3, .04); }],
+        ];
+        var FIN = 20500;
+        return {
+          actif: function () { return actif; },
+          // ecoule : temps déjà passé dans le clip (ms) ; seuls les sons à venir sont programmés.
+          allumer: function (ecoule) {
+            if (!contexte()) return false;
+            actif = true;
+            if (ctx.resume) ctx.resume();
+            var t0 = ctx.currentTime + .05;
+            if (FIN - ecoule > 1500) souffle(t0, (FIN - ecoule) / 1000, .05, 900, 1300); // brise légère
+            SONS.forEach(function (s) { if (s[0] >= ecoule) s[1](t0 + (s[0] - ecoule) / 1000); });
+            return true;
+          },
+          couper: function () {
+            if (ctx) ctx.close();
+            ctx = null;
+          },
+          eteindre: function () { actif = false; this.couper(); },
+          vouloir: function () { actif = true; }, // le prochain lancer() démarre avec le son
+        };
+      })();
+
+      function majSon() { $('#son').textContent = son.actif() ? '🔊 Son' : '🔇 Activer le son'; }
+      $('#son').addEventListener('click', function () {
+        if (son.actif()) son.eteindre();
+        else if (debut) son.allumer(Math.max(0, performance.now() - debut));
+        majSon();
+      });
+
+      var deroule = [
+        [0, function () { scene.classList.add('aube'); }],
+        [300, function () { scene.classList.add('leve'); }],
+        [1200, function () { scene.classList.add('jour'); }],
+        [1000, function () { dire('Au printemps, tout se réveille…|même les boîtes !', 'milieu'); }],
+        [2200, function () { scene.classList.add('reveil'); }],
+        [3300, taire],
+        [3500, function () { scene.classList.add('prairie'); }],
+        [4500, function () { scene.classList.add('envol'); }],
+        [5300, rafale],
+        [5800, function () { dire('Au jardin, tout est bien rangé dans des boîtes…', 'haut'); scene.classList.add('table'); }],
+        [6200, function () { boite('plante'); }],
+        [6550, function () { boite('petales'); }],
+        [6900, function () { boite('insecte'); }],
+        [7300, function () { ranger('tulipe'); }],
+        [7750, function () { ranger('marguerite'); }],
+        [8200, function () { ranger('pousse'); }],
+        [8650, function () { ranger('coccinelle'); }],
+        [9200, function () { carte('cerf-volant').classList.add('hesite'); }],
+        [9900, function () { $('#verdict').classList.add('visible'); }],
+        [10700, function () { taire(); $('#verdict').classList.remove('visible'); }],
+        [11000, function () {
+          dire('Oh ! Les boîtes s\'ouvrent…|et les papillons s\'échappent !', 'haut');
+          $$('.boite').forEach(function (b) { b.classList.add('tremble'); });
+        }],
+        [11500, function () { scene.classList.add('ouvre'); }],
+        [12000, function () { scene.classList.add('evasion'); }],
+        [12900, function () { scene.classList.add('efface'); }],
+        [13300, function () { taire(); rafale(); }],
+        [13500, function () { scene.classList.add('titre'); }],
+        [14300, function () { scene.classList.add('fleurir'); rafale(); }],
+        [14900, function () { scene.classList.add('sous-titre'); }],
+        [15600, function () { regle(0); }],
+        [16400, function () { regle(1); }],
+        [17200, function () { regle(2); }],
+        [18000, function () { scene.classList.add('reine'); }],
+        [20300, finir],
+      ];
+
+      function finir() {
+        if (integre) {
+          scene.classList.add('fin');
+          minuteurs.push(setTimeout(function () { window.parent.postMessage({ evenement: 'fin' }, '*'); }, 800));
+          return;
+        }
+        $('#rejouer').hidden = false;
+        $('#rejouer').focus();
+      }
+
+      function remettre() {
+        minuteurs.forEach(clearTimeout);
+        minuteurs = [];
+        son.couper();
+        scene.className = 'sans-transition';
+        taire();
+        $('#verdict').classList.remove('visible');
+        $('#rafales').classList.remove('passe');
+        $$('.boite').forEach(function (b) { b.classList.remove('montree', 'tremble'); });
+        $$('#titre .regles li').forEach(function (l) { l.classList.remove('vue'); });
+        $$('.carte').forEach(function (c, i) {
+          c.classList.remove('hesite');
+          c.style.setProperty('--x', (12 + i * 19) + '%');
+          c.style.setProperty('--y', '112%');
+        });
+        void scene.offsetWidth;
+        scene.className = '';
+      }
+
+      function lancer() {
+        remettre();
+        $('#rejouer').hidden = true;
+        debut = performance.now();
+        deroule.forEach(function (d) { minuteurs.push(setTimeout(d[1], d[0])); });
+        if (son.actif()) son.allumer(0);
+      }
+
+      $('#rejouer').addEventListener('click', lancer);
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && integre) window.parent.postMessage({ evenement: 'fin' }, '*');
+      });
+
+      if (integre) {
+        lancer(); // sans le son : le navigateur le refuse tant qu'on n'a pas touché la page
+      } else {
+        $('#depart').hidden = false;
+        $('#retour').hidden = false;
+        $('#lancer').focus();
+        $('#lancer').addEventListener('click', function () {
+          $('#depart').hidden = true;
+          son.vouloir();
+          lancer(); // dans le clic : le navigateur accepte le son
+          majSon();
+        });
+      }
+      majSon();
+    })();
+  </script>
+</body>
+</html>

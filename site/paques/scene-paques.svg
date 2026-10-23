@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <!-- Bas de l'accueil (site/paques/theme.css) : prairie de printemps, collines, cerisier en fleurs, tulipes et
+       marguerites, lapin assis, œufs cachés dans l'herbe. Répétée en largeur : les deux bords sont à la même hauteur.
+       Dessin fait pour Boîtes à classer (GPL-3.0). -->
+  <defs>
+    <g id="tulipe">
+      <path d="M0 0v30" stroke="#4f9e4c" stroke-width="3"/><path d="M0 24q-10-4-12-14q8 2 12 10z" fill="#5fb35a"/>
+      <path d="M-8-14q0 14 8 14t8-14l-4 4-4-6-4 6z"/>
+    </g>
+    <g id="marguerite">
+      <path d="M0 0v22" stroke="#4f9e4c" stroke-width="2.4"/>
+      <g fill="#fff" stroke="#e6dcef" stroke-width=".8"><ellipse cx="0" cy="-7" rx="3" ry="6"/><ellipse cx="0" cy="7" rx="3" ry="6"/><ellipse cx="-7" cy="0" rx="6" ry="3"/><ellipse cx="7" cy="0" rx="6" ry="3"/><ellipse cx="-5" cy="-5" rx="3" ry="5.5" transform="rotate(-45 -5 -5)"/><ellipse cx="5" cy="-5" rx="3" ry="5.5" transform="rotate(45 5 -5)"/><ellipse cx="-5" cy="5" rx="3" ry="5.5" transform="rotate(45 -5 5)"/><ellipse cx="5" cy="5" rx="3" ry="5.5" transform="rotate(-45 5 5)"/></g>
+      <circle r="4" fill="#ffd23f"/>
+    </g>
+    <g id="oeuf">
+      <path d="M0-26c9 0 16 13 16 23 0 9-7 14-16 14s-16-5-16-14c0-10 7-23 16-23z"/>
+      <path d="M-14-8l4.5-4 4.5 4 4.5-4 4.5 4 4.5-4 4.5 4 1 5-5.5-4-4.5 4-4.5-4-4.5 4-4.5-4-4.5 4-5.5 4z" fill="#fff" opacity=".75"/>
+    </g>
+  </defs>
+  <!-- colline du fond -->
+  <path d="M0 214C150 192 300 178 450 188S720 216 860 198 1080 170 1200 214V300H0z" fill="#c9ecb4"/>
+  <!-- cerisier en fleurs -->
+  <g transform="translate(1000 182)">
+    <path d="M-5 0l-2-46q-14-10-22-22l5-2q9 10 19 16l1-22h6l1 26q10-8 18-20l5 3q-9 14-22 24l-1 43z" fill="#b98a5e"/>
+    <g fill="#ffc6dc"><circle cx="-26" cy="-70" r="20"/><circle cx="2" cy="-86" r="24"/><circle cx="28" cy="-66" r="20"/><circle cx="-8" cy="-56" r="18"/><circle cx="16" cy="-50" r="16"/></g>
+    <g fill="#ffe3ee"><circle cx="-18" cy="-80" r="9"/><circle cx="8" cy="-96" r="10"/><circle cx="30" cy="-74" r="8"/></g>
+    <g fill="#ff9cc4"><circle cx="-30" cy="-62" r="3"/><circle cx="-4" cy="-72" r="3"/><circle cx="20" cy="-82" r="3"/><circle cx="34" cy="-58" r="3"/><circle cx="6" cy="-58" r="3"/></g>
+  </g>
+  <!-- colline du milieu -->
+  <path d="M0 242C200 224 380 232 560 240S880 222 1020 228 1160 238 1200 242V300H0z" fill="#a8dd8f"/>
+  <!-- lapin assis sur la colline -->
+  <g transform="translate(330 228)" fill="#fdfaff" stroke="#cbbbe6" stroke-width="2">
+    <path d="M-4-42c-6-18-4-34 3-36 6-1 8 16 6 36zM6-42c2-18 8-32 15-31 6 2 0 18-9 33z"/>
+    <ellipse cx="-8" cy="-12" rx="24" ry="20"/>
+    <circle cx="8" cy="-32" r="15"/>
+    <circle cx="-31" cy="-8" r="7"/>
+    <ellipse cx="2" cy="6" rx="12" ry="5"/>
+  </g>
+  <g transform="translate(330 228)"><path d="M-1-44c-4-12-3-25 1-27 4 0 5 12 4 27z" fill="#ffc3db"/><circle cx="14" cy="-34" r="2.2" fill="#3a2350"/><circle cx="22.5" cy="-29" r="2" fill="#ff8fb5"/><ellipse cx="11" cy="-27" rx="3.5" ry="2" fill="#ffb3cf" opacity=".8"/></g>
+  <!-- fleurs de la colline -->
+  <use href="#tulipe" x="90" y="214" fill="#ff8fc0"/><use href="#tulipe" x="112" y="220" fill="#b48cf0"/><use href="#tulipe" x="560" y="222" fill="#ffd23f"/>
+  <use href="#tulipe" x="584" y="226" fill="#ff8fc0"/><use href="#tulipe" x="860" y="210" fill="#b48cf0"/><use href="#tulipe" x="1130" y="222" fill="#ffd23f"/>
+  <use href="#marguerite" x="200" y="232"/><use href="#marguerite" x="470" y="236"/><use href="#marguerite" x="700" y="230"/><use href="#marguerite" x="1060" y="232"/>
+  <!-- œufs cachés dans l'herbe -->
+  <use href="#oeuf" x="150" y="272" fill="#ffb3d4"/><use href="#oeuf" x="420" y="276" fill="#ffe066"/><use href="#oeuf" x="640" y="270" fill="#b9e8ff"/>
+  <use href="#oeuf" x="800" y="276" fill="#c7a8ff"/><use href="#oeuf" x="1100" y="272" fill="#9fe0b0"/>
+  <!-- premier plan : herbe -->
+  <path d="M0 266L4 253 12 266L14 252 24 266L34 257 36 266L43 257 48 266L50 249 60 266L65 250 72 266L75 258 84 266L92 252 96 266L101 257 108 266L118 257 120 266L122 252 132 266L135 249 144 266L146 255 156 266L164 249 168 266L173 258 180 266L190 258 192 266L198 256 204 266L208 252 216 266L219 250 228 266L234 249 240 266L244 250 252 266L257 257 264 266L267 253 276 266L279 250 288 266L290 249 300 266L305 249 312 266L322 251 324 266L331 252 336 266L345 251 348 266L354 253 360 266L364 255 372 266L375 255 384 266L390 249 396 266L405 250 408 266L417 253 420 266L423 254 432 266L442 257 444 266L448 252 456 266L460 253 468 266L476 251 480 266L483 258 492 266L499 250 504 266L511 253 516 266L525 249 528 266L537 249 540 266L543 257 552 266L561 254 564 266L567 248 576 266L582 258 588 266L597 248 600 266L608 254 612 266L619 248 624 266L633 258 636 266L640 253 648 266L651 249 660 266L662 251 672 266L678 255 684 266L689 256 696 266L704 252 708 266L711 251 720 266L729 256 732 266L742 252 744 266L748 254 756 266L766 252 768 266L776 254 780 266L788 253 792 266L796 255 804 266L808 257 816 266L821 256 828 266L833 248 840 266L849 258 852 266L856 249 864 266L870 254 876 266L880 258 888 266L898 252 900 266L907 253 912 266L922 256 924 266L926 249 936 266L946 251 948 266L956 252 960 266L968 252 972 266L981 257 984 266L992 248 996 266L1001 258 1008 266L1013 257 1020 266L1024 251 1032 266L1039 257 1044 266L1046 249 1056 266L1058 257 1068 266L1072 249 1080 266L1083 250 1092 266L1094 253 1104 266L1109 257 1116 266L1124 249 1128 266L1134 256 1140 266L1147 253 1152 266L1155 251 1164 266L1173 257 1176 266L1185 251 1188 266L1194 251 1200 266V300H0z" fill="#86cf6f"/>
+  <path d="M0 282L12 275 22 282L31 275 38 282L49 272 54 282L66 274 70 282L77 276 86 282L92 271 102 282L114 276 118 282L123 272 134 282L146 272 150 282L156 271 166 282L173 271 182 282L189 271 198 282L205 273 214 282L221 270 230 282L242 273 246 282L255 269 262 282L266 276 278 282L289 272 294 282L301 272 310 282L321 271 326 282L335 271 342 282L349 275 358 282L365 275 374 282L381 269 390 282L397 271 406 282L410 269 422 282L431 269 438 282L443 275 454 282L461 270 470 282L476 269 486 282L495 270 502 282L512 275 518 282L528 269 534 282L540 275 550 282L556 274 566 282L572 276 582 282L588 269 598 282L607 269 614 282L626 274 630 282L634 274 646 282L651 276 662 282L672 274 678 282L685 273 694 282L702 276 710 282L718 273 726 282L735 273 742 282L754 272 758 282L764 270 774 282L783 276 790 282L802 269 806 282L818 270 822 282L834 274 838 282L850 274 854 282L865 276 870 282L874 274 886 282L892 274 902 282L913 274 918 282L930 275 934 282L943 276 950 282L955 269 966 282L973 276 982 282L990 273 998 282L1003 276 1014 282L1026 269 1030 282L1035 276 1046 282L1055 269 1062 282L1070 273 1078 282L1090 269 1094 282L1106 269 1110 282L1122 273 1126 282L1138 272 1142 282L1153 273 1158 282L1168 274 1174 282L1184 275 1190 282L1199 269 1200 282V300H0z" fill="#74c25f"/>
+  <use href="#marguerite" x="40" y="276"/><use href="#tulipe" x="300" y="268" fill="#ff8fc0"/><use href="#marguerite" x="520" y="280"/>
+  <use href="#tulipe" x="730" y="270" fill="#ffd23f"/><use href="#marguerite" x="960" y="278"/><use href="#tulipe" x="1170" y="268" fill="#b48cf0"/>
+</svg>

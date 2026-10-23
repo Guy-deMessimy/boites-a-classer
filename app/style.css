@@ -939,6 +939,16 @@ body.consultation #exercices { display: none; }
   --motif: url(../noel/fond-noel.svg);
   --motif-opacite: .3;
 }
+:root[data-theme="paques"], :root.hanter-en-cours[data-evenement="paques"] {
+  --plan-theme: linear-gradient(180deg, #fdf3fa 0%, #f6f9ec 100%);
+  --motif: url(../paques/fond-paques.svg);
+  --motif-opacite: .3;
+}
+:root[data-theme="printemps"], :root.hanter-en-cours[data-evenement="printemps"] {
+  --plan-theme: linear-gradient(180deg, #eef8ff 0%, #f3faec 100%);
+  --motif: url(../printemps/fond-printemps.svg);
+  --motif-opacite: .3;
+}
 @media screen and (prefers-color-scheme: dark) {
   :root[data-theme="halloween"], :root.hanter-en-cours[data-evenement="halloween"] {
     --plan-theme: linear-gradient(180deg, #0f0a1a 0%, #1a1028 60%, #24122d 100%);
@@ -948,10 +958,18 @@ body.consultation #exercices { display: none; }
     --plan-theme: linear-gradient(180deg, #08122a 0%, #0e1f40 100%);
     --motif-opacite: .24;
   }
+  :root[data-theme="paques"], :root.hanter-en-cours[data-evenement="paques"] {
+    --plan-theme: linear-gradient(180deg, #1d1426 0%, #1a2018 100%);
+    --motif-opacite: .18;
+  }
+  :root[data-theme="printemps"], :root.hanter-en-cours[data-evenement="printemps"] {
+    --plan-theme: linear-gradient(180deg, #0f1b26 0%, #13200f 100%);
+    --motif-opacite: .18;
+  }
 }
-:root[data-theme="halloween"] #zone, :root[data-theme="noel"] #zone, :root.hanter-en-cours[data-evenement] #zone { background: var(--plan-theme); }
-:root[data-theme="halloween"] #espace, :root[data-theme="noel"] #espace, :root.hanter-en-cours[data-evenement] #espace { background: none; }
-:root[data-theme="halloween"] #zone::before, :root[data-theme="noel"] #zone::before, :root.hanter-en-cours[data-evenement] #zone::before {
+:root[data-theme="halloween"] #zone, :root[data-theme="noel"] #zone, :root[data-theme="paques"] #zone, :root[data-theme="printemps"] #zone, :root.hanter-en-cours[data-evenement] #zone { background: var(--plan-theme); }
+:root[data-theme="halloween"] #espace, :root[data-theme="noel"] #espace, :root[data-theme="paques"] #espace, :root[data-theme="printemps"] #espace, :root.hanter-en-cours[data-evenement] #espace { background: none; }
+:root[data-theme="halloween"] #zone::before, :root[data-theme="noel"] #zone::before, :root[data-theme="paques"] #zone::before, :root[data-theme="printemps"] #zone::before, :root.hanter-en-cours[data-evenement] #zone::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -960,7 +978,7 @@ body.consultation #exercices { display: none; }
   pointer-events: none;
 }
 /* Les boîtes gardent un fond plein : le motif ne passe pas derrière les cartes rangées. */
-:root[data-theme="halloween"] .boite, :root[data-theme="noel"] .boite, :root.hanter-en-cours[data-evenement] .boite { background: linear-gradient(var(--c-fond), var(--c-fond)), var(--plan); }
+:root[data-theme="halloween"] .boite, :root[data-theme="noel"] .boite, :root[data-theme="paques"] .boite, :root[data-theme="printemps"] .boite, :root.hanter-en-cours[data-evenement] .boite { background: linear-gradient(var(--c-fond), var(--c-fond)), var(--plan); }
 @media print {
   #zone::before { content: none !important; }
   #zone { background: none !important; }

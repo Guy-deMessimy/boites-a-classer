@@ -1,0 +1,94 @@
+/* Thème du printemps de la page d'accueil (classe « theme-printemps » sur <html>, feuille chargée après le style de la
+   page) : jardin fleuri en plein jour, ciel bleu et petits nuages, soleil, motif fond-printemps.svg, prairie fleurie
+   scene-printemps.svg, titres en Pacifico. Thème clair, quel que soit le réglage de l'appareil.
+   Pour revenir au thème sciences après le printemps : retirer la classe et le <link> de site/index.html.
+   Pendant l'événement (site/evenement.js, fiche « printemps »), le fond s'anime en plus (pétales de cerisier, abeilles,
+   fleurs qui se balancent) : le motif et la prairie passent sous ce décor animé (z-index plus bas). */
+
+/* Police Pacifico (SIL Open Font License, voir polices/OFL-pacifico.txt), hébergée avec le site. */
+@font-face {
+  font-family: "Pacifico";
+  font-weight: 400;
+  font-display: swap;
+  src: url(../polices/pacifico-latin.woff2) format("woff2");
+}
+
+:root.theme-printemps {
+  color-scheme: light;
+  --fond: #9fd8f8;
+  --carte: rgb(255 255 255 / .95);
+  --encre: #1b3022;
+  --doux: #425b49;
+  --ligne: #cde8c2;
+  --accent: #23803a;
+  --accent-encre: #ffffff;
+  --accent-doux: #fff3c4;
+  --code: #eaf6e1;
+  --voile: rgb(255 255 255 / .86);
+  --ombre: 0 8px 22px rgb(30 90 60 / .18);
+  --motif-opacite: .32;
+  --titre: "Pacifico", "Space Grotesk", system-ui, cursive;
+}
+
+/* Ciel de jour : soleil en haut à droite (au même endroit que la lune des thèmes de nuit), trois petits nuages. */
+.theme-printemps body {
+  background:
+    radial-gradient(circle at 88% 10%, #fff7b0 0 14px, #ffe14d 30px, #ffd21f 41px, rgb(255 255 236 / .7) 43px, rgb(255 255 240 / .3) 66px, rgb(255 255 245 / .1) 110px, transparent 170px) fixed,
+    radial-gradient(46px 22px at calc(12% + 2px) calc(16% + 8px), #fff 92%, transparent) fixed,
+    radial-gradient(28px 26px at calc(12% - 18px) calc(16% + 2px), #fff 92%, transparent) fixed,
+    radial-gradient(32px 30px at calc(12% + 14px) calc(16% - 4px), #fff 92%, transparent) fixed,
+    radial-gradient(40px 18px at calc(55% + 2px) calc(7% + 6px), #fff 92%, transparent) fixed,
+    radial-gradient(24px 22px at calc(55% - 14px) calc(7% + 2px), #fff 92%, transparent) fixed,
+    radial-gradient(26px 24px at calc(55% + 12px) calc(7% - 3px), #fff 92%, transparent) fixed,
+    radial-gradient(52px 24px at calc(30% + 2px) calc(38% + 8px), rgb(255 255 255 / .9) 92%, transparent) fixed,
+    radial-gradient(30px 28px at calc(30% - 22px) calc(38% + 2px), rgb(255 255 255 / .9) 92%, transparent) fixed,
+    radial-gradient(36px 34px at calc(30% + 14px) calc(38% - 6px), rgb(255 255 255 / .9) 92%, transparent) fixed,
+    linear-gradient(180deg, #2f9ff0 0%, #6cc1f6 40%, #b5e3fb 75%, #def5e6 100%) fixed;
+}
+.theme-printemps body::before {
+  z-index: -3; /* sous la prairie et sous le décor animé de l'événement */
+  background: url(fond-printemps.svg) 0 0 / 320px 320px;
+}
+/* Prairie fleurie en bas de l'écran, derrière le contenu. */
+.theme-printemps body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(34vh, 300px);
+  z-index: -2;
+  background: url(scene-printemps.svg) center bottom / auto 100% repeat-x;
+  pointer-events: none;
+}
+
+/* Titres de la page seulement (main) : les fenêtres de l'événement (classement…) gardent les leurs. */
+.theme-printemps main h1,
+.theme-printemps main h2,
+.theme-printemps main .carte h3,
+.theme-printemps main .annonce p {
+  font-family: var(--titre);
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+/* rose sur les panneaux blancs, vert foncé sur le ciel */
+.theme-printemps main h1 { color: #d1306b; text-shadow: 0 3px 0 #ffe066; }
+.theme-printemps main h2 { color: #17602b; font-size: 2rem; text-shadow: 0 0 6px #fff, 0 0 14px rgb(255 255 255 / .9), 0 2px 0 #fff; }
+.theme-printemps main .carte h3 { color: #1f7a35; font-size: 1.4rem; }
+.theme-printemps .auteur { color: #c22a63; }
+
+.theme-printemps .annonce p {
+  background: linear-gradient(90deg, #c92f6d, #b23a8a 40%, #23803a);
+  color: #fff;
+  font-size: 1.35rem;
+  text-shadow: 0 1px 3px rgb(0 0 0 / .35);
+  box-shadow: 0 0 22px rgb(255 255 255 / .6), var(--ombre);
+}
+.theme-printemps .annonce a {
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: .95rem;
+  letter-spacing: 0;
+}
+.theme-printemps .fonctions li::before { background: #e0407c; }
+.theme-printemps footer { margin-bottom: 120px; } /* au-dessus de la prairie */

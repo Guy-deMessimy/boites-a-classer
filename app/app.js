@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.41.0';
+  const VERSION = '3.42.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -3547,14 +3547,18 @@
     if (etat && etat.avatar && typeof etat.avatar_fond === 'string' && etat.avatar_fond) ecrire(CLE_AVATAR_FOND, etat.avatar_fond); else oublier(CLE_AVATAR_FOND);
   }
 
-  // Badges du compte, à côté de son nom (site/evenement.js) : « vérifié par le site » ✔, boss d'Halloween 🎃 ou de Noël 🎅,
-  // participation à Halloween 🧛 ou à Noël ⛄. Toujours dans cet ordre.
+  // Badges du compte, à côté de son nom (site/evenement.js) : « vérifié par le site » ✔, boss d'Halloween 🎃, de Noël 🎅,
+  // de Pâques 🐰 ou du printemps 🌷, participation 🧛 ⛄ 🥚 🦋. Toujours dans cet ordre.
   const BADGES = {
     verifie: ['✔', 'Vérifié par le site', 'badge-verifie'],
     halloween: ['🎃', 'Badge Halloween', 'badge'],
     'participation-halloween': ['🧛', 'Participation à Halloween', 'badge'],
     noel: ['🎅', 'Badge Noël', 'badge'],
     'participation-noel': ['⛄', 'Participation à Noël', 'badge'],
+    paques: ['🐰', 'Badge Pâques', 'badge'],
+    'participation-paques': ['🥚', 'Participation à Pâques', 'badge'],
+    printemps: ['🌷', 'Badge Printemps', 'badge'],
+    'participation-printemps': ['🦋', 'Participation au printemps', 'badge'],
   };
   function badgesCompte() {
     // Toujours dans le même ordre : celui de BADGES.
@@ -3576,6 +3580,10 @@
     'participation-halloween': ['Participation', 'Halloween', 'argent'],
     noel: ['Noël', 'Père Noël vaincu', 'or'],
     'participation-noel': ['Participation', 'Noël', 'argent'],
+    paques: ['Pâques', 'Lapin de Pâques attrapé', 'or'],
+    'participation-paques': ['Participation', 'Pâques', 'argent'],
+    printemps: ['Printemps', 'Reine des abeilles attrapée', 'or'],
+    'participation-printemps': ['Participation', 'Printemps', 'argent'],
   };
   // Teinte (0 à 359) tirée d'un nom : la même pour un même nom, d'un appareil à l'autre.
   function teinte(nom) {
@@ -3666,6 +3674,10 @@
     'participation-halloween': 'Attraper un fantôme ou frapper le boss pendant Halloween',
     noel: 'Porter le plus de coups au Père Noël pendant Noël',
     'participation-noel': 'Attraper un lutin ou frapper le Père Noël pendant Noël',
+    paques: 'Attraper le plus de fois le Lapin de Pâques pendant Pâques',
+    'participation-paques': 'Attraper un œuf ou le Lapin de Pâques pendant Pâques',
+    printemps: 'Attraper le plus de fois la Reine des abeilles au printemps',
+    'participation-printemps': 'Attraper un papillon ou la Reine des abeilles au printemps',
   };
   const commentMedaille = (b) => COMMENT_MEDAILLE[b]
     || (b.startsWith('participation-') ? 'Participer à l\'événement ' + MEDAILLES[b][1] : 'Vaincre le boss de l\'événement ' + MEDAILLES[b][0]);

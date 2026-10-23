@@ -259,6 +259,8 @@
             <option value="normal">🔬 Normal : Boîtes à classer</option>
             <option value="halloween">🎃 Halloween : Boîtes à hanter</option>
             <option value="noel">🎄 Noël : Boîtes à lutins</option>
+            <option value="paques">🐣 Pâques : Boîtes à œufs</option>
+            <option value="printemps">🌸 Printemps : Boîtes à fleurs</option>
           </select>
           <button type="button" class="bouton" id="appliquer-theme" disabled>Appliquer</button>
         </div>
@@ -269,6 +271,8 @@
             <select id="theme-ajout-choix" aria-label="Thème à programmer">
               <option value="halloween">🎃 Halloween</option>
               <option value="noel">🎄 Noël</option>
+              <option value="paques">🐣 Pâques</option>
+              <option value="printemps">🌸 Printemps</option>
               <option value="normal">🔬 Normal</option>
             </select>
             <label>du <input type="date" id="theme-du" required></label>
@@ -288,6 +292,8 @@
           <select id="evenement-choix" aria-label="Événement à déclencher">
             <option value="halloween" selected>🎃 Halloween</option>
             <option value="noel">🎄 Noël</option>
+            <option value="paques">🐣 Pâques</option>
+            <option value="printemps">🌸 Printemps</option>
           </select>
           <button type="button" class="bouton" id="basculer-evenement" disabled></button>
         </div>
@@ -298,6 +304,8 @@
             <select id="evenement-ajout-choix" aria-label="Événement à programmer">
               <option value="halloween">🎃 Halloween</option>
               <option value="noel">🎄 Noël</option>
+              <option value="paques">🐣 Pâques</option>
+              <option value="printemps">🌸 Printemps</option>
             </select>
             <label>du <input type="datetime-local" id="evenement-debut" required></label>
             <label>au <input type="datetime-local" id="evenement-fin" required></label>
@@ -564,7 +572,8 @@
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); afficherEtat(siteArrete); });
       });
 
-      /* Thème du site (serveur/theme.js) : normal (sciences), Halloween ou Noël, indépendant des événements. */
+      /* Thème du site (serveur/theme.js) : normal (sciences), Halloween, Noël, Pâques ou Printemps, indépendant des
+         événements. */
       var nomSite = document.title.replace(/^.*· /, ''), themeActuel = null;
       var libelleTheme = function (t) { var o = $('#theme-choix option[value="' + t + '"]'); return o ? o.textContent : t; };
       // « AAAA-MM-JJ » et « AAAA-MM-JJTHH:MM » (heure de Paris, comme le serveur) en toutes lettres.
@@ -600,7 +609,7 @@
           function (p) { return p.au < r.jour ? 'terminé' : p.du <= r.jour ? 'en cours' : 'à venir'; },
           envoyerProgrammeTheme);
         $('#appliquer-theme').disabled = true;
-        document.title = document.title.replace(/Boîtes à (classer|hanter|lutins)/, r.nom);
+        document.title = document.title.replace(/Boîtes à (classer|hanter|lutins|œufs|fleurs)/, r.nom);
         if (r.theme === 'normal') delete document.documentElement.dataset.theme;
         else document.documentElement.dataset.theme = r.theme;
         if (siteArrete !== null) afficherEtat(siteArrete);
@@ -632,13 +641,16 @@
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); chargerTheme(); });
       });
 
-      /* Événements (serveur/evenement.js : Noël, Halloween) : fond animé, personnages à attraper, boss et clip d'intro sur
+      /* Événements (serveur/evenement.js : Noël, Halloween, Pâques, Printemps) : fond animé, personnages à attraper, boss et clip d'intro sur
          les pages ouvertes (site/evenement.js), quelques secondes après le déclenchement, sans recharger
          (functions/api/etat.js). Le choix de l'événement se fait dans la liste à côté du bouton. */
       var EVENEMENTS = {
         noel: { emoji: '🎄', de: 'de Noël', petits: 'lutins', petit: 'lutin', icone: '🧝', boss: '🎅 Père Noël', vaincu: 'attrapé', badge: '🎅 Noël' },
         halloween: { emoji: '🎃', de: 'd\'Halloween', petits: 'fantômes', petit: 'fantôme', icone: '👻', boss: '👑 Roi des fantômes', vaincu: 'vaincu', badge: '🎃 Halloween' },
+        paques: { emoji: '🐣', de: 'de Pâques', petits: 'œufs', petit: 'œuf', icone: '🥚', boss: '🐰 Lapin de Pâques', vaincu: 'attrapé', badge: '🐰 Pâques' },
+        printemps: { emoji: '🌸', de: 'du printemps', petits: 'papillons', petit: 'papillon', icone: '🦋', boss: '🐝 Reine des abeilles', vaincu: 'attrapée', badge: '🌷 Printemps' },
       };
+      var NOMS_EVENEMENTS = { halloween: 'Halloween', noel: 'Noël', paques: 'Pâques', printemps: 'Printemps' };
       var evenement = null, dernierFini = null;
       var fiche = function () { var x = evenement || dernierFini; return EVENEMENTS[x ? x.nom : $('#evenement-choix').value] || EVENEMENTS.noel; };
       function afficherEvenement(e, fini) {
@@ -651,7 +663,7 @@
         choix.hidden = !!e;
         $('#etat-evenement').classList.toggle('en-cours', !!e);
         $('#evenement-texte').textContent = e ? f.emoji + ' L\'événement ' + f.de + ' est en cours'
-          : d ? d.emoji + ' Dernier événement : ' + fini.nom.replace('noel', 'Noël').replace('halloween', 'Halloween') + ' (terminé)'
+          : d ? d.emoji + ' Dernier événement : ' + (NOMS_EVENEMENTS[fini.nom] || fini.nom) + ' (terminé)'
           : 'Aucun événement en cours';
         $('#evenement-detail').textContent = e
           ? 'Depuis le ' + date(e.depuis) + ' : fond animé, ' + f.petits + ' à attraper sur tout le site, clip d\'intro sur l\'accueil. À l\'arrêt, le classement est montré à tous.'
@@ -678,7 +690,7 @@
       function afficherProgrammeEvenements(r) {
         programmeEvenements = r.programme || [];
         lignesProgramme(programmeEvenements, $('#evenement-periodes'),
-          function (p) { var f = EVENEMENTS[p.evenement]; return f.emoji + ' ' + p.evenement.replace('noel', 'Noël').replace('halloween', 'Halloween') + ' : du ' + minuteFr(p.debut) + ' au ' + minuteFr(p.fin); },
+          function (p) { var f = EVENEMENTS[p.evenement]; return f.emoji + ' ' + (NOMS_EVENEMENTS[p.evenement] || p.evenement) + ' : du ' + minuteFr(p.debut) + ' au ' + minuteFr(p.fin); },
           function (p) { return p.arrete ? 'fait' : p.lance ? 'en cours' : p.debut > r.maintenant ? 'à venir' : 'en attente d\'une visite'; },
           envoyerProgrammeEvenements);
       }
@@ -802,7 +814,9 @@
 
       // Badges des événements (pastille de la liste, filtre « badge », export CSV).
       var LIBELLES = { verifie: ['✔', 'vérifié par le site'], halloween: ['🎃', 'Halloween (boss)'], 'participation-halloween': ['🧛', 'participation à Halloween'],
-        noel: ['🎅', 'Noël (boss)'], 'participation-noel': ['⛄', 'participation à Noël'] };
+        noel: ['🎅', 'Noël (boss)'], 'participation-noel': ['⛄', 'participation à Noël'],
+        paques: ['🐰', 'Pâques (boss)'], 'participation-paques': ['🥚', 'participation à Pâques'],
+        printemps: ['🌷', 'Printemps (boss)'], 'participation-printemps': ['🦋', 'participation au printemps'] };
       var badgesDe = function (c) { try { var l = JSON.parse(c.badges || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } };
       // Rôle d'un compte, dans l'ordre des étiquettes de la liste : admin, enseignant, élève (connecté par code), ordinaire.
       var roleDe = function (c) { return c.admin ? 'admin' : c.enseignant ? 'enseignant' : c.classe ? 'eleve' : 'ordinaire'; };
@@ -1055,6 +1069,10 @@
         ['participation-halloween', '🧛', 'Participation', 'Halloween', 'argent'],
         ['noel', '🎅', 'Noël', 'Père Noël vaincu', 'or'],
         ['participation-noel', '⛄', 'Participation', 'Noël', 'argent'],
+        ['paques', '🐰', 'Pâques', 'Lapin de Pâques attrapé', 'or'],
+        ['participation-paques', '🥚', 'Participation', 'Pâques', 'argent'],
+        ['printemps', '🌷', 'Printemps', 'Reine des abeilles attrapée', 'or'],
+        ['participation-printemps', '🦋', 'Participation', 'Printemps', 'argent'],
       ];
       function carteProfil(c, avatar, fond) {
         var el = function (balise, classe, texte) {

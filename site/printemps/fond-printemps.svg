@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="320" height="320" viewBox="0 0 320 320">
+  <!-- Motif du printemps de la page d'accueil (site/printemps/theme.css), répété en mosaïque de 320 px : marguerites,
+       fleurs de cerisier, feuilles, tulipes, petites abeilles, coccinelle. Dessins faits pour Boîtes à classer (GPL-3.0). -->
+  <defs>
+    <symbol id="marguerite" viewBox="-20 -20 40 40">
+      <g fill="#ffffff">
+        <ellipse rx="4.2" ry="9" cy="-9"/><ellipse rx="4.2" ry="9" cy="-9" transform="rotate(45)"/>
+        <ellipse rx="4.2" ry="9" cy="-9" transform="rotate(90)"/><ellipse rx="4.2" ry="9" cy="-9" transform="rotate(135)"/>
+        <ellipse rx="4.2" ry="9" cy="-9" transform="rotate(180)"/><ellipse rx="4.2" ry="9" cy="-9" transform="rotate(225)"/>
+        <ellipse rx="4.2" ry="9" cy="-9" transform="rotate(270)"/><ellipse rx="4.2" ry="9" cy="-9" transform="rotate(315)"/>
+      </g>
+      <circle r="5.5" fill="#ffc928"/>
+    </symbol>
+    <symbol id="cerisier" viewBox="-20 -20 40 40">
+      <g fill="#ff9fc6">
+        <path d="M0-2C-6-8-6-16 0-18c6 2 6 10 0 16z"/>
+        <path d="M0-2C-6-8-6-16 0-18c6 2 6 10 0 16z" transform="rotate(72)"/>
+        <path d="M0-2C-6-8-6-16 0-18c6 2 6 10 0 16z" transform="rotate(144)"/>
+        <path d="M0-2C-6-8-6-16 0-18c6 2 6 10 0 16z" transform="rotate(216)"/>
+        <path d="M0-2C-6-8-6-16 0-18c6 2 6 10 0 16z" transform="rotate(288)"/>
+      </g>
+      <circle r="3.5" fill="#e0407c"/>
+    </symbol>
+    <symbol id="feuille" viewBox="0 0 40 24">
+      <path d="M2 12C10 0 30 0 38 12C30 24 10 24 2 12z" fill="#5fbf4a"/>
+      <path d="M4 12h30" stroke="#3f9a35" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="tulipe" viewBox="0 0 30 50">
+      <path d="M15 48V24" stroke="#3f9a35" stroke-width="3"/>
+      <path d="M15 42q-10-4-10-16q6 6 10 10z" fill="#5fbf4a"/>
+      <path d="M5 6q0 18 10 18t10-18l-5 6-5-10-5 10z" fill="#ff6f9f"/>
+    </symbol>
+    <symbol id="abeille" viewBox="0 0 60 46">
+      <g fill="#eaf6ff" stroke="#9cc8e8" stroke-width="1.5"><ellipse cx="22" cy="13" rx="8" ry="11" transform="rotate(-20 22 13)"/><ellipse cx="33" cy="13" rx="7" ry="10" transform="rotate(18 33 13)"/></g>
+      <ellipse cx="28" cy="28" rx="18" ry="13" fill="#ffc928"/>
+      <path d="M20 16.4Q23 28 20 39.6A18 13 0 0 0 25 40.8Q28 28 25 15.2A18 13 0 0 0 20 16.4zM31 15.2Q34 28 31 40.8A18 13 0 0 0 36 39.6Q39 28 36 16.4A18 13 0 0 0 31 15.2z" fill="#3a2a1a"/>
+      <path d="M10 28l-7-3v6z" fill="#3a2a1a"/>
+      <circle cx="47" cy="26" r="10" fill="#3a2a1a"/><circle cx="50" cy="24" r="2.4" fill="#fff"/>
+    </symbol>
+    <symbol id="coccinelle" viewBox="0 0 30 30">
+      <circle cx="15" cy="6" r="5" fill="#2a1a12"/>
+      <circle cx="15" cy="17" r="11" fill="#e8364f"/>
+      <path d="M15 6v22" stroke="#2a1a12" stroke-width="1.6"/>
+      <g fill="#2a1a12"><circle cx="10" cy="14" r="2.4"/><circle cx="20" cy="14" r="2.4"/><circle cx="10" cy="22" r="2"/><circle cx="20" cy="22" r="2"/></g>
+    </symbol>
+  </defs>
+
+  <use xlink:href="#marguerite" x="10" y="12" width="36" height="36"/>
+  <use xlink:href="#feuille" x="92" y="30" width="40" height="24" transform="rotate(-24 112 42)"/>
+  <use xlink:href="#cerisier" x="196" y="16" width="34" height="34"/>
+  <use xlink:href="#abeille" x="262" y="30" width="44" height="34" transform="rotate(-8 284 47)"/>
+  <use xlink:href="#tulipe" x="34" y="92" width="30" height="50" transform="rotate(-8 49 117)"/>
+  <use xlink:href="#cerisier" x="138" y="100" width="22" height="22"/>
+  <use xlink:href="#marguerite" x="204" y="108" width="40" height="40"/>
+  <use xlink:href="#feuille" x="280" y="122" width="30" height="18" transform="rotate(30 295 131)"/>
+  <use xlink:href="#abeille" x="96" y="176" width="38" height="29" transform="rotate(10 115 190)"/>
+  <use xlink:href="#feuille" x="14" y="222" width="36" height="22" transform="rotate(16 32 233)"/>
+  <use xlink:href="#tulipe" x="250" y="190" width="28" height="46" transform="rotate(10 264 213)"/>
+  <use xlink:href="#marguerite" x="174" y="218" width="26" height="26"/>
+  <use xlink:href="#cerisier" x="72" y="270" width="20" height="20"/>
+  <use xlink:href="#coccinelle" x="146" y="266" width="26" height="26" transform="rotate(-20 159 279)"/>
+  <use xlink:href="#cerisier" x="280" y="268" width="30" height="30"/>
+  <use xlink:href="#marguerite" x="226" y="290" width="18" height="18"/>
+  <use xlink:href="#cerisier" x="58" y="64" width="14" height="14"/>
+</svg>

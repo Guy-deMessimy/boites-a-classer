@@ -1,22 +1,23 @@
-// Événement du site (Halloween, Noël), déclenché puis arrêté par un admin (page site/admin/, POST /api/admin/evenement).
+// Événement du site (Halloween, Noël, Pâques, Printemps), déclenché puis arrêté par un admin (page site/admin/, POST /api/admin/evenement).
 // Les pages le lisent dans GET /api/etat (site/arret.js, app/app.js) et chargent alors ses effets
 // (site/evenement.js). Pendant l'événement, chaque personnage attrapé (fantôme, lutin) par un compte rapporte un point
 // (functions/api/evenement/[action].js, table scores_evenement) ; à l'arrêt, le classement est montré à tous.
-// Quand tous les comptes ensemble en ont attrapé SEUIL_BOSS, le boss (Roi des fantômes, Père Noël) apparaît chez tout
+// Quand tous les comptes ensemble en ont attrapé SEUIL_BOSS, le boss (Roi des fantômes, Père Noël, Lapin de Pâques,
+// Reine des abeilles) apparaît chez tout
 // le monde (table boss_evenement) : chaque clic lui retire DEGATS PV ; celui qui a cliqué le plus (coups_boss) gagne les
 // badges badgesBoss(nom) (colonne comptes.badges). Tout compte qui participe (un personnage attrapé ou un clic sur le
-// boss) gagne le badge de participation (« participation-<nom> » : vampire 🧛, bonhomme de neige ⛄).
+// boss) gagne le badge de participation (« participation-<nom> » : vampire 🧛, bonhomme de neige ⛄, œuf 🥚, papillon 🦋).
 // Rangé dans la table reglages (migrations/0005_reglages.sql), clé « evenement » : { nom, depuis } pendant l'événement,
 // { nom, depuis, fin } une fois arrêté (son classement reste consultable), ou vide.
 // Un admin peut aussi le programmer à heure fixe (clé « programme-evenement », voir appliquerProgramme).
 
 import { minuteParis, dateValide, lireListe, PERIODES_MAX } from './programme.js';
 
-export const EVENEMENTS = ['halloween', 'noel'];
+export const EVENEMENTS = ['halloween', 'noel', 'paques', 'printemps'];
 export const SEUIL_BOSS = 30;
 export const PV_BOSS = 100000;
 export const DEGATS = 1000;
-export const badgesBoss = (nom) => ['verifie', nom]; // « halloween » 🎃, « noel » 🎅
+export const badgesBoss = (nom) => ['verifie', nom]; // « halloween » 🎃, « noel » 🎅, « paques » 🐰, « printemps » 🌷
 export const badgeParticipation = (nom) => 'participation-' + nom;
 
 // Ajoute un badge aux comptes choisis par « ou » (condition SQL sur comptes.id, avec ses paramètres à partir de ?2),
