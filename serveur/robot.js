@@ -17,6 +17,11 @@ const HISTORIQUE = 20; // messages de la conversation envoyés au robot
 const REPONSE_MAX = 2000; // comme les messages du service client
 const PAR_HEURE_ET_FIL = 15; // réponses du robot par conversation et par heure ; au-delà, l'admin prend le relais
 const PAR_JOUR = 400; // réponses du robot par jour pour tout le site (garde-fou sur la facture)
+// Prix de claude-opus-5-5 en dollars par million de jetons, pour l'estimation montrée à l'admin (lecture du cache :
+// 0,20 ; écriture du cache, durée 5 min : 1,25 × l'entrée). Une réponse rattrapée par un autre modèle (fallbacks) est
+// comptée au même prix : c'est une estimation, la facture fait foi.
+const PRIX = { entree: 4, sortie: 20, cacheLu: 0.2, cacheEcrit: 5 };
+const JOURS_GARDES = 31; // consommation gardée jour par jour (réglages « robot-conso:AAAA-MM-JJ »)
 
 export const NOTE_TRANSFERT = '🙋 Conversation transmise à l\'administrateur : il vous répondra ici dès que possible.';
 export const NOTE_DEMANDE = '🙋 Vous avez demandé à parler à une personne : l\'administrateur vous répondra ici dès que possible.';
@@ -98,23 +103,39 @@ async function quiEstLe(env, compte) {
   return 'Le visiteur est connecté avec un compte ordinaire (pas enseignant).';
 }
 
-// Réponse du robot au dernier message du visiteur.
-//   → { texte, transfere }  (texte vide possible si seul le transfert a eu lieu)
-//   → null si une limite est atteinte (l'admin prend le relais)
-// Lance une erreur si l'API ne répond pas : l'appelant transmet alors à l'admin.
-export async function repondre(env, fil, compte) {
-  if (await limiteAtteinte(env, 'robot:fil:' + fil, PAR_HEURE_ET_FIL, 3600 * 1000)) return null;
-  if (await limiteAtteinte(env, 'robot:jour', PAR_JOUR, 24 * 3600 * 1000)) return null;
+// Ajoute la consommation d'un appel au total du jour (jetons et nombre de réponses).
+async function noterConso(env, u, reponses) {
+  const jour = new Date().toISOString().slice(0, 10);
+  const ajout = JSON.stringify({ reponses, entree: u.entree, sortie: u.sortie, cacheLu: u.cacheLu, cacheEcrit: u.cacheEcrit });
+  const champ = (k) => `'${k}', COALESCE(json_extract(valeur, '$.${k}'), 0) + json_extract(?2, '$.${k}')`;
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO reglages (cle, valeur) VALUES (?1, ?2) ON CONFLICT (cle) DO UPDATE SET valeur = json_object('
+      + ['reponses', 'entree', 'sortie', 'cacheLu', 'cacheEcrit'].map(champ).join(', ') + ')').bind('robot-conso:' + jour, ajout),
+    env.DB.prepare('DELETE FROM reglages WHERE cle LIKE \'robot-conso:%\' AND cle < ?')
+      .bind('robot-conso:' + new Date(Date.now() - JOURS_GARDES * 86400 * 1000).toISOString().slice(0, 10)),
+  ]);
+}
 
-  const { results } = await env.DB.prepare('SELECT auteur, texte FROM support_messages WHERE fil = ? AND auteur != \'note\' '
-    + 'ORDER BY id DESC LIMIT ?').bind(fil, HISTORIQUE).all();
-  const messages = [];
-  for (const m of results.reverse()) {
-    if (m.auteur === 'client') messages.push({ role: 'user', content: m.texte });
-    else if (messages.length) messages.push({ role: 'assistant', content: (m.auteur === 'admin' ? '[Réponse de l\'administrateur] ' : '') + m.texte });
-  }
-  if (!messages.length || messages[messages.length - 1].role !== 'user') return null;
+// Consommation pour la page admin : aujourd'hui et 30 derniers jours, coût estimé en dollars.
+export async function consommation(env) {
+  const { results } = await env.DB.prepare('SELECT cle, valeur FROM reglages WHERE cle LIKE \'robot-conso:%\'').all();
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const depuis = new Date(Date.now() - 29 * 86400 * 1000).toISOString().slice(0, 10);
+  const total = (filtre) => {
+    const t = { reponses: 0, entree: 0, sortie: 0, cacheLu: 0, cacheEcrit: 0 };
+    for (const r of results) {
+      if (!filtre(r.cle.slice(12))) continue;
+      const v = JSON.parse(r.valeur);
+      for (const k of Object.keys(t)) t[k] += Number(v[k]) || 0;
+    }
+    const cout = (t.entree * PRIX.entree + t.sortie * PRIX.sortie + t.cacheLu * PRIX.cacheLu + t.cacheEcrit * PRIX.cacheEcrit) / 1e6;
+    return { reponses: t.reponses, jetons: t.entree + t.sortie + t.cacheLu + t.cacheEcrit, cout: Math.round(cout * 1000) / 1000 };
+  };
+  return { aujourdhui: total((j) => j === aujourdhui), trenteJours: total((j) => j >= depuis), limiteJour: PAR_JOUR };
+}
 
+// Un appel au robot : messages de la conversation (le dernier vient du visiteur) → { texte, transfere }.
+async function appeler(env, messages, quiTexte) {
   let transfere = false;
   const transmettre = betaTool({
     name: 'transmettre_a_l_admin',
@@ -139,7 +160,7 @@ export async function repondre(env, fil, compte) {
     timeout: 25 * 1000,
     maxRetries: 1,
   });
-  const final = await client.beta.messages.toolRunner({
+  const runner = client.beta.messages.toolRunner({
     model: MODELE,
     max_tokens: 4000,
     max_iterations: 3,
@@ -148,13 +169,55 @@ export async function repondre(env, fil, compte) {
     fallbacks: 'default',
     system: [
       { type: 'text', text: CONNAISSANCES, cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: await quiEstLe(env, compte) },
+      { type: 'text', text: quiTexte },
     ],
     tools: [transmettre],
     messages,
   });
+  // Chaque tour de la boucle (réponse, puis suite après l'outil) est payé : on additionne les jetons de tous.
+  const u = { entree: 0, sortie: 0, cacheLu: 0, cacheEcrit: 0 };
+  let final = null;
+  for await (const message of runner) {
+    final = message;
+    u.entree += message.usage.input_tokens || 0;
+    u.sortie += message.usage.output_tokens || 0;
+    u.cacheLu += message.usage.cache_read_input_tokens || 0;
+    u.cacheEcrit += message.usage.cache_creation_input_tokens || 0;
+  }
+  await noterConso(env, u, 1);
 
-  if (final.stop_reason === 'refusal') return { texte: '', transfere: true };
+  if (!final || final.stop_reason === 'refusal') return { texte: '', transfere: true };
   const texte = final.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
   return { texte: texte.slice(0, REPONSE_MAX), transfere };
+}
+
+// Réponse du robot au dernier message du visiteur.
+//   → { texte, transfere }  (texte vide possible si seul le transfert a eu lieu)
+//   → null si une limite est atteinte (l'admin prend le relais)
+// Lance une erreur si l'API ne répond pas : l'appelant transmet alors à l'admin.
+export async function repondre(env, fil, compte) {
+  if (await limiteAtteinte(env, 'robot:fil:' + fil, PAR_HEURE_ET_FIL, 3600 * 1000)) return null;
+  if (await limiteAtteinte(env, 'robot:jour', PAR_JOUR, 24 * 3600 * 1000)) return null;
+
+  const { results } = await env.DB.prepare('SELECT auteur, texte FROM support_messages WHERE fil = ? AND auteur != \'note\' '
+    + 'ORDER BY id DESC LIMIT ?').bind(fil, HISTORIQUE).all();
+  const messages = [];
+  for (const m of results.reverse()) {
+    if (m.auteur === 'client') messages.push({ role: 'user', content: m.texte });
+    else if (messages.length) messages.push({ role: 'assistant', content: (m.auteur === 'admin' ? '[Réponse de l\'administrateur] ' : '') + m.texte });
+  }
+  if (!messages.length || messages[messages.length - 1].role !== 'user') return null;
+  return appeler(env, messages, await quiEstLe(env, compte));
+}
+
+// Essai depuis la page admin : une question, la réponse du robot, rien n'est gardé (sauf la consommation).
+//   → { texte, transfere } ; null si la limite du jour est atteinte.
+export async function essayer(env, question, role) {
+  if (await limiteAtteinte(env, 'robot:jour', PAR_JOUR, 24 * 3600 * 1000)) return null;
+  const qui = {
+    eleve: 'Le visiteur est un élève, connecté avec le code donné par son enseignant (probablement un enfant).',
+    enseignant: 'Le visiteur est connecté avec un compte enseignant.',
+    anonyme: 'Le visiteur n\'est pas connecté (pas de compte, ou connecté seulement dans un autre navigateur).',
+  }[role] || 'Le visiteur n\'est pas connecté.';
+  return appeler(env, [{ role: 'user', content: question }], qui);
 }
