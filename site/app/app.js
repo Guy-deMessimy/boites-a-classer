@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.38.0';
+  const VERSION = '3.39.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -252,30 +252,42 @@
   };
   const CLE_NIVEAU = 'boites-a-classer:reglage:niveau'; // « : » : ne peut pas être le plan de travail d'une collection
   const niveauValide = (n) => n === 'facile' || n === 'normal' || n === 'expert';
-  const niveau = () => { const n = lire(CLE_NIVEAU); return niveauValide(n) ? n : 'normal'; };
+  // Élève d'une classe : son enseignant peut imposer le niveau (page « Mes classes », serveur/classes.js).
+  const niveauImpose = () => { const e = jetonCompte() && eleveConnecte(); return e && niveauValide(e.niveau) ? e.niveau : null; };
+  const niveau = () => { const n = niveauImpose() || lire(CLE_NIVEAU); return niveauValide(n) ? n : 'normal'; };
   const boutonNiveau = $('#niveau');
+  let niveauAffiche = null; // niveau avec lequel les cartes sont dessinées (voir rendre)
 
+  // Appelée aussi quand le compte change (majBoutonCompte) : niveau imposé ou levé, connexion, déconnexion.
   function majBoutonNiveau() {
     const d = NIVEAUX[niveau()];
+    const impose = !!niveauImpose();
     boutonNiveau.querySelector('.niveau-ico').textContent = d.ico;
     boutonNiveau.querySelector('.niveau-nom').textContent = d.nom;
-    boutonNiveau.title = `Niveau ${d.nom.toLowerCase()} : ${d.detail} (appuie pour changer)`;
-    boutonNiveau.setAttribute('aria-label', `Niveau ${d.nom.toLowerCase()}, changer de niveau`);
+    boutonNiveau.title = `Niveau ${d.nom.toLowerCase()} : ${d.detail}` + (impose ? ' (choisi par ton enseignant)' : ' (appuie pour changer)');
+    boutonNiveau.setAttribute('aria-label', `Niveau ${d.nom.toLowerCase()}` + (impose ? ', choisi par ton enseignant' : ', changer de niveau'));
+    boutonNiveau.classList.toggle('impose', impose);
     document.body.dataset.niveau = niveau();
+    // Un défi commencé à un autre niveau ne compte plus : pas de record en passant en facile pour voir les erreurs.
+    if (coll && niveauAffiche !== null && niveauAffiche !== niveau()) {
+      if (defi) arreterDefi();
+      fermerBilan();
+      rendre();
+      majInfoDefaut();
+    }
   }
 
   // pourquoi : précision ajoutée au message (« choisi par le lien »).
   function choisirNiveau(n, pourquoi) {
     if (!niveauValide(n)) return;
+    if (niveauImpose()) {
+      info.textContent = `🔒 Ton enseignant a choisi le niveau ${NIVEAUX[niveau()].nom.toLowerCase()} pour ta classe.`;
+      return;
+    }
     const avant = niveau();
     ecrire(CLE_NIVEAU, n);
     majBoutonNiveau();
     if (n === avant) return;
-    // Un défi commencé à un autre niveau ne compte plus : pas de record en passant en facile pour voir les erreurs.
-    if (defi) arreterDefi();
-    fermerBilan();
-    rendre();
-    majInfoDefaut();
     const d = NIVEAUX[n];
     info.textContent = `${d.ico} Niveau ${d.nom.toLowerCase()}${pourquoi ? ' ' + pourquoi : ''} : ${d.detail}`;
   }
@@ -286,6 +298,13 @@
       titre.className = 'menu-titre';
       titre.textContent = 'Niveau';
       m.appendChild(titre);
+      const impose = !!niveauImpose();
+      if (impose) {
+        const note = document.createElement('p');
+        note.className = 'menu-note';
+        note.textContent = '🔒 Ton enseignant a choisi ce niveau pour ta classe.';
+        m.appendChild(note);
+      }
       for (const [cle, d] of Object.entries(NIVEAUX)) {
         const b = document.createElement('button');
         b.type = 'button';
@@ -302,6 +321,7 @@
         const texte = document.createElement('span');
         texte.append(nom, detail);
         b.append(ico, texte);
+        b.disabled = impose && cle !== niveau();
         b.addEventListener('click', () => { fermerMenu(); choisirNiveau(cle); });
         m.appendChild(b);
       }
@@ -349,6 +369,7 @@
 
   function rendre() {
     fermerMenu();
+    niveauAffiche = niveau();
     calque.replaceChildren();
     plateau.replaceChildren();
     elBoites = new Map();
@@ -3481,6 +3502,7 @@
   // Bouton 👤 de la barre : nom du compte connecté, ou « Se connecter ».
   const boutonCompte = $('#compte');
   function majBoutonCompte() {
+    majBoutonNiveau(); // niveau imposé par la classe : arrive ou part avec le compte
     const nom = jetonCompte() && lire(CLE_IDENTIFIANT);
     // Connecté : sa photo de profil, ou le rond à son initiale (app/profil.css) ; sinon 👤.
     if (nom) rondProfil($('#compte-avatar'), nom, lire(CLE_AVATAR), lire(CLE_AVATAR_FOND));
