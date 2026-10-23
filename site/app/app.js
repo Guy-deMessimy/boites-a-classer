@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.33.0';
+  const VERSION = '3.34.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -133,6 +133,7 @@
     }
     histoire.actuel = s;
     ecrire(cle(), s);
+    noterSuivi(); // jour d'activité, pour « Mon parcours »
     majBoutonsHistoire();
   }
 
@@ -1193,7 +1194,7 @@
     const PROGRES = /^(reussi|expert):[A-Za-z0-9_-]{1,60}$/;
     const entrees = Object.entries(donnees)
       .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE)
-        && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU));
+        && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU || k === CLE_SUIVI));
     const lireJSON = (v) => { try { return JSON.parse(v); } catch (e) { return null; } };
     let n = 0;
 
@@ -1224,6 +1225,7 @@
       if (k === PREFIXE + 'collection' || k === PREFIXE + 'zoom') { ecrire(k, v.slice(0, 80)); continue; }
       if (PROGRES.test(k.slice(PREFIXE.length))) { if (/^[0-9TZ:.+-]{1,40}$/.test(v)) ecrire(k, v); continue; }
       if (k === CLE_NIVEAU) { if (niveauValide(v)) ecrire(k, v); continue; }
+      if (k === CLE_SUIVI) { try { ecrire(k, JSON.stringify(suiviPropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
       const c = toutes().find((x) => PREFIXE + x.id === k);
       const o = lireJSON(v);
       if (!c || !o) continue;
@@ -2189,6 +2191,7 @@
   }
 
   function verifier() {
+    noterSuivi('verifs');
     fermerMenu();
     oublierVerification();
     const analyse = analyser();
@@ -2305,6 +2308,7 @@
       const titre = (t) => { const h = document.createElement('div'); h.className = 'menu-titre'; h.textContent = t; return h; };
       m.append(
         titre('Comprendre'),
+        entreeMenu('📈 Mon parcours', ouvrirParcours),
         entreeMenu('💡 Un indice', donnerIndice),
         entreeMenu('🌳 Voir ma classification en arbre', ouvrirArbre),
         entreeMenu('📊 Tableau des caractères', ouvrirTableau),
@@ -2341,6 +2345,151 @@
   }
   for (const evt of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(evt, () => { if (pleinEcran()) setTimeout(toutVoir, 120); }); // tout le travail à l'écran
 
+  /* Mon parcours : ce que l'élève a réussi, par matière, ses trophées, sa série de jours, ses records. */
+
+  // Gardé avec le travail (sauvegarde en ligne) : indices demandés, vérifications, jours d'activité (série 🔥).
+  // Les records du défi et du jeu, eux, restent propres à l'appareil (CLE_RECORD_DEFI, CLE_RECORD_JEU).
+  const CLE_SUIVI = 'boites-a-classer:suivi:parcours';
+  const entier = (v) => (Number.isInteger(v) && v >= 0 ? Math.min(v, 1e7) : 0);
+  const suiviPropre = (o) => ({
+    indices: entier(o && o.indices),
+    verifs: entier(o && o.verifs),
+    jours: Array.isArray(o && o.jours) ? [...new Set(o.jours.filter((j) => typeof j === 'string' && /^\d{4}-\d\d-\d\d$/.test(j)))].sort().slice(-400) : [],
+  });
+  function lireSuivi() {
+    try { return suiviPropre(JSON.parse(lire(CLE_SUIVI))); } catch (e) { return suiviPropre(null); }
+  }
+  const jourDe = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // quoi : 'indices' ou 'verifs' à compter ; sans rien, marque seulement le jour (une écriture par jour au plus).
+  function noterSuivi(quoi) {
+    if (document.body.classList.contains('consultation')) return; // regarder le travail d'un élève ne compte pas
+    const s = lireSuivi();
+    const jour = jourDe(new Date());
+    const nouveauJour = s.jours[s.jours.length - 1] !== jour;
+    if (!quoi && !nouveauJour) return;
+    if (quoi) s[quoi]++;
+    if (nouveauJour) s.jours = [...s.jours, jour].slice(-400);
+    ecrire(CLE_SUIVI, JSON.stringify(s));
+  }
+
+  // Jours d'activité d'affilée, jusqu'à aujourd'hui (ou hier : la série tient encore tant que la journée n'est pas finie).
+  function serieDeJours(jours) {
+    const faits = new Set(jours);
+    const d = new Date();
+    if (!faits.has(jourDe(d))) d.setDate(d.getDate() - 1);
+    let n = 0;
+    while (faits.has(jourDe(d))) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+
+  // Records gardés sur cet appareil : « boites-a-classer-defi:<id>[:<niveau>] » (ms) et « boites-a-classer-jeu:<id> ».
+  function recordsAppareil() {
+    const defis = [], jeux = [];
+    try {
+      for (let i = 0; i < stockage.length; i++) {
+        const k = stockage.key(i);
+        const v = parseInt(stockage.getItem(k), 10);
+        if (!k || !(v > 0)) continue;
+        if (k.startsWith('boites-a-classer-defi:')) {
+          const [id, niv] = k.slice('boites-a-classer-defi:'.length).split(':');
+          const c = toutes().find((x) => x.id === id);
+          if (c) defis.push({ c, temps: v, niveau: niveauValide(niv) ? niv : 'normal' });
+        } else if (k.startsWith('boites-a-classer-jeu:')) {
+          const c = toutes().find((x) => x.id === k.slice('boites-a-classer-jeu:'.length));
+          if (c) jeux.push({ c, questions: v });
+        }
+      }
+    } catch (e) { /* stockage indisponible */ }
+    return { defis: defis.sort((a, b) => a.c.nom.localeCompare(b.c.nom)), jeux: jeux.sort((a, b) => a.c.nom.localeCompare(b.c.nom)) };
+  }
+
+  function ouvrirParcours() {
+    fermerMenu();
+    const el = (balise, classe, texte) => { const n = document.createElement(balise); if (classe) n.className = classe; if (texte !== undefined) n.textContent = texte; return n; };
+    const liste = toutes();
+    const faites = liste.filter(reussie);
+    const trophees = liste.filter(reussieExpert);
+    const suivi = lireSuivi();
+    const serie = serieDeJours(suivi.jours);
+    const qui = document.body.classList.contains('consultation') ? $('#consultation strong').textContent : '';
+    $('#titre-parcours').textContent = qui ? `📈 Parcours de ${qui}` : '📈 Mon parcours';
+
+    // Les chiffres du moment, en tuiles.
+    const tuiles = el('div', 'parcours-tuiles');
+    for (const [ico, nombre, texte] of [
+      ['✅', faites.length, `collection${faites.length > 1 ? 's' : ''} réussie${faites.length > 1 ? 's' : ''} sur ${liste.length}`],
+      ['🏆', trophees.length, `trophée${trophees.length > 1 ? 's' : ''} expert`],
+      ['🔥', serie, serie > 1 ? 'jours de suite' : 'jour de suite'],
+      ['💡', suivi.indices, `indice${suivi.indices > 1 ? 's' : ''} demandé${suivi.indices > 1 ? 's' : ''}`],
+    ]) {
+      const t = el('div', 'parcours-tuile');
+      t.append(el('span', 'parcours-ico', ico), el('strong', 'parcours-nombre', String(nombre)), el('span', 'parcours-legende', texte));
+      tuiles.appendChild(t);
+    }
+
+    // Une barre par matière : collections réussies sur le total, puis les collections (un appui en ouvre une).
+    const groupes = [
+      ...MATIERES.map(([m, titre]) => [titre, liste.filter((c) => !estPerso(c) && matiere(c) === m && (!estSite(c) || c.matiere))]),
+      ['Collections du site', collectionsSite.filter((c) => !c.matiere)],
+      ['Mes collections', mesCollections],
+    ].filter(([, l]) => l.length);
+    const matieres = el('div', 'parcours-matieres');
+    for (const [titre, l] of groupes) {
+      const n = l.filter(reussie).length;
+      const x = l.filter(reussieExpert).length;
+      const ligne = el('details', 'parcours-matiere');
+      const tete = el('summary');
+      const barre = el('span', 'parcours-barre');
+      barre.setAttribute('role', 'img');
+      barre.setAttribute('aria-label', `${n} réussie${n > 1 ? 's' : ''} sur ${l.length}`);
+      const plein = el('span');
+      plein.style.width = (100 * n / l.length) + '%';
+      barre.appendChild(plein);
+      tete.append(el('span', 'parcours-titre', titre), barre, el('span', 'parcours-compte', `${n} / ${l.length}` + (x ? ` · 🏆 ${x}` : '')));
+      const colls = el('div', 'parcours-colls');
+      for (const c of l) {
+        const b = el('button', 'parcours-coll' + (reussie(c) ? ' faite' : ''), (marqueReussite(c) || '○ ') + c.nom);
+        b.type = 'button';
+        b.title = reussieExpert(c) ? 'Réussie au niveau expert' : reussie(c) ? 'Réussie' : 'Pas encore réussie : appuie pour la commencer';
+        b.addEventListener('click', () => { $('#fen-parcours').close(); choisirCollection(c.id); });
+        colls.appendChild(b);
+      }
+      ligne.append(tete, colls);
+      matieres.appendChild(ligne);
+    }
+
+    // Niveau, dernière activité, vérifications, records de cet appareil.
+    const d = NIVEAUX[niveau()];
+    const dates = [...liste.map((c) => lire(cleReussie(c))), ...liste.map((c) => lire(cleExpert(c)))].filter(Boolean).sort();
+    const derniere = suivi.jours[suivi.jours.length - 1] || (dates.length ? dates[dates.length - 1].slice(0, 10) : '');
+    const infos = el('ul', 'parcours-infos');
+    const point = (t) => infos.appendChild(el('li', '', t));
+    point(`${d.ico} Niveau ${d.nom.toLowerCase()}` + (trophees.length ? ` · ${pluriel(trophees.length, 'collection réussie', 'collections réussies')} au niveau expert` : ''));
+    if (derniere) point(`📅 Dernière activité : ${new Date(derniere + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}` + (suivi.jours.length > 1 ? ` · ${pluriel(suivi.jours.length, 'jour', 'jours')} d'activité en tout` : ''));
+    if (suivi.verifs) point(`✔ ${pluriel(suivi.verifs, 'vérification', 'vérifications')}`);
+    const { defis, jeux } = recordsAppareil();
+    const records = el('div', 'parcours-records');
+    if (defis.length || jeux.length) {
+      records.appendChild(el('h3', '', '⏱ Mes records (sur cet appareil)'));
+      const ul = el('ul', 'parcours-infos');
+      for (const r of defis) ul.appendChild(el('li', '', `${r.c.nom} : défi en ${duree(r.temps)} ${NIVEAUX[r.niveau].ico}`));
+      for (const r of jeux) ul.appendChild(el('li', '', `${r.c.nom} : « Qui suis-je ? » trouvé en ${pluriel(r.questions, 'question', 'questions')}`));
+      records.appendChild(ul);
+    }
+    const aide = el('p', 'aide', faites.length
+      ? 'Touche une matière pour voir ses collections ; touche une collection pour l\'ouvrir.'
+      : 'Réussis une collection (tout juste à la vérification) pour remplir ton parcours ! Touche une matière pour voir ses collections.');
+    $('#parcours').replaceChildren(tuiles, aide, matieres, infos, records);
+    $('#fen-parcours').showModal();
+  }
+  $('#parcours-imprimer').addEventListener('click', () => {
+    document.body.classList.add('imprime-parcours');
+    for (const d of document.querySelectorAll('#parcours details')) d.open = true;
+    window.addEventListener('afterprint', () => document.body.classList.remove('imprime-parcours'), { once: true });
+    window.print();
+  });
+
   // Aide : montrée d'elle-même à la toute première visite, puis dans 🧰 Outils.
   const CLE_AIDE = 'boites-a-classer-aide:vue';
   function ouvrirAide() {
@@ -2350,7 +2499,7 @@
   $('#aide-ok').addEventListener('click', () => { ecrire(CLE_AIDE, '1'); $('#fen-aide').close(); });
   $('#fen-aide').addEventListener('close', () => ecrire(CLE_AIDE, '1'));
 
-  for (const f of ['#fen-aide', '#fen-arbre', '#fen-tableau', '#fen-jeu']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
+  for (const f of ['#fen-aide', '#fen-arbre', '#fen-tableau', '#fen-jeu', '#fen-parcours']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
 
   // Être vivant dessiné en petit (emoji ou photo), pour le tableau et le jeu.
   function icone(e) {
@@ -2761,6 +2910,7 @@
       texte = reste.length ? `Ce qui est placé est juste. Continue avec ${tirer(reste).nom}.` : 'Appuie sur « ✔ Vérifier ».';
     }
     info.textContent = '💡 ' + texte;
+    noterSuivi('indices');
     dire(texte);
   }
 

@@ -988,3 +988,36 @@ body.consultation #exercices { display: none; }
 /* Éditeur : remplir à partir d'un tableur. */
 .ed-coller summary { cursor: pointer; font-weight: 600; }
 .ed-coller textarea { width: 100%; box-sizing: border-box; margin-top: .3rem; padding: .5rem; border: 1px solid var(--ligne); border-radius: 10px; background: var(--surface); color: var(--encre); font: .85rem/1.4 ui-monospace, Menlo, Consolas, monospace; tab-size: 12; resize: vertical; }
+
+/* Mon parcours : tuiles de chiffres, une barre par matière (une seule teinte : la part réussie), records. */
+.parcours-tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: .6rem; margin-bottom: 1rem; }
+.parcours-tuile { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: .45rem; padding: .65rem .75rem; border: 1px solid var(--ligne); border-radius: 14px; background: var(--surface); }
+.parcours-ico { grid-row: span 2; font-size: 1.5rem; line-height: 1; }
+.parcours-nombre { font-size: 1.45rem; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--encre); }
+.parcours-legende { color: var(--doux); font-size: .78rem; line-height: 1.25; }
+.parcours-matieres { display: grid; gap: .35rem; margin-bottom: 1rem; }
+.parcours-matiere summary { display: grid; grid-template-columns: minmax(7.5rem, 11rem) 1fr auto; align-items: center; gap: .7rem; padding: .45rem .3rem; border-radius: 10px; cursor: pointer; list-style: none; }
+.parcours-matiere summary::-webkit-details-marker { display: none; }
+.parcours-matiere summary:hover { background: var(--survol); }
+.parcours-matiere summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.parcours-titre { font-weight: 600; font-size: .92rem; }
+.parcours-barre { position: relative; height: 10px; border-radius: 5px; background: var(--ligne-douce, var(--ligne)); overflow: hidden; }
+.parcours-barre span { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: var(--ok); }
+.parcours-compte { min-width: 6.5rem; color: var(--doux); font-size: .85rem; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.parcours-colls { display: flex; flex-wrap: wrap; gap: .35rem; padding: .3rem .3rem .7rem; }
+.parcours-coll { padding: .3rem .65rem; border: 1px solid var(--ligne); border-radius: 999px; background: var(--surface); color: var(--doux); font-size: .82rem; cursor: pointer; }
+.parcours-coll.faite { color: var(--encre); border-color: color-mix(in srgb, var(--ok) 45%, var(--ligne)); background: var(--fond-ok); }
+.parcours-coll:hover { border-color: var(--accent); }
+.parcours-infos { margin: 0 0 .8rem; padding-left: 1.1rem; font-size: .9rem; line-height: 1.6; }
+.parcours-records h3 { margin: .4rem 0 .3rem; font-size: .95rem; }
+@media (max-width: 700px) {
+  .parcours-matiere summary { grid-template-columns: 1fr auto; row-gap: .3rem; }
+  .parcours-barre { grid-column: 1 / -1; grid-row: 2; }
+}
+@media print {
+  body.imprime-parcours > *:not(#fen-parcours) { display: none !important; }
+  body.imprime-parcours #fen-parcours { display: block !important; position: static; width: auto; max-width: none; max-height: none; margin: 0; border: 0; box-shadow: none; background: #fff; color: #000; animation: none; }
+  body.imprime-parcours #fen-parcours::backdrop { display: none; }
+  body.imprime-parcours #fen-parcours .fenetre-pied, body.imprime-parcours #fen-parcours .fermer, body.imprime-parcours #parcours > .aide { display: none !important; }
+  body.imprime-parcours .parcours-barre, body.imprime-parcours .parcours-barre span { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
