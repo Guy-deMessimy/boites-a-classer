@@ -142,6 +142,7 @@
     }
     .bouton:hover { filter: brightness(1.08); }
     .bouton.secondaire { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+    @media (max-width: 360px) { .bouton { white-space: normal; text-align: center; } } /* « Se connecter ou créer un compte » tient à 320 px */
 
     h2 { margin: 40px 0 16px; font-size: 1.5rem; font-weight: 600; }
     .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
