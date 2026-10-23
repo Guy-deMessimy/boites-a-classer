@@ -115,6 +115,10 @@
     .chiffres strong { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
     .chiffres span { color: var(--doux); font-size: .9rem; }
     .outils { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .outils select { max-width: min(100%, 14em); padding: .4rem .7rem; border: 1px solid var(--ligne); border-radius: 999px; background: var(--carte); color: var(--encre); font: inherit; font-size: .9rem; }
+    .outils select.actif { border-color: var(--accent); }
+    .filtres { align-items: center; }
+    .compte-nombre { margin-left: auto; color: var(--doux); font-size: .9rem; }
     .defile { overflow-x: auto; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
     table { width: 100%; border-collapse: collapse; font-size: .92rem; }
     th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--ligne); vertical-align: middle; }
@@ -383,6 +387,24 @@
       <div class="outils">
         <input id="filtre" type="search" placeholder="Chercher un identifiant" aria-label="Chercher un identifiant" autocomplete="off">
         <button type="button" class="bouton" id="actualiser">↻ Actualiser</button>
+      </div>
+      <div class="outils filtres" id="filtres">
+        <select id="filtre-role" aria-label="Rôle">
+          <option value="">Tous les rôles</option>
+          <option value="eleve">Élèves</option>
+          <option value="enseignant">Enseignants</option>
+          <option value="admin">Admins</option>
+          <option value="ordinaire">Comptes ordinaires</option>
+        </select>
+        <select id="filtre-classe" aria-label="Classe"><option value="">Toutes les classes</option></select>
+        <select id="filtre-photo" aria-label="Photo de profil">
+          <option value="">Avec ou sans photo</option>
+          <option value="avec">Avec photo</option>
+          <option value="sans">Sans photo</option>
+        </select>
+        <select id="filtre-badge" aria-label="Badge"><option value="">Tous les badges</option></select>
+        <span class="compte-nombre" id="compte-nombre" role="status"></span>
+        <button type="button" class="bouton" id="exporter-csv">⬇ Exporter en CSV</button>
       </div>
       <div class="defile">
         <table>
@@ -759,6 +781,7 @@
             return li;
           }));
           comptes = x.r.comptes;
+          remplirFiltres();
           afficher();
           remplirSerie();
           chargerActivite();
@@ -777,12 +800,85 @@
         return b;
       }
 
+      // Badges des événements (pastille de la liste, filtre « badge », export CSV).
+      var LIBELLES = { verifie: ['✔', 'vérifié par le site'], halloween: ['🎃', 'Halloween (boss)'], 'participation-halloween': ['🧛', 'participation à Halloween'],
+        noel: ['🎅', 'Noël (boss)'], 'participation-noel': ['⛄', 'participation à Noël'] };
+      var badgesDe = function (c) { try { var l = JSON.parse(c.badges || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } };
+      // Rôle d'un compte, dans l'ordre des étiquettes de la liste : admin, enseignant, élève (connecté par code), ordinaire.
+      var roleDe = function (c) { return c.admin ? 'admin' : c.enseignant ? 'enseignant' : c.classe ? 'eleve' : 'ordinaire'; };
+      var ROLES = { admin: 'admin', enseignant: 'enseignant', eleve: 'élève', ordinaire: 'ordinaire' };
+      var classeDe = function (c) { return c.classe ? (c.de || '?') + '\u0000' + c.classe : ''; };
+
+      // Filtres de la liste (au-dessus du tableau) : leurs choix suivent les comptes chargés, la sélection est gardée.
+      function remplirFiltres() {
+        var remplir = function (sel, options) {
+          var avant = sel.value;
+          sel.replaceChildren(sel.options[0]);
+          options.forEach(function (o) { sel.add(new Option(o[1], o[0])); });
+          if (options.some(function (o) { return o[0] === avant; })) sel.value = avant;
+        };
+        var classes = {}, badges = {};
+        comptes.forEach(function (c) {
+          if (c.classe) classes[classeDe(c)] = '« ' + c.classe + ' » (' + (c.de || '?') + ')';
+          badgesDe(c).forEach(function (b) { badges[b] = true; });
+        });
+        remplir($('#filtre-classe'), Object.keys(classes).sort().map(function (k) { return [k, classes[k]]; }));
+        var ordre = Object.keys(LIBELLES).concat(Object.keys(badges).filter(function (b) { return !LIBELLES[b]; }).sort());
+        remplir($('#filtre-badge'), [['aucun', 'Sans badge']].concat(ordre.map(function (b) { return [b, LIBELLES[b] ? LIBELLES[b][0] + ' ' + LIBELLES[b][1] : b]; })));
+      }
+      function comptesFiltres() {
+        var texte = $('#filtre').value.trim().toLowerCase(), role = $('#filtre-role').value, classe = $('#filtre-classe').value;
+        var photo = $('#filtre-photo').value, badge = $('#filtre-badge').value;
+        ['#filtre-role', '#filtre-classe', '#filtre-photo', '#filtre-badge'].forEach(function (s) { $(s).classList.toggle('actif', !!$(s).value); });
+        return comptes.filter(function (c) {
+          if (texte && c.identifiant.indexOf(texte) === -1 && !(c.nom && c.nom.toLowerCase().indexOf(texte) !== -1)) return false;
+          if (role && roleDe(c) !== role) return false;
+          if (classe && classeDe(c) !== classe) return false;
+          if (photo && !!c.avatar !== (photo === 'avec')) return false;
+          var b = badgesDe(c);
+          return !badge || (badge === 'aucun' ? !b.length : b.indexOf(badge) !== -1);
+        });
+      }
+
+      // Export de la liste filtrée, pour un tableur (séparateur « ; », UTF-8 avec BOM, dates en heure de Paris) :
+      // ni mot de passe, ni code, ni jeton — seulement ce que la liste montre.
+      function exporterCsv() {
+        var liste = comptesFiltres();
+        var heure = function (iso) {
+          if (!iso) return '';
+          var p = {};
+          new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+            .formatToParts(new Date(iso)).forEach(function (x) { p[x.type] = x.value; });
+          return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute;
+        };
+        // Un texte qui commence par = + - @ serait lu comme une formule par le tableur.
+        var cellule = function (v) {
+          v = String(v == null ? '' : v);
+          if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+          return /[";\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+        };
+        var lignes = [['identifiant', 'rôle', 'classe', 'enseignant', 'créé le', 'dernière connexion', 'badges']].concat(liste.map(function (c) {
+          return [c.identifiant, ROLES[roleDe(c)], c.classe || '', c.classe ? c.de || '' : '', heure(c.cree), c.derniere === c.cree && c.classe ? '' : heure(c.derniere),
+            badgesDe(c).map(function (b) { return LIBELLES[b] ? LIBELLES[b][1] : b; }).join(', ')];
+        }));
+        var csv = '\ufeff' + lignes.map(function (l) { return l.map(cellule).join(';'); }).join('\r\n') + '\r\n';
+        var lien = document.createElement('a');
+        lien.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        lien.download = 'comptes-' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(lien);
+        lien.click();
+        lien.remove();
+        setTimeout(function () { URL.revokeObjectURL(lien.href); }, 1000);
+        message(liste.length + ' compte' + (liste.length > 1 ? 's' : '') + ' exporté' + (liste.length > 1 ? 's' : '') + ' (' + lien.download + ').');
+      }
+
       function afficher() {
-        var filtre = $('#filtre').value.trim().toLowerCase();
         var lignes = [];
-        comptes.filter(function (c) {
-          return c.identifiant.indexOf(filtre) !== -1 || (c.nom && c.nom.toLowerCase().indexOf(filtre) !== -1);
-        }).forEach(function (c) {
+        var visibles = comptesFiltres();
+        $('#compte-nombre').textContent = visibles.length === comptes.length ? comptes.length + ' compte' + (comptes.length > 1 ? 's' : '')
+          : visibles.length + ' sur ' + comptes.length + ' comptes';
+        $('#exporter-csv').disabled = !visibles.length;
+        visibles.forEach(function (c) {
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
           // Un élève (créé par son enseignant) est montré par son prénom, avec sa classe.
@@ -799,8 +895,6 @@
             nom.appendChild(badge);
           });
           // Badges gagnés pendant les événements : une pastille d'emojis, le nom de chacun au survol.
-          var LIBELLES = { verifie: ['✔', 'vérifié par le site'], halloween: ['🎃', 'Halloween (boss)'], 'participation-halloween': ['🧛', 'participation à Halloween'],
-            noel: ['🎅', 'Noël (boss)'], 'participation-noel': ['⛄', 'participation à Noël'] };
           var connus = Object.keys(LIBELLES).filter(function (b) { return gagnes.indexOf(b) >= 0; });
           if (connus.length) {
             var pastille = document.createElement('span');
@@ -858,7 +952,7 @@
           var td = document.createElement('td');
           td.colSpan = 6;
           td.className = 'vide';
-          td.textContent = comptes.length ? 'Aucun identifiant ne correspond.' : 'Aucun compte pour l\'instant.';
+          td.textContent = comptes.length ? 'Aucun compte ne correspond à ces filtres.' : 'Aucun compte pour l\'instant.';
           tr.appendChild(td);
           lignes.push(tr);
         }
@@ -1533,6 +1627,8 @@
       setInterval(function () { if (document.visibilityState === 'visible' && !$('#contenu').hidden) chargerSupport(); }, 30000);
 
       $('#filtre').addEventListener('input', afficher);
+      ['#filtre-role', '#filtre-classe', '#filtre-photo', '#filtre-badge'].forEach(function (s) { $(s).addEventListener('change', afficher); });
+      $('#exporter-csv').addEventListener('click', exporterCsv);
       $('#actualiser').addEventListener('click', function () { message(''); charger(); });
       charger();
     })();
