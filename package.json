@@ -9,5 +9,8 @@
   "devDependencies": {
     "playwright-core": "1.48.2",
     "wrangler": "4.146.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.2.0"
   }
 }

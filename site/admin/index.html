@@ -179,6 +179,9 @@
     .bulle { max-width: 85%; padding: 6px 10px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92rem; }
     .bulle.client { align-self: flex-start; background: var(--fond); }
     .bulle.admin { align-self: flex-end; background: var(--accent); color: var(--accent-encre); }
+    .bulle.robot { align-self: flex-end; background: var(--accent-doux); border: 1px dashed var(--accent); }
+    .bulle.note { align-self: center; max-width: 95%; background: none; color: var(--doux); font-size: .82rem; text-align: center; }
+    .robot-etat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 12px; font-size: .9rem; color: var(--doux); }
     .bulle small { display: block; opacity: .7; font-size: .72rem; }
     .support form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .support textarea {
@@ -280,6 +283,7 @@
       <ul class="chiffres" id="chiffres"></ul>
       <section class="support" id="support">
         <h2>💬 Service client <span class="badge" id="support-badge" hidden></span></h2>
+        <p class="robot-etat"><span id="robot-texte">🤖 Robot : …</span> <button type="button" class="bouton" id="robot-basculer" hidden></button></p>
         <div class="support-grille">
           <ul class="support-liste" id="support-liste"></ul>
           <div id="support-fil" hidden>
@@ -711,6 +715,7 @@
           afficher();
           remplirSerie();
           chargerSupport();
+          chargerRobot();
           chargerCollectionsSite();
         }).catch(function (e) { horsSession('Impossible de joindre le serveur : ' + e.message); });
       }
@@ -1188,7 +1193,7 @@
           b.className = 'bulle ' + m.auteur;
           b.textContent = m.texte;
           var d = document.createElement('small');
-          d.textContent = (m.auteur === 'admin' ? 'Vous · ' : '') + dateCourte(m.date);
+          d.textContent = ({ admin: 'Vous · ', robot: '🤖 Robot · ' }[m.auteur] || '') + dateCourte(m.date);
           b.appendChild(d);
           return b;
         }));
@@ -1239,6 +1244,33 @@
           message('Conversation supprimée.');
           chargerSupport();
         });
+      });
+
+      /* Robot du service client (serveur/robot.js) : il répond tout de suite et transmet ici ce qui demande une personne. */
+
+      function afficherRobot(r) {
+        $('#robot-texte').textContent = !r.cle
+          ? '🤖 Robot : pas de clé d\'API (secret ANTHROPIC_API_KEY à mettre dans Cloudflare) : les messages arrivent tous ici.'
+          : r.actif
+            ? '🤖 Robot en service : il répond tout de suite et vous transmet ce qui demande une personne (non lus ci-dessous).'
+            : '🤖 Robot coupé : les messages arrivent tous ici.';
+        var b = $('#robot-basculer');
+        b.hidden = !r.cle;
+        b.textContent = r.actif ? 'Couper le robot' : 'Mettre le robot en service';
+        b.dataset.actif = r.actif ? '1' : '';
+      }
+      function chargerRobot() {
+        appel('robot').then(function (x) { if (x.statut === 200) afficherRobot(x.r); }).catch(function () { /* on réessaiera */ });
+      }
+      $('#robot-basculer').addEventListener('click', function (ev) {
+        var b = ev.currentTarget;
+        b.disabled = true;
+        appel('robot', { actif: !b.dataset.actif }).then(function (x) {
+          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
+          afficherRobot(x.r);
+          message(x.r.actif ? 'Robot en service.' : 'Robot coupé : les nouveaux messages arrivent tous ici.');
+        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); })
+          .then(function () { b.disabled = false; });
       });
 
       /* Collections du site (publiées par l'admin ou par les enseignants) */

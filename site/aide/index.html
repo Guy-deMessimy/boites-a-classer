@@ -7,7 +7,8 @@
   <link rel="icon" href="../icone.png">
   <style>
     /* Service client : une conversation avec l'administrateur du site (functions/api/support/[action].js).
-       Connecté : la conversation du compte, retrouvée partout. Sinon : celle de ce navigateur (jeton gardé ici). */
+       Connecté : la conversation du compte, retrouvée partout. Sinon : celle de ce navigateur (jeton gardé ici).
+       Quand le robot est en service (serveur/robot.js), une IA répond tout de suite et transmet à l'admin si besoin. */
     @font-face {
       font-family: "Space Grotesk";
       font-weight: 300 700;
@@ -67,6 +68,11 @@
     .bulle.admin { align-self: flex-start; background: var(--bulle-admin); border-bottom-left-radius: 4px; }
     .bulle small { display: block; margin-top: 2px; opacity: .75; font-size: .75rem; }
     .bulle.admin small::before { content: "Service client · "; font-weight: 600; }
+    .bulle.robot { align-self: flex-start; background: var(--bulle-admin); border: 1px dashed var(--accent); border-bottom-left-radius: 4px; }
+    .bulle.robot small::before { content: "🤖 Assistant (IA) · "; font-weight: 600; }
+    .bulle.note { align-self: center; max-width: 95%; padding: 2px 8px; color: var(--doux); font-size: .85rem; text-align: center; }
+    .bulle.ecrit { align-self: flex-start; background: var(--bulle-admin); color: var(--doux); font-style: italic; }
+    .bouton.second { background: var(--accent-doux); color: var(--accent); }
     .vide { margin: auto; color: var(--doux); text-align: center; }
     .resolu { align-self: center; color: var(--ok); font-size: .85rem; font-weight: 600; }
     form { display: grid; gap: 8px; margin-top: 12px; }
@@ -102,7 +108,7 @@
   <main>
     <a class="retour" href="../" data-nom-site>← Boîtes à classer</a>
     <h1>💬 Service client</h1>
-    <p class="intro">Une question, un problème, une idée ? Écrivez ici : l'administrateur du site vous répond sur cette page.</p>
+    <p class="intro" id="intro">Une question, un problème, une idée ? Écrivez ici : l'administrateur du site vous répond sur cette page.</p>
     <p class="qui" id="qui"></p>
 
     <div class="fil" id="fil" aria-live="polite"></div>
@@ -112,6 +118,7 @@
       <textarea id="texte" maxlength="2000" placeholder="Bonjour, …" required></textarea>
       <div class="envoi">
         <button type="submit" class="bouton" id="envoyer">Envoyer</button>
+        <button type="button" class="bouton second" id="humain" hidden>🙋 Parler à une personne</button>
         <p>N'écrivez pas d'informations personnelles (adresse, téléphone, nom de famille). <a href="../confidentialite/">Confidentialité</a></p>
       </div>
     </form>
@@ -162,7 +169,15 @@
 
       var date = function (iso) { return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
 
+      var CLASSES = { admin: 'admin', robot: 'robot', note: 'note' };
+      var robot = false; // le robot répond-il ? (dernière réponse du serveur)
+
       function afficher(r) {
+        robot = !!r.robot && !r.humain;
+        $('#intro').textContent = r.robot
+          ? 'Une question, un problème, une idée ? Écrivez ici : un assistant (une intelligence artificielle) vous répond tout de suite, et transmet à l\'administrateur du site ce qui demande une personne.'
+          : 'Une question, un problème, une idée ? Écrivez ici : l\'administrateur du site vous répond sur cette page.';
+        $('#humain').hidden = !robot;
         var fil = $('#fil');
         var bas = fil.scrollHeight - fil.scrollTop - fil.clientHeight < 40;
         if (!r.messages.length) {
@@ -173,8 +188,9 @@
         } else {
           fil.replaceChildren.apply(fil, r.messages.map(function (m) {
             var b = document.createElement('div');
-            b.className = 'bulle ' + (m.auteur === 'admin' ? 'admin' : 'client');
+            b.className = 'bulle ' + (CLASSES[m.auteur] || 'client');
             b.textContent = m.texte;
+            if (m.auteur === 'note') return b;
             var d = document.createElement('small');
             d.textContent = date(m.date);
             b.appendChild(d);
@@ -191,7 +207,9 @@
         nbMessages = r.messages.length;
       }
 
+      var envoi = false; // pendant un envoi, pas de rechargement (il effacerait « … écrit »)
       function charger() {
+        if (envoi) return Promise.resolve();
         return appel('fil').then(function (x) {
           if (x.statut !== 200) { $('#message').textContent = x.r.erreur || 'Le serveur a répondu ' + x.statut + '.'; $('#message').className = 'message erreur'; return; }
           afficher(x.r);
@@ -206,15 +224,54 @@
         b.disabled = true;
         $('#message').className = 'message';
         $('#message').textContent = 'Envoi…';
+        // Le robot répond pendant l'envoi : on montre le message et « … écrit » en attendant.
+        var attente = null;
+        if (robot) {
+          var fil = $('#fil');
+          var vide = fil.querySelector('.vide');
+          if (vide) vide.remove();
+          var moi = document.createElement('div');
+          moi.className = 'bulle client';
+          moi.textContent = texte;
+          attente = document.createElement('div');
+          attente.className = 'bulle ecrit';
+          attente.textContent = '🤖 L\'assistant écrit…';
+          fil.append(moi, attente);
+          fil.scrollTop = fil.scrollHeight;
+          $('#message').textContent = '';
+        }
+        envoi = true;
         appel('envoyer', { texte: texte }).then(function (x) {
+          envoi = false;
           if (x.statut !== 200) {
+            if (attente) charger();
             $('#message').className = 'message erreur';
             $('#message').textContent = (x.r.erreur ? x.r.erreur.charAt(0).toUpperCase() + x.r.erreur.slice(1) : 'Le serveur a répondu ' + x.statut) + '.';
             return;
           }
           $('#texte').value = '';
           afficher(x.r);
-          $('#message').textContent = 'Message envoyé : la réponse arrivera ici.';
+          $('#message').textContent = x.r.humain || !x.r.robot ? 'Message envoyé : la réponse arrivera ici.' : '';
+        }).catch(function (e) {
+          envoi = false;
+          if (attente) attente.remove();
+          $('#message').className = 'message erreur';
+          $('#message').textContent = 'Impossible de joindre le serveur : ' + e.message;
+        }).then(function () { b.disabled = false; });
+      });
+
+      $('#humain').addEventListener('click', function () {
+        var b = $('#humain');
+        b.disabled = true;
+        appel('humain', {}).then(function (x) {
+          if (x.statut !== 200) {
+            $('#message').className = 'message erreur';
+            $('#message').textContent = (x.r.erreur || 'Le serveur a répondu ' + x.statut) + '.';
+            return;
+          }
+          afficher(x.r);
+          $('#message').className = 'message';
+          $('#message').textContent = 'C\'est noté : l\'administrateur vous répondra ici. Vous pouvez ajouter un message pour lui expliquer.';
         }).catch(function (e) {
           $('#message').className = 'message erreur';
           $('#message').textContent = 'Impossible de joindre le serveur : ' + e.message;
