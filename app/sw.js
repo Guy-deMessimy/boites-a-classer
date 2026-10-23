@@ -1,9 +1,9 @@
 // Garde le logiciel en cache pour qu'il fonctionne sans connexion une fois installé.
 // Changer VERSION à chaque publication pour que les appareils récupèrent la nouvelle version.
-const VERSION = 'boites-a-classer-3.40.1';
+const VERSION = 'boites-a-classer-3.41.0';
 const FICHIERS = [
   './', './index.html', './style.css', './app.js', './collections.js', './manifest.webmanifest',
-  './profil.css', './icone.png', './icone-apple.png', './icone-192.png', './icone-512.png', './icone-maskable.png',
+  './profil.css', './avent.css', './avent.js', './icone.png', './icone-apple.png', './icone-192.png', './icone-512.png', './icone-maskable.png',
 ];
 
 self.addEventListener('install', (ev) => {

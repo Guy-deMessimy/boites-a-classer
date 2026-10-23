@@ -163,6 +163,14 @@ Choisi dans la page admin (« 🎨 Thème », `POST /api/admin/theme { theme }`,
 - **Programme** (depuis la 3.34.1) : dans la même carte, « 📅 Thèmes programmés » (`POST /api/admin/theme { programme: [{ theme, du, au }] }`, clé `programme-theme`) : pendant une période (jours compris, heure de Paris), son thème remplace le thème choisi, qui revient tout seul à la fin. `/api/etat` et le middleware donnent le thème du jour (le changement de minuit est vu par les pages ouvertes).
 - **Événements programmés** (depuis la 3.34.1) : carte de l'événement, « 📅 Événements programmés » (`POST /api/admin/evenement { programme: [{ evenement, debut, fin }] }`, « AAAA-MM-JJTHH:MM » à Paris, clé `programme-evenement`). Pas d'horloge côté serveur : `lireEtat` (`serveur/evenement.js`, `appliquerProgramme`, toutes les 10 s au plus par instance) déclenche ou arrête l'événement à la première lecture de l'état après l'heure dite (pages ouvertes, ou premier visiteur). Chaque ligne garde `lance` / `arrete` ; le programme n'est réécrit que s'il n'a pas changé entre-temps (une seule instance agit). Une plage passée sans aucune visite est marquée faite sans déclenchement. Déclencher remet le classement à zéro et remplace l'événement en cours ; à la fin, l'événement n'est arrêté que s'il est toujours celui du programme (même nom).
 
+## Calendrier de l'Avent (depuis la 3.41.0)
+
+Pendant le thème Noël (`data-theme="noel"`, § Thème du site), `app/avent.js` (et `app/avent.css`) ouvre une case par jour du 1er au 24 décembre, heure de Paris ; les cases à venir restent fermées, les jours passés se rattrapent (en janvier, c'est le calendrier de décembre). Chaque case a un défi (tableau DEFIS) : une devinette « Qui suis-je ? » (3 indices, 4 réponses) ou une collection fournie à réussir (bouton « Commencer », puis « Vérifier » : `app/app.js` envoie l'événement `boites:reussite` quand tout est juste). Une case réussie gagne sa ⭐ : clé `boites-a-classer:avent:AAAA-12-JJ`, écrite par `window.boitesApp.ecrire`, donc partie avec la sauvegarde en ligne. Pas de migration.
+
+- Logiciel : bouton 🎄 dans la barre (pastille quand la case du jour attend), Outils → Jouer → « Calendrier de l'Avent », `#avent` ou `#avent=<jour>` dans l'adresse.
+- Accueil : section `.avent` (`data-theme-seul="noel"`, comme son `<script>` et son `<link>`), chaque case ouverte mène au logiciel.
+- Essais en local seulement : date simulée dans `localStorage`, clé `boites-a-classer-avent:date` (« AAAA-MM-JJ »).
+
 ## Noël (depuis la 3.29.0)
 
 Même mécanique qu'Halloween (voir plus bas), avec sa propre fiche dans `site/evenement.js` (moteur commun des événements, qui remplace `site/halloween/hanter.js` ; classes `hanter-…` et `window.hanter` gardées) :

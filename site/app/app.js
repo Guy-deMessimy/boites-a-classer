@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.40.1';
+  const VERSION = '3.41.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -2314,6 +2314,8 @@
     for (const e of places) elEtres.get(e.id).classList.add(fautifs.has(e.id) ? 'faux' : 'ok');
     if (complet) {
       dire('Bravo ! Ta classification est correcte.');
+      // Pour les défis qui attendent une collection réussie (calendrier de l'Avent, app/avent.js).
+      window.dispatchEvent(new CustomEvent('boites:reussite', { detail: { collection: coll.id } }));
       confettis();
       if (!reussie(coll)) {
         ecrire(cleReussie(coll), new Date().toISOString());
@@ -2423,6 +2425,7 @@
         entreeMenu('📊 Tableau des caractères', ouvrirTableau),
         titre('Jouer'),
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
+        ...(window.avent && window.avent.actif() ? [entreeMenu('🎄 Calendrier de l\'Avent', window.avent.ouvrir)] : []),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
         titre('Plan de travail'),
         ...(pleinEcranPossible() ? [entreeMenu(pleinEcran() ? '📺 Quitter le plein écran' : '📺 Plein écran (tableau de la classe)', basculerPleinEcran)] : []),
@@ -4430,6 +4433,13 @@
     if (recus) info.textContent = `Le site a changé d'adresse : ton travail a suivi (${pluriel(recus, 'élément récupéré', 'éléments récupérés')}).`;
     synchroniser();
   }
+  // Ce dont les modules à part ont besoin (calendrier de l'Avent, app/avent.js) : lire et écrire comme le logiciel (les
+  // clés « boites-a-classer:… » partent avec la sauvegarde en ligne), ouvrir une collection, fêter une réussite.
+  window.boitesApp = {
+    lire, ecrire, choisirCollection, feter: confettis,
+    collection: (id) => toutes().find((c) => c.id === id) || null,
+  };
+
   if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer);
   else if (consultationDemandee()) ouvrirConsultation().then(() => demarrer(0));
   else demarrer(0);

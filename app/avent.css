@@ -1,0 +1,48 @@
+/* Calendrier de l'Avent (app/avent.js) : les 24 cases, dans la fenêtre du logiciel et sur l'accueil au thème Noël
+   (chargé aussi par site/index.html). Couleurs de Noël propres au calendrier, lisibles en clair comme en sombre. */
+.avent-grille { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 12px 0 4px; }
+@media (max-width: 520px) { .avent-grille { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; } }
+.avent-case {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  aspect-ratio: 1; min-width: 0; padding: 4px; border: 2px solid #9e1b31; border-radius: 14px;
+  background: linear-gradient(160deg, #e8364f, #b3203a); color: #fff;
+  font: 700 1.3rem/1 "Space Grotesk", system-ui, sans-serif; text-decoration: none; cursor: pointer;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / .2); transition: transform .15s;
+}
+.avent-case:nth-child(3n+2) { background: linear-gradient(160deg, #2fa05a, #1f6e3d); border-color: #185c32; }
+.avent-case:nth-child(3n) { background: linear-gradient(160deg, #f4c24d, #d39a1c); border-color: #b07d0e; color: #3a2400; }
+.avent-case .etat { font-size: .9rem; }
+.avent-case.fermee { cursor: default; filter: grayscale(.7) brightness(.9); opacity: .6; }
+.avent-case.reussie::after { content: "⭐"; position: absolute; top: -9px; right: -7px; font-size: 1.15rem; }
+.avent-case.aujourdhui { outline: 3px solid #ffd34d; outline-offset: 2px; animation: avent-brille 1.6s ease-in-out infinite alternate; }
+@keyframes avent-brille { to { box-shadow: inset 0 -3px 0 rgb(0 0 0 / .2), 0 0 18px 4px rgb(255 211 77 / .75); } }
+button.avent-case:hover, a.avent-case:hover { transform: translateY(-2px); }
+.avent-case:focus-visible { outline: 3px solid #2f6fde; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .avent-case.aujourdhui { animation: none; } .avent-case { transition: none; } }
+
+/* La case ouverte, dans la fenêtre du logiciel */
+.avent-defi h3 { margin: 0 0 10px; }
+.avent-defi ol { margin: 0 0 14px; padding-left: 1.4em; line-height: 1.5; }
+.avent-choix { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
+.avent-choix .btn { white-space: normal; }
+.avent-choix button.faux { border-color: var(--faux, #d93a3a); background: var(--fond-faux, #fdeeee); color: var(--faux, #d93a3a); }
+.avent-choix button.juste { border-color: var(--ok, #17955a); background: var(--fond-ok, #e7f6ee); color: var(--ok-fonce, #117646); opacity: 1; }
+.avent-message { min-height: 1.4em; margin: 6px 0 12px; font-weight: 600; }
+.avent-defi > .btn { margin-right: 8px; }
+.avent-toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 1000; transform: translateX(-50%); max-width: calc(100vw - 32px);
+  padding: .7rem 1.2rem; border-radius: 999px; background: #1f6e3d; color: #fff; font-weight: 700; text-align: center;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .3);
+}
+#avent-bouton .avent-ico { font-size: 1.05rem; line-height: 1; }
+@media (max-width: 700px) { #avent-bouton { padding: .3rem .75rem; } }
+/* Très petit écran : la place du bouton est prise sur la liste des collections. */
+@media (max-width: 360px) {
+  #avent-bouton { padding: .3rem .45rem; }
+  .choix:has(#avent-bouton:not([hidden])) select { min-width: 110px; }
+}
+
+/* Accueil (section .avent de site/index.html) */
+.avent { margin: 24px 0 0; padding: 18px 20px 20px; border-radius: 22px; background: var(--carte); box-shadow: var(--ombre); }
+.avent h2 { margin: 0 0 6px; }
+.avent .avent-texte { margin: 0; color: var(--doux); }

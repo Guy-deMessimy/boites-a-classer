@@ -1,6 +1,6 @@
 {
   "applicationId": "fr.boitesaclasser.app",
-  "version": "3.40.1",
+  "version": "3.41.0",
   "defaultMode": "window",
   "port": 47821,
   "documentRoot": "/resources/",

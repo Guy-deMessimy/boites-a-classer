@@ -214,6 +214,7 @@
   </style>
   <!-- Décor du thème choisi dans la page admin (fond, police) : functions/_middleware.js ajoute ici son <link> et la
        classe theme-… de <html> (data-decor), sauf pour le thème sciences (serveur/theme.js). -->
+  <link rel="stylesheet" href="app/avent.css" data-theme-seul="noel">
 </head>
 <body>
   <main>
@@ -234,6 +235,13 @@
         <a class="bouton secondaire" href="aide/">💬 Service client</a>
       </div>
     </header>
+
+    <!-- Calendrier de l'Avent (app/avent.js, app/avent.css) : seulement au thème Noël (serveur/theme.js). -->
+    <section class="avent" data-theme-seul="noel" aria-labelledby="titre-avent" hidden>
+      <h2 id="titre-avent">🎄 Calendrier de l'Avent</h2>
+      <p class="avent-texte"></p>
+      <div class="avent-grille"></div>
+    </section>
 
     <section class="pub">
       <iframe data-nom-site src="pub/" title="Boîtes à classer en 20 secondes (publicité animée)" loading="lazy"></iframe>
@@ -416,6 +424,7 @@
     })();
   </script>
   <script src="app/collections.js"></script>
+  <script src="app/avent.js" data-theme-seul="noel"></script>
   <script>
     // Nombre et liste des collections, tirés de app/collections.js : rien à mettre à jour à la main.
     (function () {
