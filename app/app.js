@@ -161,6 +161,84 @@
     return o;
   }
 
+  /* ---------- Réglages d'accessibilité ---------- */
+
+  // Taille du texte et des cartes, contraste élevé, couleurs pour daltoniens (palette validée + un symbole par attribut),
+  // police plus lisible (OpenDyslexic, licence OFL, téléchargée seulement si elle est choisie), moins d'animations.
+  // Gardés avec le travail (sauvegarde en ligne), comme le niveau ; posés sur <html> pour app/style.css.
+  const CLE_ACCES = 'boites-a-classer:reglage:acces';
+  const TAILLES = ['normale', 'grande', 'tres-grande'];
+  const ZOOM_TAILLE = { normale: 1, grande: 1.2, 'tres-grande': 1.4 }; // le plan de travail grandit avec le texte
+  const accesPropre = (o) => ({
+    taille: o && TAILLES.includes(o.taille) ? o.taille : 'normale',
+    contraste: !!(o && o.contraste === true),
+    daltonien: !!(o && o.daltonien === true),
+    police: !!(o && o.police === true),
+    calme: !!(o && o.calme === true),
+  });
+  function lireAcces() {
+    try { return accesPropre(JSON.parse(lire(CLE_ACCES))); } catch (e) { return accesPropre(null); }
+  }
+  // Palette catégorielle de référence, vérifiée pour les trois daltonismes (écarts ≥ 8) en clair et en sombre.
+  const PALETTE_DALTONIENS = {
+    clair: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'],
+    sombre: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
+  };
+  const SYMBOLES = ['●', '▲', '■', '◆', '★', '✚', '▼', '⬟', '⬢', '✖', '◀', '▶', '♥', '♣', '♠'];
+  const sombre = window.matchMedia('(prefers-color-scheme: dark)');
+
+  // Couleur et symbole de chaque attribut de la collection affichée.
+  function calculerAttributs() {
+    const daltonien = lireAcces().daltonien;
+    const palette = PALETTE_DALTONIENS[sombre.matches ? 'sombre' : 'clair'];
+    attrParId = new Map(coll.attributs.map((a, i) => [a.id, {
+      ...a,
+      couleur: daltonien ? palette[i % palette.length] : a.couleur || PALETTE[i % PALETTE.length],
+      symbole: SYMBOLES[i % SYMBOLES.length],
+    }]));
+  }
+
+  function appliquerAcces() {
+    const r = lireAcces();
+    const h = document.documentElement;
+    h.dataset.taille = r.taille;
+    h.classList.toggle('contraste', r.contraste);
+    h.classList.toggle('daltonien', r.daltonien);
+    h.classList.toggle('police-lisible', r.police);
+    h.classList.toggle('calme', r.calme);
+  }
+
+  function changerAcces(modif) {
+    const avant = lireAcces();
+    const r = accesPropre({ ...avant, ...modif });
+    ecrire(CLE_ACCES, JSON.stringify(r));
+    appliquerAcces();
+    if (r.daltonien !== avant.daltonien) { calculerAttributs(); rendre(); }
+    if (r.taille !== avant.taille) changerZoom(zoom * ZOOM_TAILLE[r.taille] / ZOOM_TAILLE[avant.taille]);
+    remplirReglages();
+  }
+  appliquerAcces(); // dès le chargement, avant le premier dessin
+  sombre.addEventListener('change', () => { if (coll && lireAcces().daltonien) { calculerAttributs(); rendre(); } });
+
+  const fenReglages = $('#fen-reglages');
+  function remplirReglages() {
+    const r = lireAcces();
+    for (const radio of fenReglages.querySelectorAll('input[name="taille"]')) radio.checked = radio.value === r.taille;
+    for (const cle of ['contraste', 'daltonien', 'police', 'calme']) $('#rg-' + cle).checked = r[cle];
+    $('#rg-voix').checked = voixActive();
+    $('#rg-voix-ligne').hidden = !voixPossible;
+  }
+  function ouvrirReglages() {
+    fermerMenu();
+    remplirReglages();
+    fenReglages.showModal();
+  }
+  for (const radio of fenReglages.querySelectorAll('input[name="taille"]')) radio.addEventListener('change', () => changerAcces({ taille: radio.value }));
+  for (const cle of ['contraste', 'daltonien', 'police', 'calme']) $('#rg-' + cle).addEventListener('change', (ev) => changerAcces({ [cle]: ev.target.checked }));
+  $('#rg-voix').addEventListener('change', (ev) => { if (ev.target.checked !== voixActive()) basculerVoix(); });
+  $('#rg-defaut').addEventListener('click', () => changerAcces(accesPropre(null)));
+  $('#rg-ok').addEventListener('click', () => fenReglages.close());
+
   /* ---------- Niveaux ---------- */
 
   // 🌱 Facile : les attributs de chaque carte en pastilles (de la couleur de leur boîte), et une carte posée dans une
@@ -252,8 +330,8 @@
   function choisirCollection(id, etatOuvert) {
     coll = toutes().find((c) => c.id === id) || FOURNIES[0];
     selColl.value = coll.id;
-    attrParId = new Map(coll.attributs.map((a, i) =>
-      [a.id, { ...a, couleur: a.couleur || PALETTE[i % PALETTE.length] }]));
+    calculerAttributs();
+    appliquerAcces(); // les réglages ont pu arriver avec la sauvegarde en ligne
     etat = etatOuvert ? accorder(etatOuvert) : charger();
     histoire = { passe: [], futur: [], actuel: null };
     if (etatOuvert) sauver();
@@ -347,6 +425,8 @@
     const c = couleurBoite(b);
     el.style.setProperty('--c', c);
     el.style.setProperty('--c-fond', rgba(c, 0.09));
+    const symbole = el.querySelector('.boite-symbole'); // couleurs pour daltoniens : le symbole de l'attribut
+    if (symbole) symbole.textContent = b.attr && attrParId.has(b.attr) ? attrParId.get(b.attr).symbole : '';
   }
 
   function creerBoite(b) {
@@ -405,7 +485,12 @@
       rendre();
     });
 
-    tete.append(poignee, titre, btnMenu, btnSuppr);
+    const symbole = document.createElement('span');
+    symbole.className = 'boite-symbole';
+    symbole.setAttribute('aria-hidden', 'true');
+    tete.append(poignee, symbole, titre, btnMenu, btnSuppr);
+    el.append(tete);
+    colorer(el, b); // le symbole de l'attribut, maintenant que le bandeau existe
 
     // Souris : on saisit la boîte par son bandeau ou son fond.
     // Doigt : seulement par le bandeau (titre compris : un appui écrit, un glisser déplace),
@@ -427,7 +512,7 @@
     coin.title = 'Glisser pour agrandir';
     coin.addEventListener('pointerdown', (ev) => redimensionner(ev, b, el));
 
-    el.append(tete, coin);
+    el.append(coin);
     return el;
   }
 
@@ -463,6 +548,7 @@
         if (!a) continue;
         const p = document.createElement('i');
         p.style.setProperty('--c', a.couleur);
+        p.textContent = a.symbole; // affiché seulement avec les couleurs pour daltoniens (style.css)
         attrs.appendChild(p);
       }
       el.classList.add('avec-attrs');
@@ -1194,7 +1280,7 @@
     const PROGRES = /^(reussi|expert):[A-Za-z0-9_-]{1,60}$/;
     const entrees = Object.entries(donnees)
       .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE)
-        && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU || k === CLE_SUIVI));
+        && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU || k === CLE_SUIVI || k === CLE_ACCES));
     const lireJSON = (v) => { try { return JSON.parse(v); } catch (e) { return null; } };
     let n = 0;
 
@@ -1225,6 +1311,7 @@
       if (k === PREFIXE + 'collection' || k === PREFIXE + 'zoom') { ecrire(k, v.slice(0, 80)); continue; }
       if (PROGRES.test(k.slice(PREFIXE.length))) { if (/^[0-9TZ:.+-]{1,40}$/.test(v)) ecrire(k, v); continue; }
       if (k === CLE_NIVEAU) { if (niveauValide(v)) ecrire(k, v); continue; }
+      if (k === CLE_ACCES) { try { ecrire(k, JSON.stringify(accesPropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
       if (k === CLE_SUIVI) { try { ecrire(k, JSON.stringify(suiviPropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
       const c = toutes().find((x) => PREFIXE + x.id === k);
       const o = lireJSON(v);
@@ -2062,7 +2149,7 @@
   function ouvrirMenu(ancre, b) {
     afficherMenu(ancre, 'boite-' + b.id, (m) => {
       for (const a of attrParId.values()) {
-        m.appendChild(entreeMenu(a.nom, () => {
+        m.appendChild(entreeMenu((lireAcces().daltonien ? a.symbole + ' ' : '') + a.nom, () => {
           b.attr = a.id;
           b.texte = a.nom;
           sauver();
@@ -2241,7 +2328,7 @@
 
   // Une pluie de confettis quand tout est juste (rien si l'appareil demande moins d'animations).
   function confettis() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || lireAcces().calme) return;
     const pluie = document.createElement('div');
     pluie.className = 'confettis';
     pluie.setAttribute('aria-hidden', 'true');
@@ -2324,6 +2411,7 @@
         entreeMenu('🔗 Copier le lien de cet exercice', partagerExercice),
         titre('Aide'),
         entreeMenu('❓ Comment ça marche ?', ouvrirAide),
+        entreeMenu('⚙️ Réglages (taille, contraste, couleurs…)', ouvrirReglages),
         // Événement en cours (site/evenement.js) : fantômes ou lutins peuvent gêner une séance de travail.
         ...(window.hanter && window.hanter.actif() ? [entreeMenu(window.hanter.libelleCalme()
           + (window.hanter.points() ? ` (${pluriel(window.hanter.points(), 'attrapé', 'attrapés')})` : ''), () => window.hanter.calme(!window.hanter.calme()))] : []),
@@ -2499,7 +2587,7 @@
   $('#aide-ok').addEventListener('click', () => { ecrire(CLE_AIDE, '1'); $('#fen-aide').close(); });
   $('#fen-aide').addEventListener('close', () => ecrire(CLE_AIDE, '1'));
 
-  for (const f of ['#fen-aide', '#fen-arbre', '#fen-tableau', '#fen-jeu', '#fen-parcours']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
+  for (const f of ['#fen-aide', '#fen-arbre', '#fen-tableau', '#fen-jeu', '#fen-parcours', '#fen-reglages']) $(f).querySelector('.fermer').addEventListener('click', () => $(f).close());
 
   // Être vivant dessiné en petit (emoji ou photo), pour le tableau et le jeu.
   function icone(e) {
@@ -2666,7 +2754,7 @@
       const s = document.createElement('span');
       s.className = 'pastille';
       s.style.setProperty('--c', a.couleur);
-      th.append(s, a.nom);
+      th.append(s, (lireAcces().daltonien ? a.symbole + ' ' : '') + a.nom);
       tete.appendChild(th);
     }
     const lignes = coll.etres.map((e) => {
