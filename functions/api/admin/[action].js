@@ -1,15 +1,19 @@
 // API d'administration (page site/admin/), réservée aux comptes dont la colonne « admin » vaut 1 (migrations/0003_admin.sql).
 // Le jeton de session voyage comme pour les comptes, dans « Authorization: Bearer … ».
 //
-//   GET  /api/admin/comptes                   → { stats, comptes: [{ identifiant, admin, enseignant, nom, badges, avatar, classe, de, cree, derniere, versions, date, taille }] }
+//   GET  /api/admin/comptes                   → { stats, comptes: [{ identifiant, admin, enseignant, nom, badges, avatar, avatar_fond, classe, de, cree, derniere, versions, date, taille }] }
 //                                               (élève : nom = prénom, classe = nom de sa classe, de = identifiant de son enseignant)
 //   GET  /api/admin/travail?identifiant=…     dernière version du travail d'un compte (gzip, en-têtes X-Version et X-Date) ; 404 s'il n'y en a pas
 //   POST /api/admin/mot-de-passe { identifiant, secret }  nouveau mot de passe (secret dérivé par la page) ; ferme ses sessions → 204
 //   POST /api/admin/suppression  { identifiant }          efface le compte, ses sessions et son travail (enseignant : aussi
 //                                                         ses classes et ses élèves) → 204
 //   POST /api/admin/enseignant   { identifiant, actif }   donne (true) ou retire (false) le rôle enseignant → 204
-//   POST /api/admin/avatar       { identifiant, avatar }  photo de profil : un emoji, ou null pour l'enlever (aussi pour un
-//                                                         compte admin) → 204  (migrations/0012_avatar.sql)
+//   POST /api/admin/avatar       { identifiant, avatar, avatar_fond }  photo de profil : un emoji, ou null pour l'enlever (aussi
+//                                                         pour un compte admin) → 204  (migrations/0012_avatar.sql) ; avatar_fond, facultatif :
+//                                                         couleur du rond (FONDS_AVATAR, null = par défaut, migrations/0013_avatar_fond.sql),
+//                                                         gardée s'il manque, effacée avec la photo
+//   POST /api/admin/avatars      { photos: [{ identifiant, avatar, avatar_fond }] }  la même chose pour 1 à 500 comptes d'un
+//                                                         coup (tout est vérifié avant d'écrire) → { changes }  comptes modifiés
 //   GET  /api/admin/collections               → { collections: [{ id, nom, auteur, date, elements }] }  collections du site et leur auteur
 //   POST /api/admin/collection   { collection }           ajoute ou remplace une collection du site (functions/api/collections.js) → 204
 //   POST /api/admin/collection-suppression { id }         retire une collection du site → 204
@@ -34,7 +38,7 @@
 //   POST /api/admin/theme        { theme } | { programme } « halloween », « noel » ou « normal » : décor de l'accueil, couleurs du
 //                                                         logiciel et nom du site, suivis par les pages ouvertes ; ou le
 //                                                         programme entier (dates « AAAA-MM-JJ », jours compris) → comme GET
-//   GET  /api/admin/classement                            → { participants, top: [{ nom, identifiant, eleve, points }] }
+//   GET  /api/admin/classement                            → { participants, top: [{ nom, avatar, avatar_fond, identifiant, eleve, points }] }
 //                                                         classement du dernier événement (en direct pendant l'événement)
 //
 // Un compte admin ne peut pas être modifié ni supprimé par cette API (y compris le sien) : réglages du compte dans le logiciel.
@@ -52,6 +56,9 @@ const FORME_ID_COLLECTION = /^site-[A-Za-z0-9_-]{1,55}$/;
 const FORME_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // Un seul emoji (avec sa teinte de peau, ou fait de plusieurs joints comme 🧑‍🏫) : jamais de texte libre.
 const FORME_AVATAR = /^(?=.{1,24}$)\p{Extended_Pictographic}\ufe0f?\p{Emoji_Modifier}?(\u200d\p{Extended_Pictographic}\ufe0f?\p{Emoji_Modifier}?)*$/u;
+// Couleurs du rond de la photo (dessin\u00e9es par app/profil.css, [data-fond], et propos\u00e9es par site/admin/).
+const FONDS_AVATAR = ['bleu', 'vert', 'jaune', 'orange', 'rouge', 'rose', 'violet', 'nuit'];
+const PHOTOS_MAX = 500;
 const TEXTE_MAX = 2000;
 const TAILLE_MAX_COLLECTION = 1900000; // une valeur D1 ne peut pas dépasser 2 Mo
 
@@ -86,6 +93,17 @@ async function compteVise(env, identifiant, modifier) {
   return c;
 }
 
+// Photo de profil envoyée par la page : { avatar, avatar_fond } ; renvoie le défaut trouvé, ou null.
+function photoInvalide({ avatar, avatar_fond: fond }) {
+  if (avatar !== null && !FORME_AVATAR.test(avatar || '')) return 'la photo de profil doit être un emoji';
+  if (fond !== undefined && fond !== null && !FONDS_AVATAR.includes(fond)) return 'couleur du rond inconnue';
+  return null;
+}
+// Sans photo, pas de couleur ; avatar_fond absent : la couleur d'avant reste.
+const majPhoto = (env, { identifiant, avatar, avatar_fond: fond }) => env.DB.prepare('UPDATE comptes SET avatar = ?1, '
+  + 'avatar_fond = CASE WHEN ?1 IS NULL THEN NULL WHEN ?2 = 1 THEN ?3 ELSE avatar_fond END WHERE identifiant = ?4')
+  .bind(avatar, fond === undefined ? 0 : 1, fond === undefined ? null : fond, identifiant);
+
 const actions = {
   async comptes(request, env) {
     const [stats, liste] = await env.DB.batch([
@@ -99,7 +117,7 @@ const actions = {
         + '(SELECT count(*) FROM classes) AS classes, '
         + '(SELECT count(*) FROM comptes WHERE classe IS NOT NULL) AS eleves, '
         + '(SELECT COALESCE(sum(non_lus_admin), 0) FROM support_fils) AS support_non_lus'),
-      env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, c.badges, c.avatar, cl.nom AS classe, p.identifiant AS de, '
+      env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant AS enseignant, c.nom, c.badges, c.avatar, c.avatar_fond, cl.nom AS classe, p.identifiant AS de, '
         + 'c.cree, c.derniere, count(s.version) AS versions, max(s.date) AS date, '
         + '(SELECT length(donnees) FROM sauvegardes WHERE cle = \'compte:\' || c.id ORDER BY version DESC LIMIT 1) AS taille '
         + 'FROM comptes c LEFT JOIN sauvegardes s ON s.cle = \'compte:\' || c.id '
@@ -154,13 +172,27 @@ const actions = {
   },
 
   async avatar(request, env) {
-    const { identifiant, avatar } = await lireCorps(request);
-    if (avatar !== null && !FORME_AVATAR.test(avatar || '')) return erreur('la photo de profil doit être un emoji', 400);
-    const c = await compteVise(env, identifiant, false);
+    const photo = await lireCorps(request);
+    const faux = photoInvalide(photo);
+    if (faux) return erreur(faux, 400);
+    const c = await compteVise(env, photo.identifiant, false);
     if (c instanceof Response) return c;
-    await env.DB.prepare('UPDATE comptes SET avatar = ? WHERE id = ?').bind(avatar, c.id).run();
+    await majPhoto(env, photo).run();
     oublierCache(); // classements et gagnant du boss
     return rien();
+  },
+
+  // Plusieurs comptes d'un coup (page admin : « Photos en série »). Un identifiant inconnu est passé sans erreur.
+  async avatars(request, env) {
+    const { photos } = await lireCorps(request);
+    if (!Array.isArray(photos) || !photos.length || photos.length > PHOTOS_MAX) return erreur(`envoie de 1 à ${PHOTOS_MAX} photos`, 400);
+    for (const p of photos) {
+      const faux = !p || typeof p !== 'object' ? 'photo illisible' : !FORME_IDENTIFIANT.test(p.identifiant || '') ? 'identifiant invalide' : photoInvalide(p);
+      if (faux) return erreur(faux + (p && typeof p.identifiant === 'string' ? ' (' + p.identifiant.slice(0, 30) + ')' : ''), 400);
+    }
+    const resultats = await env.DB.batch(photos.map((p) => majPhoto(env, p)));
+    oublierCache();
+    return json({ changes: resultats.reduce((n, r) => n + (r.meta && r.meta.changes || 0), 0) });
   },
 
   // Le logiciel envoie une collection déjà vérifiée (nettoyerCollection dans app/app.js) et la revérifie à la lecture :
@@ -312,12 +344,12 @@ const actions = {
       ? await env.DB.prepare(`SELECT id, identifiant FROM comptes WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all()
       : { results: [] };
     const identifiants = new Map(results.map((r) => [r.id, r.identifiant]));
-    return json({ participants: c.participants, top: c.top.map((t) => ({ nom: t.nom, identifiant: identifiants.get(t.compte), eleve: t.eleve, points: t.points })) });
+    return json({ participants: c.participants, top: c.top.map((t) => ({ nom: t.nom, avatar: t.avatar, avatar_fond: t.avatar_fond, identifiant: identifiants.get(t.compte), eleve: t.eleve, points: t.points })) });
   },
 };
 
 const METHODES = {
-  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'], avatar: ['POST'],
+  comptes: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'], avatar: ['POST'], avatars: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
   collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'],
   evenement: ['GET', 'POST'], theme: ['GET', 'POST'], classement: ['GET'],

@@ -527,6 +527,7 @@
         var rond = document.createElement('span');
         rond.className = 'avatar' + (e.avatar ? '' : ' defaut');
         rond.textContent = e.avatar || (Array.from(e.nom || '?')[0] || '?').toLocaleUpperCase('fr-FR');
+        if (e.avatar && e.avatar_fond) rond.dataset.fond = e.avatar_fond; // couleur du rond choisie par l'admin
         rond.title = e.avatar ? 'Photo de profil (choisie par l\'administrateur)' : 'Pas de photo de profil';
         var texte = document.createElement('span');
         texte.className = 'mp-texte';

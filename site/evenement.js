@@ -211,6 +211,9 @@
     '.hanter-classement .gagnant{margin:0 0 12px;padding:10px 12px;border-radius:14px;background:rgb(255 211 77 / .14);color:#ffe7a3;text-align:center}',
     '.hanter-verifie{display:inline-grid;place-items:center;width:1.1em;height:1.1em;margin-left:.3em;border-radius:50%;background:#1d9bf0;color:#fff;font:900 .7em/1 system-ui,sans-serif;vertical-align:.1em}',
     '.hanter-badge{margin-left:.25em}',
+    // Rond de la photo de profil dans les classements (comme .avatar de app/profil.css, en sombre)
+    '.hanter-rond{display:inline-grid;place-items:center;width:28px;height:28px;margin-right:8px;border-radius:50%;background:rgb(255 255 255 / .12);box-shadow:inset 0 0 0 1px rgb(255 255 255 / .18);font-size:16px;font-weight:400;line-height:1;vertical-align:middle}',
+    '.hanter-rond.initiale{background:linear-gradient(140deg,hsl(var(--teinte) 78% 64%),hsl(calc(var(--teinte) + 38) 70% 46%));box-shadow:inset 0 -2px 0 rgb(0 0 0 / .14);color:#fff;font-size:13px;font-weight:700;text-shadow:0 1px 2px rgb(0 0 0 / .22)}',
     // Boss
     '.hanter-boss-zone{position:fixed;inset:0;z-index:2147483100;pointer-events:none;overflow:hidden}',
     '.hanter-boss-zone.cache{display:none}',
@@ -424,8 +427,30 @@
     noel: ['🎅', 'Badge Noël', 'hanter-badge'],
     'participation-noel': ['⛄', 'Participation à Noël', 'hanter-badge'],
   };
-  function nomBadges(cible, nom, badges) {
+  // Couleurs du rond choisies par l'admin (FONDS_AVATAR, functions/api/admin/[action].js), teintes sombres de app/profil.css.
+  var FONDS = { bleu: '#213a63', vert: '#1d4430', jaune: '#4d4117', orange: '#55331b', rouge: '#56242a', rose: '#522443', violet: '#3a2b5c', nuit: '#0f0e22' };
+  function teinte(nom) { // même calcul que teinte() dans app/app.js : la même couleur que dans son logiciel
+    var h = 7;
+    Array.from(nom).forEach(function (c) { h = (h * 31 + c.codePointAt(0)) % 360; });
+    return h;
+  }
+  // qui : { avatar, avatar_fond } d'un classement ; sans photo, l'initiale du nom sur un dégradé de sa teinte.
+  function rondProfil(nom, qui) {
+    var r = el('span', 'hanter-rond');
+    r.setAttribute('aria-hidden', 'true');
+    if (qui && qui.avatar) {
+      r.textContent = qui.avatar;
+      if (FONDS[qui.avatar_fond]) r.style.background = FONDS[qui.avatar_fond];
+    } else {
+      r.classList.add('initiale');
+      r.style.setProperty('--teinte', teinte(nom || '?'));
+      r.textContent = (Array.from(nom || '?')[0] || '?').toLocaleUpperCase('fr-FR');
+    }
+    return r;
+  }
+  function nomBadges(cible, nom, badges, qui) {
     cible.textContent = nom;
+    if (qui) cible.prepend(rondProfil(nom, qui));
     Object.keys(BADGES).forEach(function (b) {
       if ((badges || []).indexOf(b) < 0) return;
       var s = el('span', BADGES[b][2]);
@@ -470,14 +495,14 @@
         if (r.boss && r.boss.gagnant) {
           var g = el('p', 'gagnant');
           g.append(th.boss.titre.split(' ')[0] + ' ' + th.boss.Nom + ' ' + th.boss.vaincu + ' ! ' + th.boss.lePlus.charAt(0).toUpperCase() + th.boss.lePlus.slice(1) + ' : ',
-            nomBadges(el('strong'), r.boss.gagnant.nom, r.boss.gagnant.badges));
+            nomBadges(el('strong'), r.boss.gagnant.nom, r.boss.gagnant.badges, r.boss.gagnant));
           carte.insertBefore(g, liste);
         }
         top.forEach(function (j, i) {
           var li = el('li'), place = el('span', 'place'), nom = el('span', 'nom'), pts = el('span', 'pts');
           if (r.moi && r.moi.rang === i + 1) li.className = 'moi';
           place.textContent = MEDAILLES[i] || String(i + 1);
-          nomBadges(nom, j.nom, j.badges);
+          nomBadges(nom, j.nom, j.badges, j);
           pts.textContent = j.points + ' ' + th.petit.emoji;
           li.append(place, nom, pts);
           liste.appendChild(li);
@@ -627,13 +652,13 @@
         if (b.chasseurs) sous.textContent = th.boss.Nom + ' est ' + th.boss.vaincu + ' par ' + pluriel(b.chasseurs, 'chasseur', 'chasseurs') + ' ensemble !';
         if (b.gagnant) {
           gagnant.textContent = '';
-          gagnant.append('🏆 ', nomBadges(el('strong'), b.gagnant.nom, b.gagnant.badges),
+          gagnant.append('🏆 ', nomBadges(el('strong'), b.gagnant.nom, b.gagnant.badges, b.gagnant),
             ' ' + th.boss.plus + ' : vérifié par le site ✔ et ' + th.badge[2] + ' ' + th.badge[1] + ' !');
         } else gagnant.remove();
         top.forEach(function (j, i) {
           var li = el('li'), place = el('span', 'place'), nom = el('span', 'nom'), pts = el('span', 'pts');
           place.textContent = ['🥇', '🥈', '🥉'][i] || String(i + 1);
-          nomBadges(nom, j.nom, j.badges);
+          nomBadges(nom, j.nom, j.badges, j);
           pts.textContent = pluriel(j.coups, th.boss.coup[0], th.boss.coup[1]);
           li.append(place, nom, pts);
           liste.appendChild(li);
@@ -728,7 +753,7 @@
     if (!accueil() || !en) return;
     var b = T.boss;
     changerAnnonce(bossDebout() ? b.enCours
-      : bossEtat && bossEtat.vaincu ? T.emoji + ' ' + b.Nom + ' est ' + b.vaincu + (bossEtat.gagnant ? ' (' + b.lePlus + ' : ' + bossEtat.gagnant.nom + ')' : '') + ' ! Les ' + T.petit.des + ' reviennent… '
+      : bossEtat && bossEtat.vaincu ? T.emoji + ' ' + b.Nom + ' est ' + b.vaincu + (bossEtat.gagnant ? ' (' + b.lePlus + ' : ' + (bossEtat.gagnant.avatar ? bossEtat.gagnant.avatar + ' ' : '') + bossEtat.gagnant.nom + ')' : '') + ' ! Les ' + T.petit.des + ' reviennent… '
       : T.emoji + " L'événement " + T.de + ' a commencé ! ' + T.petit.des.charAt(0).toUpperCase() + T.petit.des.slice(1) + ' attrapés par tous : '
         + Math.min(total, seuil) + ' / ' + seuil + ' avant ' + b.nom + '… ');
   }

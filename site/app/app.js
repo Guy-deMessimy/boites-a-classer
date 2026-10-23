@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.35.0';
+  const VERSION = '3.36.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -3155,7 +3155,8 @@
   const CLE_ELEVE = 'boites-a-classer-compte:eleve'; // élève : { classe, enseignant } en JSON (connecté avec un code)
   const CLE_BADGES = 'boites-a-classer-compte:badges'; // badges gagnés pendant les événements, en JSON (serveur/evenement.js)
   const CLE_AVATAR = 'boites-a-classer-compte:avatar'; // photo de profil (un emoji choisi par un admin), à la place de 👤
-  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES, CLE_AVATAR];
+  const CLE_AVATAR_FOND = 'boites-a-classer-compte:avatar-fond'; // couleur de son rond (app/profil.css, [data-fond])
+  const CLES_COMPTE = [CLE_JETON, CLE_IDENTIFIANT, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES, CLE_AVATAR, CLE_AVATAR_FOND];
   const SITE = RACINE_API.slice(0, -'/api'.length); // pages du site (« Mes classes »)
   const FORME_CODE_ELEVE = /^[A-HJKMNP-Z2-9]{8}$/; // code de connexion d'un élève (serveur/classes.js)
   const HORS_SAUVEGARDE = new Set(['boites-a-classer:zoom', 'boites-a-classer:collection']); // réglages propres à l'appareil
@@ -3364,10 +3365,11 @@
   function majBoutonCompte() {
     const nom = jetonCompte() && lire(CLE_IDENTIFIANT);
     // Connecté : sa photo de profil, ou le rond à son initiale (app/profil.css) ; sinon 👤.
-    if (nom) rondProfil($('#compte-avatar'), nom, lire(CLE_AVATAR));
+    if (nom) rondProfil($('#compte-avatar'), nom, lire(CLE_AVATAR), lire(CLE_AVATAR_FOND));
     else {
       $('#compte-avatar').textContent = '👤';
       $('#compte-avatar').classList.remove('avatar', 'defaut');
+      delete $('#compte-avatar').dataset.fond;
     }
     $('#compte-nom').textContent = ' ' + (nom || 'Se connecter');
     if (nom) ajouterBadges($('#compte-nom'));
@@ -3396,6 +3398,7 @@
     if (etat && etat.eleve) ecrire(CLE_ELEVE, JSON.stringify(etat.eleve)); else oublier(CLE_ELEVE);
     if (etat && Array.isArray(etat.badges) && etat.badges.length) ecrire(CLE_BADGES, JSON.stringify(etat.badges)); else oublier(CLE_BADGES);
     if (etat && typeof etat.avatar === 'string' && etat.avatar) ecrire(CLE_AVATAR, etat.avatar); else oublier(CLE_AVATAR);
+    if (etat && etat.avatar && typeof etat.avatar_fond === 'string' && etat.avatar_fond) ecrire(CLE_AVATAR_FOND, etat.avatar_fond); else oublier(CLE_AVATAR_FOND);
   }
 
   // Badges du compte, à côté de son nom (site/evenement.js) : « vérifié par le site » ✔, boss d'Halloween 🎃 ou de Noël 🎅,
@@ -3434,10 +3437,11 @@
     for (const c of nom) h = (h * 31 + c.codePointAt(0)) % 360;
     return h;
   }
-  // Rond de la photo de profil ; sans photo, l'initiale du nom sur un dégradé de sa teinte.
-  function rondProfil(el, nom, avatar) {
+  // Rond de la photo de profil, sur la couleur choisie par l'admin (fond) ; sans photo, l'initiale du nom sur un dégradé de sa teinte.
+  function rondProfil(el, nom, avatar, fond) {
     el.classList.add('avatar');
     el.classList.toggle('defaut', !avatar);
+    if (avatar && fond) el.dataset.fond = fond; else delete el.dataset.fond;
     el.style.setProperty('--teinte', teinte(nom || '?'));
     el.textContent = avatar || ([...(nom || '?')][0] || '?').toLocaleUpperCase('fr-FR');
     return el;
@@ -3462,7 +3466,8 @@
     };
     carte.style.setProperty('--teinte', teinte(nom || '?'));
     const identite = el('div', 'cp-identite');
-    const rond = rondProfil(el('span', 'grand'), nom, lire(CLE_AVATAR));
+    const rond = rondProfil(el('span', 'grand'), nom, lire(CLE_AVATAR), lire(CLE_AVATAR_FOND));
+    if (rond.dataset.fond) carte.dataset.fond = rond.dataset.fond; else delete carte.dataset.fond; // le bandeau prend la couleur du rond
     rond.title = lire(CLE_AVATAR) ? 'Photo de profil (choisie par l\'administrateur)' : 'Pas encore de photo de profil : l\'administrateur peut en choisir une';
     const qui = el('div', 'cp-qui');
     const n = el('strong', 'cp-nom', nom);
@@ -3505,12 +3510,58 @@
       if (statut === 401 && jetonCompte() === jeton) { sessionExpiree(); return; }
       if (statut !== 200 || jetonCompte() !== jeton) return;
       if (r.identifiant) ecrire(CLE_IDENTIFIANT, r.identifiant);
+      const avant = [lire(CLE_AVATAR), lire(CLE_AVATAR_FOND)];
       retenirDroits(r);
       remplirSelect(); // exercices donnés par l'enseignant
       annoncerExercices();
       majBoutonCompte();
       if (fenSauvegarde.open) rendreSauvegarde();
+      // Photo (ou couleur du rond) changée par l'admin depuis la dernière lecture : pas à la connexion, qui l'a déjà retenue.
+      if (lire(CLE_AVATAR) && (lire(CLE_AVATAR) !== avant[0] || lire(CLE_AVATAR_FOND) !== avant[1])) annoncerPhoto(lire(CLE_AVATAR) !== avant[0]);
     } catch (e) { /* hors connexion */ }
+  }
+
+  // Bulle sous le bouton du compte : « Nouvelle photo de profil ! » (app/profil.css, .annonce-photo). Part seule après
+  // 8 secondes ; un appui ouvre la fenêtre du compte et sa carte.
+  function annoncerPhoto(nouvelle) {
+    // Une fenêtre (l'aide du premier lancement…) rendrait la bulle inerte : elle attend sa fermeture.
+    const fenetre = document.querySelector('dialog:modal');
+    if (fenetre) { fenetre.addEventListener('close', () => setTimeout(() => annoncerPhoto(nouvelle), 300), { once: true }); return; }
+    for (const vieille of document.querySelectorAll('.annonce-photo')) vieille.remove();
+    const bulle = document.createElement('button');
+    bulle.type = 'button';
+    bulle.className = 'annonce-photo';
+    bulle.setAttribute('role', 'status');
+    const rond = document.createElement('span');
+    rond.className = 'ap-rond';
+    const etincelle = () => { const s = document.createElement('span'); s.className = 'ap-etincelle'; s.textContent = '✨'; s.setAttribute('aria-hidden', 'true'); return s; };
+    rond.append(rondProfil(document.createElement('span'), lire(CLE_IDENTIFIANT), lire(CLE_AVATAR), lire(CLE_AVATAR_FOND)), etincelle(), etincelle());
+    const texte = document.createElement('span');
+    texte.className = 'ap-texte';
+    const titre = document.createElement('strong');
+    titre.textContent = nouvelle ? 'Nouvelle photo de profil !' : 'Nouvelle couleur pour ta photo !';
+    const detail = document.createElement('small');
+    detail.textContent = 'Choisie par l\'administrateur. Touche pour voir ta carte.';
+    texte.append(titre, detail);
+    bulle.append(rond, texte);
+    const r = boutonCompte.getBoundingClientRect();
+    bulle.style.top = (r.height ? r.bottom + 10 : 12) + 'px';
+    bulle.style.right = Math.max(12, r.height ? innerWidth - r.right : 12) + 'px';
+    let partie = false;
+    const partir = () => {
+      if (partie) return;
+      partie = true;
+      bulle.classList.add('sortie');
+      setTimeout(() => bulle.remove(), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 300);
+    };
+    bulle.addEventListener('click', () => { partir(); ouvrirSauvegarde(); });
+    document.body.append(bulle);
+    setTimeout(partir, 8000);
+    const barre = $('#compte-avatar');
+    barre.classList.remove('nouvelle');
+    void barre.offsetWidth; // relance l'onde si elle tournait encore
+    barre.classList.add('nouvelle');
+    barre.addEventListener('animationend', () => barre.classList.remove('nouvelle'), { once: true });
   }
 
   // Élève : rappelle les exercices donnés par l'enseignant qui ne sont pas encore réussis.

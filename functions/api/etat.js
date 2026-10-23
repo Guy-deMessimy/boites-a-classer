@@ -4,7 +4,7 @@
 // de temps… ». Sinon : 200 et { evenement: { nom, depuis } | null, fini: { nom, depuis, fin } | null, sig } (« fini » :
 // dernier événement arrêté, dont le classement est à montrer), theme (« halloween », « noel » ou « normal ») et nomSite
 // (« Boîtes à hanter »… : serveur/theme.js). Pendant l'événement, aussi : boss: { pv, max, vaincu, chasseurs,
-// gagnant: { nom, badges } } | null, total (fantômes attrapés par tous), seuil (total qui fait venir le boss).
+// gagnant: { nom, avatar, avatar_fond, badges } } | null, total (fantômes attrapés par tous), seuil (total qui fait venir le boss).
 //
 // GET /api/etat?attendre=<ce que la page connaît>  (site/arret.js, app/app.js, page de maintenance)
 //   Le serveur garde la question jusqu'à 24 s et répond dès que l'événement change (ou que le site est arrêté) : les

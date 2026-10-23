@@ -44,7 +44,7 @@ export async function lireEtat(env) {
   await appliquerProgramme(env).catch(() => {});
   let valeur = { evenement: null, boss: null, total: 0 };
   try {
-    const r = await env.DB.prepare('SELECT r.valeur, b.pv, b.max, b.apparu, b.vaincu, g.identifiant AS g_identifiant, g.nom AS g_nom, g.classe AS g_classe, g.badges AS g_badges, g.avatar AS g_avatar, '
+    const r = await env.DB.prepare('SELECT r.valeur, b.pv, b.max, b.apparu, b.vaincu, g.identifiant AS g_identifiant, g.nom AS g_nom, g.classe AS g_classe, g.badges AS g_badges, g.avatar AS g_avatar, g.avatar_fond AS g_avatar_fond, '
       + `(SELECT count(*) FROM coups_boss c WHERE c.evenement = ${DEPUIS}) AS chasseurs, `
       + `(SELECT coalesce(sum(points), 0) FROM scores_evenement s WHERE s.evenement = ${DEPUIS}) AS total `
       + `FROM reglages r LEFT JOIN boss_evenement b ON b.evenement = ${DEPUIS} LEFT JOIN comptes g ON g.id = b.gagnant WHERE r.cle = 'evenement'`).first();
@@ -54,7 +54,7 @@ export async function lireEtat(env) {
         evenement: { nom: e.nom, depuis: String(e.depuis || ''), ...(e.fin ? { fin: String(e.fin) } : {}) },
         boss: r.pv === null || r.pv === undefined ? null : {
           pv: r.pv, max: r.max, apparu: r.apparu, vaincu: r.vaincu || null, chasseurs: r.chasseurs,
-          gagnant: r.g_identifiant ? { nom: nomAffiche({ identifiant: r.g_identifiant, nom: r.g_nom, classe: r.g_classe, avatar: r.g_avatar }), badges: lireBadges(r.g_badges) } : null,
+          gagnant: r.g_identifiant ? { nom: nomAffiche({ identifiant: r.g_identifiant, nom: r.g_nom, classe: r.g_classe }), ...photo({ avatar: r.g_avatar, avatar_fond: r.g_avatar_fond }), badges: lireBadges(r.g_badges) } : null,
         },
         total: r.total || 0,
       };
@@ -108,17 +108,19 @@ export function lireBadges(texte) {
   }
 }
 
-// Nom montré dans les classements : l'identifiant du compte, ou le prénom d'un élève (jamais sa classe ni son enseignant),
-// précédé de sa photo de profil (emoji, migrations/0012_avatar.sql) s'il en a une.
-export const nomAffiche = (c) => (c.avatar ? c.avatar + ' ' : '') + (c.classe ? c.nom || 'Élève' : c.identifiant);
+// Nom montré dans les classements : l'identifiant du compte, ou le prénom d'un élève (jamais sa classe ni son enseignant).
+export const nomAffiche = (c) => (c.classe ? c.nom || 'Élève' : c.identifiant);
+// Sa photo de profil (emoji, migrations/0012_avatar.sql) et la couleur de son rond (0013), à part du nom depuis la 3.36.0 :
+// les pages la dessinent dans un rond (site/evenement.js, site/admin/).
+export const photo = (c) => ({ avatar: c.avatar || null, avatar_fond: (c.avatar && c.avatar_fond) || null });
 
 // Classement d'un événement : les « combien » premiers, et la place d'un compte s'il est donné.
 export async function classement(env, evenement, combien, compte) {
-  const { results } = await env.DB.prepare('SELECT s.compte, s.points, c.identifiant, c.nom, c.classe, c.badges, c.avatar FROM scores_evenement s '
+  const { results } = await env.DB.prepare('SELECT s.compte, s.points, c.identifiant, c.nom, c.classe, c.badges, c.avatar, c.avatar_fond FROM scores_evenement s '
     + 'JOIN comptes c ON c.id = s.compte WHERE s.evenement = ? AND s.points > 0 ORDER BY s.points DESC, s.dernier ASC LIMIT ?')
     .bind(evenement, combien).all();
   const { n } = await env.DB.prepare('SELECT count(*) AS n FROM scores_evenement WHERE evenement = ? AND points > 0').bind(evenement).first();
-  const res = { participants: n, top: results.map((r) => ({ nom: nomAffiche(r), eleve: !!r.classe, points: r.points, compte: r.compte, badges: lireBadges(r.badges) })) };
+  const res = { participants: n, top: results.map((r) => ({ nom: nomAffiche(r), ...photo(r), eleve: !!r.classe, points: r.points, compte: r.compte, badges: lireBadges(r.badges) })) };
   if (compte) {
     const s = await env.DB.prepare('SELECT points, dernier FROM scores_evenement WHERE evenement = ? AND compte = ?').bind(evenement, compte).first();
     if (!s || !s.points) res.moi = { points: 0, rang: null };
@@ -133,9 +135,9 @@ export async function classement(env, evenement, combien, compte) {
 
 // Ceux qui ont porté le plus de coups au boss.
 export async function chasseursBoss(env, evenement, combien) {
-  const { results } = await env.DB.prepare('SELECT b.compte, b.coups, c.identifiant, c.nom, c.classe, c.badges, c.avatar FROM coups_boss b '
+  const { results } = await env.DB.prepare('SELECT b.compte, b.coups, c.identifiant, c.nom, c.classe, c.badges, c.avatar, c.avatar_fond FROM coups_boss b '
     + 'JOIN comptes c ON c.id = b.compte WHERE b.evenement = ? ORDER BY b.coups DESC, b.dernier ASC LIMIT ?').bind(evenement, combien).all();
-  return results.map((r) => ({ compte: r.compte, nom: nomAffiche(r), coups: r.coups, badges: lireBadges(r.badges) }));
+  return results.map((r) => ({ compte: r.compte, nom: nomAffiche(r), ...photo(r), coups: r.coups, badges: lireBadges(r.badges) }));
 }
 
 // Le boss vient de tomber : le gagnant reçoit ses badges (sans doublon, gardés après l'événement). e : { nom, depuis }.
@@ -148,7 +150,7 @@ export async function recompenser(env, e) {
     env.DB.prepare('UPDATE comptes SET badges = ? WHERE id = ?').bind(JSON.stringify(badges), premier.compte),
   ]);
   oublierCache();
-  return { nom: premier.nom, badges };
+  return { nom: premier.nom, avatar: premier.avatar, avatar_fond: premier.avatar_fond, badges };
 }
 
 // Événements programmés par un admin (page site/admin/) : déclenchés puis arrêtés tout seuls à l'heure dite (Paris), à la

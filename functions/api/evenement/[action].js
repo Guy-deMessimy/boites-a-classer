@@ -6,12 +6,12 @@
 //                                    un toutes les 2,5 s (« compte » : false s'il est arrivé trop tôt) ; 409 sans événement.
 //                                    « badge » : le badge de participation vient d'être gagné (premier point ou premier coup)
 //   GET  /api/evenement/classement  (Authorization facultative) → { evenement: { nom, depuis, fin } | null, participants,
-//                                    top: [{ nom, eleve, points, badges }] (10 premiers, seulement une fois l'événement
+//                                    top: [{ nom, avatar, avatar_fond, eleve, points, badges }] (10 premiers, seulement une fois l'événement
 //                                    arrêté), moi: { points, rang } (compte connecté ; rang seulement à la fin),
-//                                    boss: { pv, max, vaincu, chasseurs, gagnant: { nom, badges } } | null }
+//                                    boss: { pv, max, vaincu, chasseurs, gagnant: { nom, avatar, avatar_fond, badges } } | null }
 //   POST /api/evenement/boss        (Authorization: Bearer …) → { boss, compte, coups, badge? }   un coup au boss, au plus un
 //                                    toutes les 0,5 s ; 409 sans boss à combattre
-//   GET  /api/evenement/boss        (Authorization facultative) → { boss, top: [{ nom, coups, badges }] (5 premiers),
+//   GET  /api/evenement/boss        (Authorization facultative) → { boss, top: [{ nom, avatar, avatar_fond, coups, badges }] (5 premiers),
 //                                    moi: { coups, gagnant } }
 
 import { sessionValide } from '../../../serveur/comptes.js';
@@ -64,7 +64,7 @@ const actions = {
     const s = request.headers.has('Authorization') ? await sessionValide(request, env) : null;
     const c = await classement(env, e.depuis, 10, s && s.compte);
     const res = { evenement: e, participants: c.participants, boss: (await lireEtat(env)).boss };
-    if (e.fin) res.top = c.top.map(({ nom, eleve, points, badges }) => ({ nom, eleve, points, badges }));
+    if (e.fin) res.top = c.top.map(({ nom, avatar, avatar_fond, eleve, points, badges }) => ({ nom, avatar, avatar_fond, eleve, points, badges }));
     if (c.moi) res.moi = e.fin ? c.moi : { points: c.moi.points };
     return json(res);
   },
@@ -76,7 +76,7 @@ const actions = {
       const etat = await lireEtat(env);
       const s = request.headers.has('Authorization') ? await sessionValide(request, env) : null;
       const top = await chasseursBoss(env, e.depuis, 5);
-      const res = { boss: etat.boss, top: top.map(({ nom, coups, badges }) => ({ nom, coups, badges })) };
+      const res = { boss: etat.boss, top: top.map(({ nom, avatar, avatar_fond, coups, badges }) => ({ nom, avatar, avatar_fond, coups, badges })) };
       if (s) {
         const m = await env.DB.prepare('SELECT c.coups, b.gagnant FROM boss_evenement b LEFT JOIN coups_boss c ON c.evenement = b.evenement AND c.compte = ?2 '
           + 'WHERE b.evenement = ?1').bind(e.depuis, s.compte).first();

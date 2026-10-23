@@ -3,7 +3,7 @@
    (--surface dans le logiciel, --carte dans Mes classes), avec des valeurs de secours. --teinte (0 à 359) est tirée du
    nom : fond de la carte et rond par défaut d'un compte sans photo. */
 
-.carte-profil, .avatar.defaut, .medaille {
+.carte-profil, .avatar.defaut, .medaille, .annonce-photo {
   --cp-surface: var(--surface, var(--carte, #fff));
   --cp-encre: var(--encre, #1c2233);
   --cp-doux: var(--doux, #5d6679);
@@ -21,7 +21,7 @@
   --m-bleu-clair: #e3edfd;
 }
 @media screen and (prefers-color-scheme: dark) {
-  .carte-profil, .avatar.defaut, .medaille {
+  .carte-profil, .avatar.defaut, .medaille, .annonce-photo {
     --cp-bandeau: hsl(var(--teinte, 215) 35% 20%);
     --cp-ombre: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .3);
     --m-or: #e6b43a;
@@ -155,4 +155,74 @@
 .mini-profil .m-ruban { width: 12px; height: 14px; }
 @media screen and (prefers-color-scheme: dark) {
   .mini-profil .avatar:not(.defaut) { background: hsl(var(--teinte, 215) 30% 22%); }
+}
+
+/* ---------- Couleur du rond (3.36.0) ----------
+   Choisie par l'admin avec la photo (FONDS_AVATAR dans functions/api/admin/[action].js) : data-fond sur le rond, et sur la
+   carte, dont le bandeau la reprend. Sans data-fond, les fonds d'avant. */
+[data-fond="bleu"] { --avatar-fond: #d6e5fd; }
+[data-fond="vert"] { --avatar-fond: #d3f1de; }
+[data-fond="jaune"] { --avatar-fond: #fcefb8; }
+[data-fond="orange"] { --avatar-fond: #fddcc2; }
+[data-fond="rouge"] { --avatar-fond: #fbd3d3; }
+[data-fond="rose"] { --avatar-fond: #fbd6eb; }
+[data-fond="violet"] { --avatar-fond: #e4d9fb; }
+[data-fond="nuit"] { --avatar-fond: #2b2a4c; }
+@media screen and (prefers-color-scheme: dark) {
+  [data-fond="bleu"] { --avatar-fond: #213a63; }
+  [data-fond="vert"] { --avatar-fond: #1d4430; }
+  [data-fond="jaune"] { --avatar-fond: #4d4117; }
+  [data-fond="orange"] { --avatar-fond: #55331b; }
+  [data-fond="rouge"] { --avatar-fond: #56242a; }
+  [data-fond="rose"] { --avatar-fond: #522443; }
+  [data-fond="violet"] { --avatar-fond: #3a2b5c; }
+  [data-fond="nuit"] { --avatar-fond: #0f0e22; }
+}
+.avatar[data-fond]:not(.defaut),
+#compte.connecte .avatar[data-fond]:not(.defaut),
+.mini-profil .avatar[data-fond]:not(.defaut),
+.carte-profil .avatar.grand[data-fond]:not(.defaut) { background: var(--avatar-fond); }
+.carte-profil[data-fond] { --cp-bandeau: var(--avatar-fond); }
+.carte-profil[data-fond="nuit"] { --cp-grille: rgb(255 255 255 / .06); --cp-grille-forte: rgb(255 255 255 / .11); }
+
+/* ---------- Annonce d'une nouvelle photo (3.36.0) ----------
+   Bulle sous le bouton du compte quand l'admin vient de changer la photo ou sa couleur (app/app.js, annoncerPhoto) ;
+   un appui ouvre la fenêtre du compte. */
+.annonce-photo {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(330px, calc(100vw - 24px));
+  padding: 12px 18px 12px 12px;
+  border: 1px solid var(--cp-ligne);
+  border-radius: 18px;
+  background: var(--cp-surface);
+  box-shadow: 0 12px 32px rgb(28 34 51 / .24);
+  color: var(--cp-encre);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: ap-entree .45s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.annonce-photo.sortie { animation: ap-sortie .3s ease-in both; }
+.ap-rond { position: relative; flex: none; }
+.annonce-photo .avatar { width: 60px; height: 60px; font-size: 32px; animation: ap-pop .7s .2s cubic-bezier(.2, 1.6, .4, 1) both; }
+.annonce-photo .avatar:not([data-fond]):not(.defaut) { background: var(--cp-bandeau); }
+.ap-etincelle { position: absolute; font-size: 16px; line-height: 1; pointer-events: none; animation: ap-scintille 1.4s .6s ease-in-out 3 both; }
+.ap-etincelle:nth-child(2) { top: -6px; right: -8px; }
+.ap-etincelle:nth-child(3) { bottom: -2px; left: -10px; font-size: 12px; animation-delay: .9s; }
+.ap-texte { display: grid; gap: 2px; }
+.ap-texte strong { font-size: 1rem; line-height: 1.25; }
+.ap-texte small { color: var(--cp-doux); font-size: .8rem; line-height: 1.3; }
+#compte .avatar.nouvelle { animation: ap-onde 1.2s ease-out 3; }
+@keyframes ap-entree { from { opacity: 0; transform: translateY(-12px) scale(.9); } }
+@keyframes ap-sortie { to { opacity: 0; transform: translateY(-8px) scale(.96); } }
+@keyframes ap-pop { 0% { transform: scale(0) rotate(-35deg); } 70% { transform: scale(1.15) rotate(6deg); } 100% { transform: none; } }
+@keyframes ap-scintille { 0%, 100% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1.1) rotate(15deg); } }
+@keyframes ap-onde { from { box-shadow: 0 0 0 0 rgb(230 180 58 / .7); } to { box-shadow: 0 0 0 12px rgb(230 180 58 / 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .annonce-photo, .annonce-photo.sortie, .annonce-photo .avatar, #compte .avatar.nouvelle { animation: none; }
+  .ap-etincelle { display: none; }
 }

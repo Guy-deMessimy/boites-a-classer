@@ -37,7 +37,7 @@ export function lireExercices(texte) {
 
 // Ce que le logiciel doit savoir d'un compte : nom affiché, rôles, et pour un élève sa classe et son enseignant.
 export async function etatCompte(env, id) {
-  const c = await env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant, c.nom, c.badges, c.avatar, cl.nom AS classe, cl.exercices, e.identifiant AS enseignant '
+  const c = await env.DB.prepare('SELECT c.identifiant, c.admin, c.est_enseignant, c.nom, c.badges, c.avatar, c.avatar_fond, cl.nom AS classe, cl.exercices, e.identifiant AS enseignant '
     + 'FROM comptes c LEFT JOIN classes cl ON cl.id = c.classe LEFT JOIN comptes e ON e.id = cl.enseignant WHERE c.id = ?').bind(id).first();
   if (!c) return null;
   return {
@@ -47,6 +47,7 @@ export async function etatCompte(env, id) {
     eleve: c.classe ? { classe: c.classe, enseignant: c.enseignant, exercices: lireExercices(c.exercices) } : null,
     badges: lireBadges(c.badges), // gagnés pendant les événements (serveur/evenement.js)
     avatar: c.avatar || null, // photo de profil (emoji), choisie par un admin
+    avatar_fond: c.avatar && c.avatar_fond || null, // couleur de son rond (migrations/0013_avatar_fond.sql)
   };
 }
 

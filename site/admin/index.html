@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex">
   <title>Administration · Boîtes à classer</title>
   <link rel="icon" href="../icone.png">
+  <link rel="stylesheet" href="../app/profil.css"><!-- couleurs du rond des photos de profil ([data-fond]) -->
   <style>
     /* Page d'administration : comptes, statistiques, mot de passe oublié, consultation du travail d'un élève.
        Réservée aux comptes admin : le serveur vérifie chaque appel (functions/api/admin/[action].js). */
@@ -132,6 +133,29 @@
     .choix-avatar .emoji { min-width: 2.4em; padding: 4px; font-size: 1.3rem; line-height: 1; }
     .choix-avatar .emoji.actuel { outline: 2px solid var(--accent); }
     .choix-avatar input { width: 7em; padding: 6px 8px; font: inherit; font-size: 1.1rem; }
+    .choix-avatar .pastille { display: inline-grid; place-items: center; width: 2.3em; height: 2.3em; padding: 0; border-radius: 50%; background: var(--avatar-fond, var(--accent-doux)); font-size: 1.15rem; line-height: 1; }
+    .choix-avatar .pastille.actuel { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .choix-avatar .pastille:disabled { opacity: .45; cursor: default; }
+    /* Photos en série */
+    .serie summary { cursor: pointer; font-size: 1.15rem; font-weight: 700; }
+    .serie[open] summary { margin-bottom: 12px; }
+    .serie-reglages { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+    .serie-reglages label { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .serie select, .serie input[type="text"] { padding: .4rem .7rem; border: 1px solid var(--ligne); border-radius: 10px; background: var(--carte); color: inherit; font: inherit; }
+    .serie input[type="text"] { width: 6em; font-size: 1.1rem; }
+    .serie-apercu { display: flex; flex-wrap: wrap; gap: 6px 14px; max-height: 240px; margin: 14px 0; padding: 0; overflow-y: auto; list-style: none; }
+    .serie-apercu li { display: inline-flex; align-items: center; font-size: .9rem; white-space: nowrap; }
+    .serie-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .serie-reglages label[hidden], .serie-actions .bouton[hidden] { display: none; }
+    /* Aperçu de la carte de profil (../app/profil.css), à droite des choix */
+    .photo-grille { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px 24px; align-items: start; }
+    @media (max-width: 900px) { .photo-grille { grid-template-columns: minmax(0, 1fr); } }
+    .apercu-carte > small { display: block; margin-bottom: 6px; color: var(--doux); }
+    .apercu-carte .carte-profil { margin: 0; }
+    .apercu-carte .avatar { margin-right: 0; }
+    .avatar.partante { opacity: .5; text-decoration: line-through; filter: grayscale(.6); }
+    #serie-donner.danger { background: var(--carte); border-color: var(--faux); }
+    #serie-donner.danger.confirmer { background: var(--faux); color: #fff; }
     .resultat code { padding: 2px 8px; border-radius: 6px; background: var(--carte); font-size: 1.05rem; font-weight: 700; user-select: all; }
     .message { min-height: 1.5em; margin: 12px 0 0; font-weight: 600; }
     .message.erreur { color: var(--faux); }
@@ -283,6 +307,28 @@
           </table>
         </div>
       </section>
+      <details class="support serie" id="serie">
+        <summary>🖼 Photos de profil en série</summary>
+        <p class="vide">Donne d'un coup une photo à plusieurs comptes (jamais aux admins). Au hasard, chacun reçoit un emoji différent tant qu'il en reste ; l'aperçu montre exactement ce qui sera donné.</p>
+        <div class="serie-reglages">
+          <label>Qui <select id="serie-qui"></select></label>
+          <label id="serie-remplacer-l"><input type="checkbox" id="serie-remplacer"> remplacer les photos déjà données</label>
+          <label>Photo <select id="serie-photo">
+            <option value="Toutes">au hasard, toutes</option>
+            <option value="Événements">au hasard, Événements</option>
+            <option value="Animaux">au hasard, Animaux</option>
+            <option value="Autres">au hasard, Autres</option>
+            <option value="meme">la même pour tous :</option>
+            <option value="enlever">enlever la photo</option>
+          </select><input type="text" id="serie-emoji" placeholder="emoji" aria-label="Emoji pour tous" hidden></label>
+          <label id="serie-fond-l">Couleur <select id="serie-fond"></select></label>
+        </div>
+        <ul class="serie-apercu" id="serie-apercu"></ul>
+        <div class="serie-actions">
+          <button type="button" class="bouton" id="serie-tirer">🎲 Retirer au sort</button>
+          <button type="button" class="bouton principal" id="serie-donner" disabled>Donner ces photos</button>
+        </div>
+      </details>
       <div class="outils">
         <input id="filtre" type="search" placeholder="Chercher un identifiant" aria-label="Chercher un identifiant" autocomplete="off">
         <button type="button" class="bouton" id="actualiser">↻ Actualiser</button>
@@ -319,6 +365,9 @@
         ['Autres', ['🌻', '⭐', '🚀', '⚽', '🎨', '🎸', '📚', '🔬', '🧑‍🏫', '🧑‍🔬']],
       ];
       var TOUS_AVATARS = AVATARS.reduce(function (t, g) { return t.concat(g[1]); }, []);
+      // Couleurs du rond (FONDS_AVATAR dans functions/api/admin/[action].js, dessinées par ../app/profil.css).
+      var FONDS = [['bleu', 'Bleu'], ['vert', 'Vert'], ['jaune', 'Jaune'], ['orange', 'Orange'], ['rouge', 'Rouge'], ['rose', 'Rose'], ['violet', 'Violet'], ['nuit', 'Nuit']];
+      var nomFond = function (f) { var x = FONDS.filter(function (g) { return g[0] === f; })[0]; return x ? x[1].toLowerCase() : f; };
 
       // Mots pour fabriquer un mot de passe facile à dicter à un élève (3 mots + 2 chiffres, environ 30 bits).
       var MOTS = ('abeille agneau aigle baleine bison castor chameau cheval chevre cigale cigogne crabe criquet cygne dauphin '
@@ -582,7 +631,7 @@
         $('#evenement-boss').textContent = !(r.evenement || r.fini) ? ''
           : !b ? 'Boss (' + f.boss + ') : ' + Math.min(r.total || 0, r.seuil) + ' / ' + r.seuil + ' ' + f.petits + ' attrapés par tous avant son arrivée.'
           : !b.vaincu ? f.boss + ' en jeu : ' + b.pv.toLocaleString('fr-FR') + ' / ' + b.max.toLocaleString('fr-FR') + ' PV, ' + b.chasseurs + ' chasseur' + (b.chasseurs > 1 ? 's' : '') + '.'
-          : f.boss + ' ' + f.vaincu + ' le ' + date(b.vaincu) + (b.gagnant ? ' : ' + b.gagnant.nom + ' a gagné les badges ✔ vérifié et ' + f.badge + '.' : '.');
+          : f.boss + ' ' + f.vaincu + ' le ' + date(b.vaincu) + (b.gagnant ? ' : ' + (b.gagnant.avatar ? b.gagnant.avatar + ' ' : '') + b.gagnant.nom + ' a gagné les badges ✔ vérifié et ' + f.badge + '.' : '.');
       }
       // Les noms viennent des comptes : toujours en textContent.
       function chargerClassement() {
@@ -591,7 +640,7 @@
           var top = x.r.top || [];
           $('#classement-liste').replaceChildren.apply($('#classement-liste'), top.map(function (t) {
             var li = document.createElement('li');
-            li.textContent = t.nom + ' — ' + t.points + ' ' + fiche().icone + ' ';
+            li.append(rondCompte({ nom: t.nom, identifiant: t.nom, classe: t.eleve, avatar: t.avatar, avatar_fond: t.avatar_fond }), t.nom + ' — ' + t.points + ' ' + fiche().icone + ' ');
             var detail = document.createElement('small');
             detail.textContent = t.eleve ? '(élève, ' + t.identifiant + ')' : '';
             li.appendChild(detail);
@@ -660,6 +709,7 @@
           }));
           comptes = x.r.comptes;
           afficher();
+          remplirSerie();
           chargerSupport();
           chargerCollectionsSite();
         }).catch(function (e) { horsSession('Impossible de joindre le serveur : ' + e.message); });
@@ -683,13 +733,7 @@
           var tr = document.createElement('tr');
           var nom = document.createElement('td');
           // Un élève (créé par son enseignant) est montré par son prénom, avec sa classe.
-          if (c.avatar) {
-            var avatar = document.createElement('span');
-            avatar.className = 'avatar';
-            avatar.title = 'Photo de profil';
-            avatar.textContent = c.avatar;
-            nom.appendChild(avatar);
-          }
+          nom.appendChild(rondCompte(c));
           nom.append(c.classe ? c.nom + ' ' : c.identifiant);
           var badges = c.admin ? ['admin'] : c.enseignant ? ['enseignant'] : c.classe ? ['élève · ' + c.classe + ' (' + (c.de || '?') + ')'] : [];
           // Badges gagnés pendant les événements (boss d'Halloween).
@@ -805,30 +849,238 @@
           });
           boite.appendChild(groupe);
         });
+        // L'aperçu montre l'emoji ou la couleur survolés, puis revient à la photo actuelle.
+        var apercu = document.createElement('div');
+        apercu.className = 'apercu-carte';
+        var montrer = function (avatar, fond) {
+          var legende = document.createElement('small');
+          legende.textContent = 'Sa carte de profil, comme dans son logiciel' + (avatar === c.avatar && (fond || null) === (c.avatar_fond || null) ? '' : ' (aperçu)') + ' :';
+          apercu.replaceChildren(legende, carteProfil(c, avatar, fond));
+        };
+        var essayer = function (b, avatar, fond) {
+          var revenir = function () { montrer(c.avatar, c.avatar_fond); };
+          b.addEventListener('mouseenter', function () { montrer(avatar, fond); });
+          b.addEventListener('focus', function () { montrer(avatar, fond); });
+          b.addEventListener('mouseleave', revenir);
+          b.addEventListener('blur', revenir);
+        };
+        boite.querySelectorAll('.emoji').forEach(function (b) { essayer(b, b.textContent, c.avatar_fond); });
+        // Couleur du rond : chaque pastille montre la photo actuelle sur cette couleur.
+        var couleurs = document.createElement('div');
+        couleurs.className = 'groupe';
+        var nomCouleurs = document.createElement('small');
+        nomCouleurs.textContent = 'Couleur du rond';
+        couleurs.appendChild(nomCouleurs);
+        [[null, 'Sans couleur']].concat(FONDS).forEach(function (f) {
+          var b = bouton(c.avatar || '·', function (ev) { changerAvatar(c, c.avatar, ev.currentTarget, f[0]); },
+            'pastille' + ((c.avatar_fond || null) === f[0] && c.avatar ? ' actuel' : ''));
+          if (f[0]) b.dataset.fond = f[0];
+          b.title = c.avatar ? f[1] : 'Choisir d\'abord un emoji';
+          b.setAttribute('aria-label', 'Couleur du rond : ' + f[1]);
+          b.disabled = !c.avatar;
+          if (c.avatar) essayer(b, c.avatar, f[0]);
+          couleurs.appendChild(b);
+        });
+        boite.appendChild(couleurs);
         var autre = document.createElement('input');
         autre.placeholder = 'autre emoji';
         autre.setAttribute('aria-label', 'Autre emoji');
         autre.value = c.avatar && TOUS_AVATARS.indexOf(c.avatar) < 0 ? c.avatar : '';
         autre.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') changerAvatar(c, autre.value.trim(), autre); });
+        autre.addEventListener('input', function () { var a = autre.value.trim(); montrer(a || c.avatar, c.avatar_fond); });
         boite.append(autre, bouton('OK', function (ev) { changerAvatar(c, autre.value.trim(), ev.currentTarget); }));
         if (c.avatar) boite.append(bouton('Enlever la photo', function (ev) { changerAvatar(c, null, ev.currentTarget); }));
         boite.append(bouton('Fermer', function () { choixAvatar = null; afficher(); }));
-        td.appendChild(boite);
+        montrer(c.avatar, c.avatar_fond);
+        var grille = document.createElement('div');
+        grille.className = 'photo-grille';
+        grille.append(boite, apercu);
+        td.appendChild(grille);
         tr.appendChild(td);
         return tr;
       }
 
-      function changerAvatar(c, avatar, b) {
+      // Carte de profil d'un compte, faite comme rendreCarteProfil() dans app/app.js (mêmes classes, ../app/profil.css) :
+      // bandeau teinté (ou de la couleur du rond), grande photo ou initiale, nom, rôle, médailles.
+      var MEDAILLES = [
+        ['verifie', '✔', 'Vérifié', 'par le site', 'verifie'],
+        ['halloween', '🎃', 'Halloween', 'Roi des fantômes vaincu', 'or'],
+        ['participation-halloween', '🧛', 'Participation', 'Halloween', 'argent'],
+        ['noel', '🎅', 'Noël', 'Père Noël vaincu', 'or'],
+        ['participation-noel', '⛄', 'Participation', 'Noël', 'argent'],
+      ];
+      function carteProfil(c, avatar, fond) {
+        var el = function (balise, classe, texte) {
+          var e = document.createElement(balise);
+          if (classe) e.className = classe;
+          if (texte) e.textContent = texte;
+          return e;
+        };
+        var nom = (c.classe ? c.nom : c.identifiant) || '?';
+        var carte = el('div', 'carte-profil');
+        carte.style.setProperty('--teinte', teinte(nom));
+        var rond = rondCompte({ nom: c.nom, classe: c.classe, identifiant: c.identifiant, avatar: avatar || null, avatar_fond: fond || null });
+        rond.classList.add('grand');
+        if (rond.dataset.fond) carte.dataset.fond = rond.dataset.fond;
+        var qui = el('div', 'cp-qui');
+        var n = el('strong', 'cp-nom', nom);
+        n.title = nom;
+        qui.appendChild(n);
+        var role = c.classe ? ['eleve', 'Élève'] : c.admin ? ['admin', 'Admin'] : c.enseignant ? ['enseignant', 'Enseignant'] : null;
+        if (role) qui.appendChild(el('span', 'cp-role ' + role[0], role[1]));
+        var identite = el('div', 'cp-identite');
+        identite.append(rond, qui);
+        var gagnes = [];
+        try { gagnes = JSON.parse(c.badges || '[]') || []; } catch (e) { /* illisible */ }
+        var medailles = MEDAILLES.filter(function (m) { return gagnes.indexOf(m[0]) >= 0; });
+        var titre = el('p', 'cp-titre', medailles.length > 1 ? 'Mes médailles' : medailles.length ? 'Ma médaille' : 'Médailles');
+        var liste;
+        if (medailles.length) {
+          liste = el('ul', 'cp-medailles');
+          medailles.forEach(function (m) {
+            var li = el('li', 'medaille ' + m[4]);
+            li.append(el('span', 'm-ruban'), el('span', 'm-disque', m[1]), el('span', 'm-nom', m[2]), el('span', 'm-detail', m[3]));
+            liste.appendChild(li);
+          });
+        } else {
+          liste = el('p', 'cp-vide', 'Pas encore de médaille : on en gagne pendant les événements du site.');
+        }
+        carte.append(el('div', 'cp-bandeau'), identite, titre, liste);
+        return carte;
+      }
+
+      // fond : couleur du rond (une clé de FONDS, ou null) ; sans fond, la couleur d'avant reste.
+      function changerAvatar(c, avatar, b, fond) {
         if (avatar === '') return;
         b.disabled = true;
-        appel('avatar', { identifiant: c.identifiant, avatar: avatar }).then(function (x) {
+        var corps = { identifiant: c.identifiant, avatar: avatar };
+        if (fond !== undefined) corps.avatar_fond = fond;
+        appel('avatar', corps).then(function (x) {
           if (x.statut !== 204) { b.disabled = false; message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
-          choixAvatar = null;
-          message(avatar ? 'Photo de profil de ' + (c.nom || c.identifiant) + ' : ' + avatar + ' (visible dans son logiciel dès qu\'il l\'ouvre ou y revient).'
-            : 'Photo de profil de ' + (c.nom || c.identifiant) + ' enlevée.');
+          if (!avatar) choixAvatar = null; // la ligne reste ouverte pour essayer une autre couleur
+          var qui = c.nom || c.identifiant;
+          message(!avatar ? 'Photo de profil de ' + qui + ' enlevée.'
+            : (fond !== undefined ? 'Rond de ' + qui + ' : ' + (fond ? nomFond(fond) : 'sans couleur') : 'Photo de profil de ' + qui + ' : ' + avatar)
+              + ' (visible dans son logiciel dès qu\'il l\'ouvre ou y revient, avec une petite annonce).');
           charger();
         }).catch(function (e) { b.disabled = false; message('Impossible de joindre le serveur : ' + e.message, true); });
       }
+
+      // Rond d'un compte : sa photo sur sa couleur, ou son initiale sur un dégradé de la teinte de son nom (même calcul que
+      // teinte() et rondProfil() dans app/app.js, donc la même que dans son logiciel ; ../app/profil.css).
+      function teinte(nom) {
+        var h = 7;
+        Array.from(nom).forEach(function (ch) { h = (h * 31 + ch.codePointAt(0)) % 360; });
+        return h;
+      }
+      function rondCompte(c) {
+        var nomAffiche = (c.classe ? c.nom : c.identifiant) || '?';
+        var rond = document.createElement('span');
+        rond.className = 'avatar' + (c.avatar ? '' : ' defaut');
+        rond.style.setProperty('--teinte', teinte(nomAffiche));
+        rond.textContent = c.avatar || (Array.from(nomAffiche)[0] || '?').toLocaleUpperCase('fr-FR');
+        rond.title = c.avatar ? 'Photo de profil' + (c.avatar_fond ? ' (rond ' + nomFond(c.avatar_fond) + ')' : '') : 'Pas de photo de profil';
+        if (c.avatar && c.avatar_fond) rond.dataset.fond = c.avatar_fond;
+        return rond;
+      }
+
+      /* Photos en série : le tirage est fait ici (aperçu = ce qui part), puis POST /api/admin/avatars. */
+      var tirage = [];
+      var melanger = function (l) {
+        l = l.slice();
+        for (var i = l.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = l[i]; l[i] = l[j]; l[j] = t; }
+        return l;
+      };
+      var cleClasse = function (c) { return c.de + '\u0000' + c.classe; };
+      function remplirSerie() {
+        var qui = $('#serie-qui'), avant = qui.value, classes = {};
+        comptes.forEach(function (c) { if (c.classe) classes[cleClasse(c)] = c; });
+        var options = [['sans', 'tous les comptes'], ['eleves', 'tous les élèves']].concat(Object.keys(classes).sort().map(function (k) {
+          return ['classe:' + k, 'la classe « ' + classes[k].classe + ' » (' + (classes[k].de || '?') + ')'];
+        }));
+        qui.replaceChildren.apply(qui, options.map(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; return op; }));
+        if (options.some(function (o) { return o[0] === avant; })) qui.value = avant;
+        var fond = $('#serie-fond');
+        if (!fond.options.length) {
+          [['hasard', 'au hasard'], ['', 'sans couleur']].concat(FONDS.map(function (f) { return [f[0], f[1].toLowerCase()]; })).forEach(function (o) {
+            var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; fond.appendChild(op);
+          });
+        }
+        tirer();
+      }
+      function cibles() {
+        var qui = $('#serie-qui').value, remplacer = $('#serie-remplacer').checked, enlever = $('#serie-photo').value === 'enlever';
+        return comptes.filter(function (c) {
+          if (c.admin || (enlever ? !c.avatar : c.avatar && !remplacer)) return false;
+          return qui === 'sans' || (qui === 'eleves' ? !!c.classe : c.classe && 'classe:' + cleClasse(c) === qui);
+        });
+      }
+      function tirer() {
+        var photo = $('#serie-photo').value, fond = $('#serie-fond').value, emoji = $('#serie-emoji').value.trim();
+        var enlever = photo === 'enlever';
+        $('#serie-emoji').hidden = photo !== 'meme';
+        $('#serie-remplacer-l').hidden = $('#serie-fond-l').hidden = $('#serie-tirer').hidden = enlever;
+        var reserve = enlever ? [null] : photo === 'meme' ? [emoji]
+          : melanger(photo === 'Toutes' ? TOUS_AVATARS : AVATARS.filter(function (g) { return g[0] === photo; })[0][1]);
+        var couleurs = melanger(FONDS.map(function (f) { return f[0]; }));
+        tirage = photo === 'meme' && !emoji ? [] : cibles().map(function (c, i) {
+          return { compte: c, avatar: reserve[i % reserve.length], fond: enlever ? null : fond === 'hasard' ? couleurs[i % couleurs.length] : fond || null };
+        });
+        var apercu = $('#serie-apercu');
+        apercu.replaceChildren.apply(apercu, tirage.map(function (t) {
+          var li = document.createElement('li');
+          // Pour « enlever », l'aperçu montre la photo qui va partir, barrée.
+          var rond = rondCompte(t.avatar ? { nom: t.compte.nom, classe: t.compte.classe, identifiant: t.compte.identifiant, avatar: t.avatar, avatar_fond: t.fond } : t.compte);
+          if (!t.avatar) rond.classList.add('partante');
+          li.append(rond, t.compte.classe ? t.compte.nom : t.compte.identifiant);
+          return li;
+        }));
+        if (!tirage.length) {
+          var vide = document.createElement('li');
+          vide.className = 'vide';
+          vide.textContent = photo === 'meme' && !emoji ? 'Écris l\'emoji à donner à tous.'
+            : enlever ? 'Personne : aucun de ces comptes n\'a de photo.' : 'Personne : tous ces comptes ont déjà une photo (cocher « remplacer » pour en changer).';
+          apercu.appendChild(vide);
+        }
+        var b = $('#serie-donner');
+        b.disabled = !tirage.length;
+        var verbe = enlever ? 'Enlever ces photos' : 'Donner ces photos';
+        b.textContent = tirage.length ? verbe + ' (' + tirage.length + ' compte' + (tirage.length > 1 ? 's' : '') + ')' : verbe;
+        b.classList.toggle('danger', enlever);
+        b.classList.toggle('principal', !enlever);
+      }
+      ['#serie-qui', '#serie-remplacer', '#serie-photo', '#serie-fond'].forEach(function (s) { $(s).addEventListener('change', tirer); });
+      $('#serie-emoji').addEventListener('input', tirer);
+      $('#serie-tirer').addEventListener('click', tirer);
+      $('#serie-donner').addEventListener('click', function () {
+        var b = $('#serie-donner'), envoi = tirage.slice();
+        if (!envoi.length) return;
+        if (!envoi[0].avatar && !b.classList.contains('confirmer')) { // enlever : second appui
+          b.classList.add('confirmer');
+          b.textContent = 'Vraiment enlever ' + envoi.length + ' photo' + (envoi.length > 1 ? 's' : '') + ' ?';
+          setTimeout(function () { if (b.classList.contains('confirmer')) { b.classList.remove('confirmer'); tirer(); } }, 4000);
+          return;
+        }
+        b.classList.remove('confirmer');
+        b.disabled = true;
+        message('Photos en cours d\'envoi…');
+        var paquets = [];
+        for (var i = 0; i < envoi.length; i += 500) paquets.push(envoi.slice(i, i + 500));
+        var total = 0;
+        paquets.reduce(function (suite, p) {
+          return suite.then(function () {
+            return appel('avatars', { photos: p.map(function (t) { return { identifiant: t.compte.identifiant, avatar: t.avatar, avatar_fond: t.fond }; }) }).then(function (x) {
+              if (x.statut !== 200) throw new Error(x.r.erreur || 'serveur ' + x.statut);
+              total += x.r.changes || 0;
+            });
+          });
+        }, Promise.resolve()).then(function () {
+          var s = total > 1 ? 's' : '';
+          message(envoi[0].avatar ? total + ' photo' + s + ' de profil donnée' + s + ' (chacun la verra dans son logiciel, avec une petite annonce).'
+            : total + ' photo' + s + ' de profil enlevée' + s + '.');
+          charger();
+        }).catch(function (e) { b.disabled = false; message('Échec : ' + e.message + (total ? ' (' + total + ' déjà données)' : '') + '.', true); if (total) charger(); });
+      });
 
       function changerEnseignant(c, b) {
         b.disabled = true;
