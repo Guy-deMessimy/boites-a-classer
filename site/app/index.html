@@ -305,6 +305,31 @@
     </div>
   </dialog>
 
+  <dialog id="fen-reglages" class="fenetre" aria-labelledby="titre-reglages">
+    <div class="fenetre-tete">
+      <h2 id="titre-reglages">⚙️ Réglages</h2>
+      <button type="button" class="fermer" aria-label="Fermer">×</button>
+    </div>
+    <div class="fenetre-corps">
+      <fieldset class="reglage-tailles">
+        <legend>Taille du texte et des cartes</legend>
+        <label><input type="radio" name="taille" value="normale"><span class="apercu" style="font-size:1rem">Aa</span>Normale</label>
+        <label><input type="radio" name="taille" value="grande"><span class="apercu" style="font-size:1.25rem">Aa</span>Grande</label>
+        <label><input type="radio" name="taille" value="tres-grande"><span class="apercu" style="font-size:1.5rem">Aa</span>Très grande</label>
+      </fieldset>
+      <label class="reglage"><input type="checkbox" id="rg-contraste"><span><strong>Contraste élevé</strong><small>Textes et traits plus foncés, bords plus épais.</small></span></label>
+      <label class="reglage"><input type="checkbox" id="rg-daltonien"><span><strong>Couleurs pour daltoniens</strong><small>Des couleurs faciles à distinguer, et un symbole (● ▲ ■ ◆…) pour chaque attribut, sur les boîtes et les pastilles du niveau facile.</small></span></label>
+      <label class="reglage"><input type="checkbox" id="rg-police"><span><strong class="exemple-police">Police plus lisible</strong><small>La police OpenDyslexic, aux lettres bien distinctes, qui aide certains lecteurs.</small></span></label>
+      <label class="reglage"><input type="checkbox" id="rg-calme"><span><strong>Moins d'animations</strong><small>Pas de confettis ni de mouvements (c'est déjà le cas si ton appareil le demande).</small></span></label>
+      <label class="reglage" id="rg-voix-ligne"><input type="checkbox" id="rg-voix"><span><strong>Lire à voix haute</strong><small>Les noms des cartes, les indices et les réussites (sur cet appareil).</small></span></label>
+      <p class="aide">Ces réglages suivent ton compte : tu les retrouves sur un autre appareil.</p>
+    </div>
+    <div class="fenetre-pied">
+      <button type="button" class="btn" id="rg-defaut">Remettre comme au début</button>
+      <button type="button" class="btn principal" id="rg-ok">OK</button>
+    </div>
+  </dialog>
+
   <dialog id="fen-parcours" class="fenetre" aria-labelledby="titre-parcours">
     <div class="fenetre-tete">
       <h2 id="titre-parcours">📈 Mon parcours</h2>

@@ -430,7 +430,7 @@ body.consultation #exercices { display: none; }
 .etre.avec-attrs { position: relative; padding-top: 8px; }
 .etre.avec-attrs.en-main { position: fixed; }
 .etre-attrs { position: absolute; top: 4px; left: 4px; right: 4px; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; pointer-events: none; }
-.etre-attrs i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px var(--surface); }
+.etre-attrs i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px var(--surface); font-size: 0; font-style: normal; }
 
 /* Bas de l'écran : une ligne d'information, puis le bac des cartes à ranger. */
 
@@ -1021,3 +1021,82 @@ body.consultation #exercices { display: none; }
   body.imprime-parcours #fen-parcours .fenetre-pied, body.imprime-parcours #fen-parcours .fermer, body.imprime-parcours #parcours > .aide { display: none !important; }
   body.imprime-parcours .parcours-barre, body.imprime-parcours .parcours-barre span { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- Réglages d'accessibilité (classes posées sur <html> par app.js, fenêtre ⚙️ Réglages) ---------- */
+@font-face {
+  font-family: "OpenDyslexic";
+  font-display: swap;
+  src: url(opendyslexic-400.woff2) format("woff2"); /* licence OFL : OFL-opendyslexic.txt */
+}
+.reglage-tailles { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin: 0 0 1rem; padding: 0; border: 0; }
+.reglage-tailles legend { margin-bottom: .45rem; padding: 0; font-weight: 600; }
+.reglage-tailles label { display: grid; justify-items: center; gap: .15rem; padding: .55rem .3rem; border: 1.5px solid var(--ligne); border-radius: 12px; background: var(--surface); font-size: .85rem; cursor: pointer; }
+.reglage-tailles label:has(input:checked) { border-color: var(--accent); background: var(--fond-accent); }
+.reglage-tailles label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.reglage-tailles input { position: absolute; opacity: 0; pointer-events: none; }
+.reglage-tailles .apercu { font-weight: 700; line-height: 1.1; }
+.reglage { display: flex; align-items: flex-start; gap: .65rem; padding: .55rem .2rem; border-top: 1px solid var(--ligne-douce); cursor: pointer; }
+.reglage[hidden] { display: none; }
+.reglage input { flex: none; width: 1.15rem; height: 1.15rem; margin: .15rem 0 0; accent-color: var(--accent); }
+.reglage strong { display: block; }
+.reglage small { display: block; color: var(--doux); font-size: .82rem; line-height: 1.35; }
+.exemple-police { font-family: "OpenDyslexic", var(--police); }
+
+/* Taille : le texte de l'interface grandit (rem), les cartes du bac aussi ; sur le plan de travail, c'est le zoom
+   (changé avec la taille) qui agrandit tout, sans toucher aux positions des cartes. */
+:root[data-taille="grande"] { font-size: 112.5%; }
+:root[data-taille="tres-grande"] { font-size: 125%; }
+:root[data-taille="grande"] #calque .etre-nom, :root[data-taille="tres-grande"] #calque .etre-nom,
+:root[data-taille="grande"] .etre.en-main .etre-nom, :root[data-taille="tres-grande"] .etre.en-main .etre-nom { font-size: 11.8px; }
+:root[data-taille="grande"] #plateau .etre { width: 104px; height: 90px; }
+:root[data-taille="grande"] #plateau .etre-ico { font-size: 36px; }
+:root[data-taille="grande"] #plateau .etre-ico img { width: 48px; height: 48px; }
+:root[data-taille="tres-grande"] #plateau .etre { width: 120px; height: 104px; }
+:root[data-taille="tres-grande"] #plateau .etre-ico { font-size: 42px; }
+:root[data-taille="tres-grande"] #plateau .etre-ico img { width: 56px; height: 56px; }
+@media (max-width: 700px) {
+  :root[data-taille="grande"] { font-size: 106.25%; }
+  :root[data-taille="tres-grande"] { font-size: 112.5%; }
+  :root[data-taille="grande"] #plateau .etre { width: 78px; height: 70px; }
+  :root[data-taille="grande"] #plateau .etre-ico { font-size: 28px; }
+  :root[data-taille="tres-grande"] #plateau .etre { width: 90px; height: 80px; }
+  :root[data-taille="tres-grande"] #plateau .etre-ico { font-size: 32px; }
+}
+
+/* Contraste élevé : encre et traits foncés (clairs en sombre), bords plus épais. */
+:root.contraste {
+  --encre: #000;
+  --doux: #1f2430;
+  --ligne: #3d4350;
+  --ligne-douce: #6b7280;
+  --survol: #dfe8fb;
+  --grille: rgb(58 123 213 / .1);
+  --grille-forte: rgb(58 123 213 / .2);
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root.contraste {
+    --encre: #fff;
+    --doux: #e6e9ef;
+    --ligne: #c5cad3;
+    --ligne-douce: #9aa1ad;
+    --survol: #34405a;
+  }
+}
+:root.contraste .etre { border-width: 2.5px; }
+:root.contraste .boite { border-width: 3px; }
+:root.contraste .actions button, :root.contraste .btn, :root.contraste #gerer, :root.contraste #exercices, :root.contraste #niveau, :root.contraste .choix select { border-width: 2px; }
+:root.contraste :focus-visible { outline-width: 3px !important; }
+
+/* Couleurs pour daltoniens : le symbole de l'attribut dans le bandeau de la boîte et à la place des pastilles. */
+.boite-symbole { display: none; }
+:root.daltonien .boite-symbole:not(:empty) { display: inline; flex: none; color: #fff; font-size: .95rem; line-height: 1; text-shadow: 0 0 2px rgb(0 0 0 / .55); }
+:root.daltonien .etre-attrs { gap: 1px 3px; }
+:root.daltonien .etre-attrs i { width: auto; height: auto; border-radius: 0; background: none; box-shadow: none; color: var(--c); font-size: 10px; line-height: 1; }
+
+/* Police plus lisible. */
+:root.police-lisible { --police: "OpenDyslexic", "Space Grotesk", system-ui, sans-serif; word-spacing: .08em; } /* la police est déjà large */
+
+/* Moins d'animations (comme prefers-reduced-motion, mais choisi dans le logiciel). */
+:root.calme *, :root.calme *::before, :root.calme *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+:root.calme .etre.en-main { rotate: none; }
+:root.calme .etre.indice { outline: 3px solid var(--manque); outline-offset: 2px; }
