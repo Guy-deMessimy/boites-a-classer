@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.30.6';
+  const VERSION = '3.31.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -71,6 +71,10 @@
   // reste du travail, pour retrouver sa progression sur un autre appareil.
   const cleReussie = (c) => 'boites-a-classer:reussi:' + c.id;
   const reussie = (c) => !!lire(cleReussie(c));
+  // Réussie au niveau expert : un trophée 🏆 à la place de la coche (sauvegardé en ligne lui aussi).
+  const cleExpert = (c) => 'boites-a-classer:expert:' + c.id;
+  const reussieExpert = (c) => !!lire(cleExpert(c));
+  const marqueReussite = (c) => (reussieExpert(c) ? '🏆 ' : reussie(c) ? '✅ ' : '');
   const estPerso = (c) => mesCollections.includes(c);
   const estSite = (c) => collectionsSite.includes(c);
   // Seul un admin crée et modifie des collections (le serveur le vérifie aussi pour celles du site).
@@ -154,6 +158,90 @@
     return o;
   }
 
+  /* ---------- Niveaux ---------- */
+
+  // 🌱 Facile : les attributs de chaque carte en pastilles (de la couleur de leur boîte), et une carte posée dans une
+  // boîte devient verte ou rouge tout de suite. 🌿 Normal : attributs au survol, vérification à la demande.
+  // 🌳 Expert : attributs cachés (survol, lecteur d'écran, tableau des caractères), bilan sans le pourquoi, et un
+  // trophée 🏆 par collection réussie. Le niveau suit l'élève (sauvegardé en ligne avec son travail).
+  const NIVEAUX = {
+    facile: { ico: '🌱', nom: 'Facile', detail: 'les couleurs des attributs sont sur les cartes, et une carte posée dans une boîte devient tout de suite verte ou rouge.' },
+    normal: { ico: '🌿', nom: 'Normal', detail: 'les attributs s\'affichent quand on survole une carte, et on vérifie quand on veut.' },
+    expert: { ico: '🌳', nom: 'Expert', detail: 'les attributs sont cachés, à toi de les connaître ! La vérification dit combien de cartes sont mal placées, pas pourquoi. Un trophée 🏆 par collection réussie.' },
+  };
+  const CLE_NIVEAU = 'boites-a-classer:reglage:niveau'; // « : » : ne peut pas être le plan de travail d'une collection
+  const niveauValide = (n) => n === 'facile' || n === 'normal' || n === 'expert';
+  const niveau = () => { const n = lire(CLE_NIVEAU); return niveauValide(n) ? n : 'normal'; };
+  const boutonNiveau = $('#niveau');
+
+  function majBoutonNiveau() {
+    const d = NIVEAUX[niveau()];
+    boutonNiveau.querySelector('.niveau-ico').textContent = d.ico;
+    boutonNiveau.querySelector('.niveau-nom').textContent = d.nom;
+    boutonNiveau.title = `Niveau ${d.nom.toLowerCase()} : ${d.detail} (appuie pour changer)`;
+    boutonNiveau.setAttribute('aria-label', `Niveau ${d.nom.toLowerCase()}, changer de niveau`);
+    document.body.dataset.niveau = niveau();
+  }
+
+  // pourquoi : précision ajoutée au message (« choisi par le lien »).
+  function choisirNiveau(n, pourquoi) {
+    if (!niveauValide(n)) return;
+    const avant = niveau();
+    ecrire(CLE_NIVEAU, n);
+    majBoutonNiveau();
+    if (n === avant) return;
+    // Un défi commencé à un autre niveau ne compte plus : pas de record en passant en facile pour voir les erreurs.
+    if (defi) arreterDefi();
+    fermerBilan();
+    rendre();
+    majInfoDefaut();
+    const d = NIVEAUX[n];
+    info.textContent = `${d.ico} Niveau ${d.nom.toLowerCase()}${pourquoi ? ' ' + pourquoi : ''} : ${d.detail}`;
+  }
+
+  function ouvrirMenuNiveau() {
+    afficherMenu(boutonNiveau, 'niveau', (m) => {
+      const titre = document.createElement('div');
+      titre.className = 'menu-titre';
+      titre.textContent = 'Niveau';
+      m.appendChild(titre);
+      for (const [cle, d] of Object.entries(NIVEAUX)) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'menu-niveau';
+        b.setAttribute('aria-pressed', String(cle === niveau()));
+        const ico = document.createElement('span');
+        ico.className = 'niveau-ico';
+        ico.textContent = d.ico;
+        const nom = document.createElement('strong');
+        nom.textContent = d.nom;
+        const detail = document.createElement('small');
+        detail.textContent = d.detail.charAt(0).toUpperCase() + d.detail.slice(1);
+        const texte = document.createElement('span');
+        texte.append(nom, detail);
+        b.append(ico, texte);
+        b.addEventListener('click', () => { fermerMenu(); choisirNiveau(cle); });
+        m.appendChild(b);
+      }
+    }, 'menu-niveaux');
+  }
+
+  // Niveau facile : une carte posée dans une boîte (qui a un attribut) est verte si elle est à sa place, rouge sinon.
+  // Hors de toute boîte, elle reste neutre : on peut d'abord poser les cartes, puis faire les boîtes.
+  function marquerEnDirect() {
+    if (niveau() !== 'facile') return;
+    const { fautifs } = analyser();
+    for (const e of coll.etres) {
+      const el = elEtres.get(e.id);
+      const p = etat.positions[e.id];
+      if (!el || !p) continue;
+      const c = centre(p);
+      const range = etat.boites.some((b) => b.attr && contient(b, c.x, c.y));
+      el.classList.toggle('ok', range && !fautifs.has(e.id));
+      el.classList.toggle('faux', range && fautifs.has(e.id));
+    }
+  }
+
   /* ---------- Affichage ---------- */
 
   // etatOuvert : plan de travail lu dans un fichier, qui remplace celui gardé dans le navigateur.
@@ -168,9 +256,8 @@
     histoire.actuel = JSON.stringify(etat);
     majBoutonsHistoire();
     if (defi && defi.collection !== coll.id) arreterDefi();
-    const ancienInfo = infoDefaut;
-    infoDefaut = `Touche ou survole un ${elements()[0]} pour voir ses caractéristiques.`;
-    if (info.textContent === ancienInfo) info.textContent = infoDefaut;
+    majInfoDefaut();
+    majBoutonNiveau(); // le niveau a pu arriver avec la sauvegarde en ligne
     plateau.dataset.vide = `Tous les ${elements()[1]} sont placés.`;
     document.title = `${coll.nom} · Boîtes à classer`; // onglets et favoris
     ecrire('boites-a-classer:collection', coll.id);
@@ -201,6 +288,16 @@
       if (p) { placer(el, p); calque.appendChild(el); } else plateau.appendChild(el);
     }
     ajusterToile();
+    marquerEnDirect();
+  }
+
+  // Ligne d'information quand rien n'est survolé : dépend de la matière et du niveau.
+  function majInfoDefaut() {
+    const ancienInfo = infoDefaut;
+    infoDefaut = niveau() === 'expert'
+      ? `Niveau expert : les attributs des ${elements()[1]} sont cachés, à toi de les connaître !`
+      : `Touche ou survole un ${elements()[0]} pour voir ses caractéristiques.`;
+    if (info.textContent === ancienInfo) info.textContent = infoDefaut;
   }
 
   function placer(el, p) {
@@ -348,6 +445,21 @@
     nom.textContent = e.nom;
 
     el.append(ico, nom);
+    // Niveau facile : une pastille par attribut, de la couleur de sa boîte.
+    if (niveau() === 'facile' && e.attributs.length) {
+      const attrs = document.createElement('span');
+      attrs.className = 'etre-attrs';
+      attrs.setAttribute('aria-hidden', 'true');
+      for (const id of e.attributs) {
+        const a = attrParId.get(id);
+        if (!a) continue;
+        const p = document.createElement('i');
+        p.style.setProperty('--c', a.couleur);
+        attrs.appendChild(p);
+      }
+      el.classList.add('avec-attrs');
+      el.appendChild(attrs);
+    }
     el.addEventListener('pointerenter', () => montrerInfo(e));
     el.addEventListener('pointerleave', (ev) => {
       if (ev.pointerType === 'mouse') info.textContent = infoDefaut;
@@ -357,7 +469,7 @@
     // déplacer (Maj + flèche : plus vite).
     el.tabIndex = 0;
     el.setAttribute('role', 'button');
-    el.setAttribute('aria-label', `${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`);
+    el.setAttribute('aria-label', niveau() === 'expert' ? e.nom : `${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`);
     el.addEventListener('focus', () => montrerInfo(e));
     el.addEventListener('keydown', (ev) => deplacerAuClavier(ev, e));
     return el;
@@ -415,6 +527,11 @@
   }
 
   function montrerInfo(e) {
+    if (niveau() === 'expert') {
+      info.textContent = `${e.emoji || ''} ${e.nom} · 🌳 à toi de trouver ses attributs`.trim();
+      dire(e.nom, coll.langue);
+      return;
+    }
     info.textContent = `${e.emoji || ''} ${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`.trim();
     dire(`${e.nom} : ${e.attributs.map(nomAttr).join(', ')}`, coll.langue);
   }
@@ -1064,8 +1181,12 @@
   // sauvegarde en ligne, qui devient alors l'état de ce navigateur). Renvoie le nombre d'éléments récupérés.
   function importerSauvegarde(donnees, ecraser) {
     const PREFIXE = 'boites-a-classer:';
+    // Progression (« reussi:<id> », « expert:<id> » : une date) et niveau, à côté des plans de travail. Avant la 3.31.0,
+    // la progression était envoyée mais pas reprise : une version reçue l'effaçait de ce navigateur.
+    const PROGRES = /^(reussi|expert):[A-Za-z0-9_-]{1,60}$/;
     const entrees = Object.entries(donnees)
-      .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE) && idSur(k.slice(PREFIXE.length)));
+      .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE)
+        && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU));
     const lireJSON = (v) => { try { return JSON.parse(v); } catch (e) { return null; } };
     let n = 0;
 
@@ -1094,6 +1215,8 @@
     for (const [k, v] of entrees) {
       if (k === CLE_MES_COLLECTIONS || (!ecraser && lire(k) !== null)) continue;
       if (k === PREFIXE + 'collection' || k === PREFIXE + 'zoom') { ecrire(k, v.slice(0, 80)); continue; }
+      if (PROGRES.test(k.slice(PREFIXE.length))) { if (/^[0-9TZ:.+-]{1,40}$/.test(v)) ecrire(k, v); continue; }
+      if (k === CLE_NIVEAU) { if (niveauValide(v)) ecrire(k, v); continue; }
       const c = toutes().find((x) => PREFIXE + x.id === k);
       const o = lireJSON(v);
       if (!c || !o) continue;
@@ -1164,7 +1287,7 @@
     const groupe = (titre, liste) => {
       const g = document.createElement('optgroup');
       g.label = titre;
-      for (const c of liste) g.appendChild(new Option((reussie(c) ? '✅ ' : '') + c.nom, c.id));
+      for (const c of liste) g.appendChild(new Option(marqueReussite(c) + c.nom, c.id));
       selColl.appendChild(g);
     };
     // Élève : les exercices donnés par son enseignant d'abord (page site/classe/).
@@ -1219,7 +1342,7 @@
       titre.textContent = c.nom;
       const detail = document.createElement('small');
       detail.textContent = `${pluriel(c.etres.length, ...elements(c))} · ${pluriel(c.attributs.length, 'attribut', 'attributs')}`
-        + (reussie(c) ? ' · ✅ réussie' : '') + (c === coll ? ' · en cours' : '');
+        + (reussieExpert(c) ? ' · 🏆 réussie en expert' : reussie(c) ? ' · ✅ réussie' : '') + (c === coll ? ' · en cours' : '');
       infos.append(titre, detail);
 
       const actions = document.createElement('div');
@@ -1856,6 +1979,7 @@
 
   function oublierVerification() {
     for (const el of elEtres.values()) el.classList.remove('ok', 'faux');
+    marquerEnDirect();
   }
 
   function fermerBilan() {
@@ -1863,11 +1987,13 @@
     oublierVerification();
   }
 
-  // Analyse du plan de travail : lignes du bilan [type, texte], êtres vivants mal placés, et « complet » quand tout est
-  // placé sans aucune erreur.
+  // Analyse du plan de travail : lignes du bilan [type, texte, revele], êtres vivants mal placés, et « complet » quand
+  // tout est placé sans aucune erreur. « revele » : la ligne dit un attribut d'un être vivant (cachée au niveau expert,
+  // qui ne compte que ces êtres vivants-là, dans « parAttribut »).
   function analyser() {
     const lignes = [];
     const fautifs = new Set();
+    const parAttribut = new Set();
     const places = coll.etres.filter((e) => etat.positions[e.id]);
     const centres = new Map(places.map((e) => [e.id, centre(etat.positions[e.id])]));
     const dans = (b, e) => centres.has(e.id) && contient(b, centres.get(e.id).x, centres.get(e.id).y);
@@ -1888,10 +2014,12 @@
         const possede = e.attributs.includes(b.attr);
         if (dans(b, e) && !possede) {
           fautifs.add(e.id);
-          lignes.push(['erreur', `${e.nom} n'a pas l'attribut « ${nom} » : il ne doit pas être dans cette boîte.`]);
+          parAttribut.add(e.id);
+          lignes.push(['erreur', `${e.nom} n'a pas l'attribut « ${nom} » : il ne doit pas être dans cette boîte.`, true]);
         } else if (!dans(b, e) && possede && centres.has(e.id)) {
           fautifs.add(e.id);
-          lignes.push(['manque', `${e.nom} possède l'attribut « ${nom} » : il doit être dans cette boîte.`]);
+          parAttribut.add(e.id);
+          lignes.push(['manque', `${e.nom} possède l'attribut « ${nom} » : il doit être dans cette boîte.`, true]);
         }
       }
     }
@@ -1908,6 +2036,7 @@
     for (const e of places) {
       if (!etat.boites.some((b) => dans(b, e))) {
         fautifs.add(e.id);
+        parAttribut.delete(e.id); // déjà dit autrement
         lignes.push(['manque', `${e.nom} n'est dans aucune boîte.`]);
       }
     }
@@ -1925,13 +2054,20 @@
     }
 
     const complet = !erreurs && etat.boites.length > 0 && restants === 0;
-    return { lignes, fautifs, places, complet };
+    return { lignes, fautifs, parAttribut, places, complet };
   }
 
   function verifier() {
     fermerMenu();
     oublierVerification();
-    const { lignes, fautifs, places, complet } = analyser();
+    const analyse = analyser();
+    const { fautifs, places, complet } = analyse;
+    let { lignes } = analyse;
+    if (niveau() === 'expert') {
+      lignes = lignes.filter((l) => !l[2]);
+      const n = analyse.parAttribut.size;
+      if (n) lignes.unshift(['erreur', `${pluriel(n, 'carte est mal placée', 'cartes sont mal placées')} (en rouge) : à toi de trouver pourquoi !`]);
+    }
     for (const e of places) elEtres.get(e.id).classList.add(fautifs.has(e.id) ? 'faux' : 'ok');
     if (complet) {
       dire('Bravo ! Ta classification est correcte.');
@@ -1948,6 +2084,12 @@
             ? `📌 Encore ${pluriel(restent, 'exercice', 'exercices')} de ton enseignant à faire (bouton 📌).`
             : '📌 Tu as réussi tous les exercices de ton enseignant !']);
         }
+      }
+      if (niveau() === 'expert' && !reussieExpert(coll)) {
+        ecrire(cleExpert(coll), new Date().toISOString());
+        remplirSelect();
+        const trophees = toutes().filter(reussieExpert).length;
+        lignes.push(['bravo', `🏆 Réussie au niveau expert : tu as ${pluriel(trophees, 'trophée', 'trophées')} sur ${toutes().length} collections !`]);
       }
       const fin = finirDefi();
       if (fin) lignes.splice(1, 0, ['bravo', fin]);
@@ -2081,7 +2223,9 @@
   // Lien qui ouvre directement la collection affichée (à donner à une classe). Rien du travail n'y est mis.
   async function partagerExercice() {
     fermerMenu();
-    const lien = 'https://boites-a-classer.pages.dev/app/#collection=' + encodeURIComponent(coll.id);
+    // Hors du niveau normal, le lien emporte le niveau (#collection=…&niveau=…).
+    const lien = 'https://boites-a-classer.pages.dev/app/#collection=' + encodeURIComponent(coll.id)
+      + (niveau() === 'normal' ? '' : '&niveau=' + niveau());
     try {
       if (tactile.matches && navigator.share) await navigator.share({ title: `Boîtes à classer : ${coll.nom}`, url: lien });
       else await navigator.clipboard.writeText(lien);
@@ -2214,7 +2358,11 @@
   function ouvrirTableau() {
     fermerMenu();
     const [un, des] = elements();
-    $('#tableau-aide').textContent = `Une coche quand l'${un} possède l'attribut. Les ${des} qui partagent un attribut vont dans la même boîte.`;
+    const cache = niveau() === 'expert'; // le tableau rempli serait la réponse
+    $('#tableau-aide').textContent = cache
+      ? `Niveau expert : le tableau est vide. Imprime-le pour le remplir (une coche quand l'${un} possède l'attribut), ou passe au niveau normal pour voir les coches.`
+      : `Une coche quand l'${un} possède l'attribut. Les ${des} qui partagent un attribut vont dans la même boîte.`;
+    $('#tableau-imprimer').hidden = cache;
     const t = $('#tableau');
     const tete = document.createElement('tr');
     tete.appendChild(document.createElement('th'));
@@ -2235,7 +2383,7 @@
       tr.appendChild(th);
       for (const a of attrParId.values()) {
         const td = document.createElement('td');
-        if (e.attributs.includes(a.id)) { td.textContent = '✓'; td.className = 'oui'; td.style.setProperty('--c', a.couleur); }
+        if (!cache && e.attributs.includes(a.id)) { td.textContent = '✓'; td.className = 'oui'; td.style.setProperty('--c', a.couleur); }
         tr.appendChild(td);
       }
       return tr;
@@ -2457,7 +2605,7 @@
     else if (fautifs.size) {
       const choisi = tirer([...fautifs]); // tiré une seule fois (pas à chaque essai de find)
       const e = coll.etres.find((x) => x.id === choisi);
-      texte = `Regarde bien ${e.nom} : est-il dans toutes les bonnes boîtes, et seulement celles-là ? Survole-le pour revoir ses attributs.`;
+      texte = `Regarde bien ${e.nom} : est-il dans toutes les bonnes boîtes, et seulement celles-là ?${niveau() === 'expert' ? '' : ' Survole-le pour revoir ses attributs.'}`;
       const carte = elEtres.get(e.id);
       carte.classList.remove('indice');
       void carte.offsetWidth;
@@ -2474,7 +2622,7 @@
   /* Défi chronométré : tout recommencer, puis réussir la classification le plus vite possible. */
 
   let minuterieDefi = null;
-  const CLE_RECORD_DEFI = () => 'boites-a-classer-defi:' + coll.id;
+  const CLE_RECORD_DEFI = () => 'boites-a-classer-defi:' + coll.id + (niveau() === 'normal' ? '' : ':' + niveau()); // un record par niveau
   const duree = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s`; };
 
   function lancerDefi() {
@@ -2590,6 +2738,7 @@
   boutonEffacer.addEventListener('click', effacer);
   boutonFichier.addEventListener('click', ouvrirMenuFichier);
   $('#gerer').addEventListener('click', ouvrirCollections);
+  boutonNiveau.addEventListener('click', ouvrirMenuNiveau);
   $('#fermer-bilan').addEventListener('click', fermerBilan);
   selColl.addEventListener('change', () => choisirCollection(selColl.value));
   document.addEventListener('keydown', (ev) => {
@@ -3022,7 +3171,7 @@
       const infos = document.createElement('div');
       infos.className = 'coll-infos';
       const titre = document.createElement('strong');
-      titre.textContent = (reussie(c) ? '✅ ' : '') + c.nom;
+      titre.textContent = marqueReussite(c) + c.nom;
       const detail = document.createElement('small');
       const nomMatiere = (MATIERES.find(([m]) => m === matiere(c)) || [])[1];
       detail.textContent = [nomMatiere, pluriel(c.etres.length, ...elements(c)), c === coll ? 'en cours' : ''].filter(Boolean).join(' · ');
@@ -3622,6 +3771,7 @@
   zoom = Number.isFinite(zoomSauve) ? borne(zoomSauve, ZOOM.min, ZOOM.max) : zoomParDefaut();
 
   function demarrer(recus) {
+    majBoutonNiveau();
     mesCollections = lireMesCollections();
     collectionsSite = lireCollectionsSite(lire(CLE_COLLECTIONS_SITE));
     chargerCollectionsSite();
@@ -3629,10 +3779,12 @@
     choisirCollection(lire('boites-a-classer:collection'));
     majBoutonCompte();
     if (!document.body.classList.contains('consultation')) rafraichirCompte();
-    if (location.hash.startsWith('#collection=')) { // lien d'une matière de la page d'accueil
-      const id = decodeURIComponent(location.hash.slice('#collection='.length));
+    if (location.hash.startsWith('#collection=')) { // lien d'une matière de la page d'accueil, ou « Copier le lien »
+      const lien = new URLSearchParams(location.hash.slice(1));
+      const id = lien.get('collection');
       history.replaceState(null, '', location.pathname + location.search);
       if (toutes().some((c) => c.id === id)) choisirCollection(id);
+      if (niveauValide(lien.get('niveau'))) choisirNiveau(lien.get('niveau'), 'choisi par le lien');
     }
     if (location.hash === '#compte') { // lien « Se connecter » de la page d'accueil
       history.replaceState(null, '', location.pathname + location.search);

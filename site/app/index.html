@@ -37,6 +37,7 @@
       <select id="collection" aria-label="Collection"></select>
       <button id="gerer" title="Choisir une collection (les administrateurs peuvent en créer)" aria-label="Gérer les collections"><svg class="ico"><use href="#i-piles"/></svg><span class="long">Collections</span></button>
       <button id="exercices" hidden title="Les exercices donnés par ton enseignant"><svg class="ico"><use href="#i-liste"/></svg><span class="long">Exercices</span><span id="exercices-nb" class="compteur" hidden></span></button>
+      <button id="niveau" class="ouvre-menu" aria-haspopup="menu"><span class="niveau-ico" aria-hidden="true">🌿</span><span class="niveau-nom long">Normal</span></button>
     </div>
     <div class="actions">
       <button id="nouvelle" class="principal"><svg class="ico"><use href="#i-plus"/></svg><span class="long">Nouvelle boîte</span><span class="court">Boîte</span></button>
@@ -258,6 +259,7 @@
         <li><span aria-hidden="true">💾</span><div><strong>Ton travail est gardé</strong> tout seul dans ce navigateur. Pour le retrouver ailleurs : 👤 (compte, code de classe ou code de sauvegarde).</div></li>
       </ol>
       <p class="aide">Pour changer d'exercice : la liste en haut, rangée par matière (sciences, français, maths, histoire, géographie, anglais, musique). Si ton enseignant t'a donné des exercices, ils sont dans « Exercices », à côté de la liste.</p>
+      <p class="aide">Trop facile, trop dur ? Le bouton 🌿 à côté de la liste change de niveau : 🌱 facile (les couleurs des attributs sur les cartes, correction en direct), 🌿 normal, 🌳 expert (attributs cachés, trophée 🏆).</p>
     </div>
     <div class="fenetre-pied">
       <button type="button" class="btn principal" id="aide-ok" autofocus>C'est parti !</button>
