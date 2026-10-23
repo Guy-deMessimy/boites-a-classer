@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-decor>
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,7 @@
   <meta name="description" content="Logiciel gratuit pour apprendre à classer dans des boîtes emboîtées : êtres vivants, mots, nombres, figures, périodes de l'histoire, vocabulaire anglais. Windows, macOS, Linux ou directement en ligne.">
   <link rel="icon" href="icone.png">
   <link rel="canonical" href="https://boites-a-classer.pages.dev/">
-  <meta property="og:title" content="Boîtes à classer" data-nom-site>
+  <meta property="og:title" content="Boîtes à classer">
   <meta property="og:description" content="Logiciel gratuit pour apprendre à classer dans des boîtes emboîtées : sciences, français, maths, histoire, anglais. Ordinateur, tablette, téléphone.">
   <meta property="og:image" content="https://boites-a-classer.pages.dev/icone.png">
   <meta property="og:url" content="https://boites-a-classer.pages.dev/">
@@ -189,7 +189,7 @@
 
     header .connexion { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
 
-    /* Annonce en haut de page (<aside class="annonce"><p>…</p></aside> au début de <main>). */
+    /* Annonce en haut de page (aucune en ce moment ; <aside class="annonce"><p>…</p></aside> au début de <main>). */
     .annonce { display: flex; justify-content: center; margin: 0 0 16px; }
     .annonce p {
       margin: 0;
@@ -212,20 +212,15 @@
     footer { margin-top: 48px; padding: 14px 20px; color: var(--doux); font-size: .9rem; }
     footer a { color: var(--accent); }
   </style>
-  <!-- Décor du thème choisi dans la page admin (fond, police) : functions/_middleware.js ajoute ici son <link> et la
-       classe theme-… de <html> (data-decor), sauf pour le thème sciences (serveur/theme.js). -->
+  <!-- Thème sciences. Pour un thème d'événement : class="theme-halloween" sur <html> et <link rel="stylesheet" href="halloween/theme.css">
+       ici (Noël : class="theme-noel" et noel/theme.css). -->
 </head>
 <body>
   <main>
-    <!-- Un bandeau par thème du site (serveur/theme.js) : seul celui du thème choisi par l'admin est envoyé (aucun pour le
-         thème normal ; un bandeau pour tous : sans data-theme-seul). -->
-    <aside class="annonce" aria-label="Annonce" data-theme-seul="halloween"><p>🎃 Événement d'Halloween prochainement… <a href="nouveautes/">Toutes les nouveautés</a></p></aside>
-    <aside class="annonce" aria-label="Annonce" data-theme-seul="noel"><p>🎄 Événement de Noël prochainement… <a href="nouveautes/">Toutes les nouveautés</a></p></aside>
-
     <header class="panneau">
       <img src="icone.png" alt="">
       <div>
-        <h1 data-nom-site>Boîtes à classer</h1>
+        <h1>Boîtes à classer</h1>
         <p class="sous-titre">Un logiciel gratuit pour apprendre à classer dans des boîtes emboîtées, selon les attributs partagés : êtres vivants, aliments, mots, nombres, figures, villes, périodes de l'histoire, vocabulaire anglais.</p>
         <p class="auteur">Ce site a été réalisé par Gabriel Des Rioux de Messimy.</p>
       </div>
@@ -236,7 +231,7 @@
     </header>
 
     <section class="pub">
-      <iframe data-nom-site src="pub/" title="Boîtes à classer en 20 secondes (publicité animée)" loading="lazy"></iframe>
+      <iframe src="pub/" title="Boîtes à classer en 20 secondes (publicité animée)" loading="lazy"></iframe>
     </section>
 
     <h2>Une partie par matière</h2>
