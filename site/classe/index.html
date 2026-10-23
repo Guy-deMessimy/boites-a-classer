@@ -508,27 +508,36 @@
 
       // Petite carte de profil d'un élève (../app/profil.css, comme la carte du logiciel) : photo donnée par l'admin, ou
       // son initiale sur un dégradé de la même teinte que dans le logiciel ; prénom ; médailles gagnées aux événements.
+      // Un clic l'ouvre en grand (montrerCarte). Médaille : id, emoji, titre, famille, nom court et précision (grande carte).
       var MEDAILLES = [
-        ['verifie', '✔', 'Vérifié par le site', 'verifie'],
-        ['halloween', '🎃', 'Halloween : Roi des fantômes vaincu', 'or'],
-        ['participation-halloween', '🧛', 'Participation à Halloween', 'argent'],
-        ['noel', '🎅', 'Noël : Père Noël vaincu', 'or'],
-        ['participation-noel', '⛄', 'Participation à Noël', 'argent'],
+        ['verifie', '✔', 'Vérifié par le site', 'verifie', 'Vérifié', 'par le site'],
+        ['halloween', '🎃', 'Halloween : Roi des fantômes vaincu', 'or', 'Halloween', 'Roi des fantômes vaincu'],
+        ['participation-halloween', '🧛', 'Participation à Halloween', 'argent', 'Participation', 'Halloween'],
+        ['noel', '🎅', 'Noël : Père Noël vaincu', 'or', 'Noël', 'Père Noël vaincu'],
+        ['participation-noel', '⛄', 'Participation à Noël', 'argent', 'Participation', 'Noël'],
       ];
       function teinte(nom) { // même calcul que teinte() dans app/app.js
         var h = 7;
         Array.from(nom).forEach(function (c) { h = (h * 31 + c.codePointAt(0)) % 360; });
         return h;
       }
-      function miniProfil(e) {
-        var carte = document.createElement('span');
-        carte.className = 'mini-profil';
-        carte.style.setProperty('--teinte', teinte(e.nom || '?'));
+      function rondEleve(e) {
         var rond = document.createElement('span');
         rond.className = 'avatar' + (e.avatar ? '' : ' defaut');
+        rond.style.setProperty('--teinte', teinte(e.nom || '?'));
         rond.textContent = e.avatar || (Array.from(e.nom || '?')[0] || '?').toLocaleUpperCase('fr-FR');
         if (e.avatar && e.avatar_fond) rond.dataset.fond = e.avatar_fond; // couleur du rond choisie par l'admin
         rond.title = e.avatar ? 'Photo de profil (choisie par l\'administrateur)' : 'Pas de photo de profil';
+        return rond;
+      }
+      function miniProfil(e) {
+        var carte = document.createElement('button');
+        carte.type = 'button';
+        carte.className = 'mini-profil';
+        carte.title = 'Voir la carte de profil de ' + e.nom;
+        carte.style.setProperty('--teinte', teinte(e.nom || '?'));
+        carte.addEventListener('click', function () { montrerCarte(e); });
+        var rond = rondEleve(e);
         var texte = document.createElement('span');
         texte.className = 'mp-texte';
         var nom = document.createElement('span');
@@ -555,6 +564,77 @@
         }
         carte.append(rond, texte);
         return carte;
+      }
+
+      // Grande carte de profil d'un élève, dans une fenêtre : la même que dans son logiciel (rendreCarteProfil, app/app.js),
+      // avec en plus, pour l'enseignant, sa dernière connexion et ce que dit son dernier travail (progression, suivis).
+      var suivis = {}; // id de l'élève → { reussies, trophees, niveau, faits, donnes }
+      function montrerCarte(e) {
+        var fen = $('#fen-carte');
+        if (!fen) {
+          fen = document.createElement('dialog');
+          fen.id = 'fen-carte';
+          fen.className = 'fen-carte';
+          fen.setAttribute('aria-label', 'Carte de profil');
+          fen.addEventListener('click', function (ev) { if (ev.target === fen) fen.close(); }); // clic à côté de la carte
+          document.body.appendChild(fen);
+        }
+        var el = function (balise, classe, texte) {
+          var x = document.createElement(balise);
+          if (classe) x.className = classe;
+          if (texte) x.textContent = texte;
+          return x;
+        };
+        var carte = el('div', 'carte-profil');
+        carte.style.setProperty('--teinte', teinte(e.nom || '?'));
+        var rond = rondEleve(e);
+        rond.classList.add('grand');
+        if (rond.dataset.fond) carte.dataset.fond = rond.dataset.fond;
+        var qui = el('div', 'cp-qui');
+        var nom = el('strong', 'cp-nom', e.nom);
+        nom.title = e.nom;
+        qui.append(nom, el('span', 'cp-role eleve', 'Élève'));
+        var identite = el('div', 'cp-identite');
+        identite.append(rond, qui);
+        var gagnees = MEDAILLES.filter(function (m) { return (e.badges || []).indexOf(m[0]) >= 0; });
+        var titre = el('p', 'cp-titre', gagnees.length > 1 ? 'Ses médailles' : gagnees.length ? 'Sa médaille' : 'Médailles');
+        var liste;
+        if (gagnees.length) {
+          liste = el('ul', 'cp-medailles');
+          gagnees.forEach(function (m) {
+            var li = el('li', 'medaille ' + m[3]);
+            li.title = m[2];
+            li.append(el('span', 'm-ruban'), el('span', 'm-disque', m[1]), el('span', 'm-nom', m[4]), el('span', 'm-detail', m[5]));
+            liste.appendChild(li);
+          });
+        } else liste = el('p', 'cp-vide', 'Pas encore de médaille : on en gagne pendant les événements du site.');
+        var suivi = el('ul', 'cp-suivi');
+        var ligne = function (texte) { suivi.appendChild(el('li', '', texte)); };
+        var c = classeChoisie();
+        if (c) ligne('🏫 Classe ' + c.nom);
+        ligne(e.derniere === e.cree ? '🕓 Pas encore connecté' : '🕓 Dernière connexion : ' + date(e.derniere));
+        var s = suivis[e.id];
+        if (!e.versions) ligne('📂 Pas encore de travail sauvegardé');
+        else if (!s) ligne('📂 Travail sauvegardé le ' + date(e.date) + ' (lecture en cours…)');
+        else {
+          ligne('✅ ' + s.reussies + (s.reussies > 1 ? ' collections réussies' : ' collection réussie')
+            + (s.trophees ? ' · 🏆 ' + s.trophees + (s.trophees > 1 ? ' trophées' : ' trophée') : ''));
+          if (s.donnes) ligne('📌 Exercices donnés réussis : ' + s.faits + ' sur ' + s.donnes);
+          ligne('Niveau choisi : ' + s.niveau);
+        }
+        var pied = el('div', 'cp-pied');
+        if (e.versions) {
+          var voir = el('a', 'bouton', '👁 Voir le travail');
+          voir.href = '../app/index.html#consulter-eleve=' + encodeURIComponent(e.id);
+          pied.appendChild(voir);
+        }
+        var fermer = bouton('Fermer', function () { fen.close(); }, 'principal');
+        pied.appendChild(fermer);
+        carte.append(el('div', 'cp-bandeau'), identite, titre, liste, suivi, pied);
+        fen.setAttribute('aria-label', 'Carte de profil de ' + e.nom);
+        fen.replaceChildren(carte);
+        if (!fen.open) fen.showModal();
+        fermer.focus();
       }
 
       function afficherEleves() {
@@ -643,6 +723,7 @@
               var niveau = NIVEAUX[donnees['boites-a-classer:reglage:niveau']] || NIVEAUX.normal;
               var donnes = (classeChoisie() && classeChoisie().exercices) || [];
               var faits = donnes.filter(function (id) { return ids.indexOf(id) !== -1; }).length;
+              suivis[x.e.id] = { reussies: ids.length, trophees: trophees, niveau: niveau, faits: faits, donnes: donnes.length }; // grande carte
               x.cellule.textContent = (ids.length ? '✅ ' + ids.length : '0') + (trophees ? ' · 🏆 ' + trophees : '')
                 + (donnes.length ? ' · 📌 ' + faits + '/' + donnes.length : '');
               x.cellule.title = (ids.length ? 'Réussies : ' + ids.map(function (id) { return NOMS[id] || nomSite(id); }).join(', ') : 'Aucune collection réussie')

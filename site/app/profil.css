@@ -226,3 +226,18 @@
   .annonce-photo, .annonce-photo.sortie, .annonce-photo .avatar, #compte .avatar.nouvelle { animation: none; }
   .ap-etincelle { display: none; }
 }
+
+/* ---------- « Mes classes » : petite carte cliquable, grande carte dans une fenêtre (3.38.0) ----------
+   site/classe/ (miniProfil, montrerCarte) : la même carte que dans le logiciel, plus le suivi de l'élève pour l'enseignant. */
+button.mini-profil { margin: -4px -8px -4px -4px; padding: 4px 8px 4px 4px; border: 0; border-radius: 14px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+button.mini-profil:hover { background: color-mix(in srgb, var(--accent, #2f6fde) 9%, transparent); }
+button.mini-profil:hover .mp-nom { text-decoration: underline; text-underline-offset: 3px; }
+button.mini-profil:focus-visible { outline: 2px solid var(--accent, #2f6fde); outline-offset: 2px; }
+.fen-carte { width: min(400px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 0; overflow: auto; border: 0; border-radius: 18px; background: transparent; animation: cp-ouvre .25s ease-out; }
+.fen-carte::backdrop { background: rgb(15 18 28 / .45); }
+.fen-carte .carte-profil { margin: 0; }
+.cp-suivi { display: grid; gap: 4px; margin: 0; padding: 12px 18px 14px; border-top: 1px solid var(--cp-ligne); color: var(--cp-doux); font-size: .9rem; list-style: none; }
+.cp-pied { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--cp-ligne); background: color-mix(in srgb, var(--cp-ligne) 35%, var(--cp-surface)); }
+@keyframes cp-ouvre { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .fen-carte { animation: none; } }
+@media (max-width: 420px) { .cp-suivi, .cp-pied { padding-inline: 14px; } }
