@@ -476,8 +476,10 @@
     titre.placeholder = 'Attribut…';
     titre.setAttribute('aria-label', 'Attribut de la boîte');
     titre.value = b.texte || '';
+    titre.title = b.texte || ''; // le nom entier au survol quand la boîte est étroite
     titre.addEventListener('input', () => {
       b.texte = titre.value;
+      titre.title = titre.value;
       const a = trouverAttr(titre.value);
       b.attr = a ? a.id : null;
       colorer(el, b);
@@ -2122,12 +2124,16 @@
     ancreMenu = ancre;
     ancre.setAttribute('aria-expanded', 'true');
 
+    // Toute la hauteur libre sous le bouton (sinon au-dessus, s'il y a plus de place) ; au-delà, le menu défile.
     const r = ancre.getBoundingClientRect();
+    const dessous = r.bottom + 4;
+    const placeDessous = window.innerHeight - dessous - 8, placeDessus = r.top - 12;
+    const enHaut = menu.scrollHeight > placeDessous && placeDessus > placeDessous;
+    menu.style.maxHeight = Math.max(160, enHaut ? placeDessus : placeDessous) + 'px';
     const larg = menu.offsetWidth;
     const haut = menu.offsetHeight;
     menu.style.left = borne(r.right - larg, 8, window.innerWidth - larg - 8) + 'px';
-    const dessous = r.bottom + 4;
-    menu.style.top = (dessous + haut > window.innerHeight - 8 ? Math.max(8, r.top - haut - 4) : dessous) + 'px';
+    menu.style.top = (enHaut ? Math.max(8, r.top - haut - 4) : dessous) + 'px';
     // Ouvert au clavier : le focus va au choix en cours (niveau) ou au premier.
     if (parClavier) {
       const premier = menu.querySelector('[aria-checked="true"]') || menu.querySelector('button:not(:disabled), input');
@@ -2162,7 +2168,15 @@
       pastille.style.setProperty('--c', couleur);
       btn.appendChild(pastille);
     }
-    btn.appendChild(document.createTextNode(texte));
+    // L'emoji du début dans une colonne de largeur fixe : tous les textes du menu commencent au même endroit.
+    const m = couleur ? null : EMOJI_DEVANT.exec(texte);
+    if (m && m[2]) {
+      const ico = document.createElement('span');
+      ico.className = 'menu-ico';
+      ico.setAttribute('aria-hidden', 'true');
+      ico.textContent = m[1];
+      btn.append(ico, document.createTextNode(m[2]));
+    } else btn.appendChild(document.createTextNode(texte));
     btn.addEventListener('click', () => { fermerMenu(); action(); });
     return btn;
   }
@@ -2429,7 +2443,7 @@
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
         titre('Plan de travail'),
         ...(pleinEcranPossible() ? [entreeMenu(pleinEcran() ? '📺 Quitter le plein écran' : '📺 Plein écran (tableau de la classe)', basculerPleinEcran)] : []),
-        entreeMenu('↺ Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
+        entreeMenu('🧹 Tout ranger (tout remettre en bas)', () => { etat.positions = {}; sauver(); fermerBilan(); rendre(); }),
         ...(peutCreer() ? [entreeMenu('🧑‍🏫 Montrer la solution (enseignants)', montrerSolution)] : []),
         titre('Imprimer et partager'),
         entreeMenu('🖨 Cartes à découper (activité sur papier)', imprimerCartes),
