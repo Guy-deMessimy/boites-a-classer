@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="profil.css">
   <link rel="stylesheet" href="avent.css">
+  <link rel="stylesheet" href="aventure.css">
 </head>
 <body>
   <!-- Icônes de la barre et du zoom : Lucide (licence ISC, https://lucide.dev), utilisées par <svg class="ico"><use href="#i-…"/></svg>. -->
@@ -37,6 +38,7 @@
     <div class="choix">
       <select id="collection" aria-label="Collection"></select>
       <button id="gerer" title="Choisir une collection (les administrateurs peuvent en créer)" aria-label="Gérer les collections"><svg class="ico"><use href="#i-piles"/></svg><span class="long">Collections</span></button>
+      <button id="aventure" title="L'Aventure des boîtes : sept îles à conquérir"><span aria-hidden="true">🗺️</span><span class="long"> Aventure</span></button>
       <button id="exercices" hidden title="Les exercices donnés par ton enseignant"><svg class="ico"><use href="#i-liste"/></svg><span class="long">Exercices</span><span id="exercices-nb" class="compteur" hidden></span></button>
       <button id="niveau" class="ouvre-menu" aria-haspopup="menu"><span class="niveau-ico" aria-hidden="true">🌿</span><span class="niveau-nom long">Normal</span></button>
     </div>
@@ -377,5 +379,6 @@
   <script src="app.js"></script>
   <script src="avent.js"></script>
   <script src="niveau.js"></script>
+  <script src="aventure.js"></script>
 </body>
 </html>

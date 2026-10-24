@@ -167,6 +167,23 @@
   // police plus lisible (OpenDyslexic, licence OFL, téléchargée seulement si elle est choisie), moins d'animations.
   // Gardés avec le travail (sauvegarde en ligne), comme le niveau ; posés sur <html> pour app/style.css.
   const CLE_ACCES = 'boites-a-classer:reglage:acces';
+  // Progression du mode aventure (app/aventure.js), synchronisée : { v: 1, niveaux: { idCollection: { e: 1..3, t: ms, d: date } },
+  // regions: { matière: date } }. Tout ce qui arrive d'ailleurs est vérifié et borné ici.
+  const CLE_AVENTURE = 'boites-a-classer:jeu:aventure';
+  function aventurePropre(o) {
+    const propre = { v: 1, niveaux: {}, regions: {} };
+    const date = (d) => (typeof d === 'string' && /^[0-9TZ:.+-]{1,40}$/.test(d) ? d : '');
+    if (o && o.niveaux && typeof o.niveaux === 'object') {
+      for (const [id, n] of Object.entries(o.niveaux).slice(0, 500)) {
+        if (!idSur(id) || !n || ![1, 2, 3].includes(n.e)) continue;
+        propre.niveaux[id] = { e: n.e, t: Number.isInteger(n.t) && n.t > 0 ? Math.min(n.t, 864e5) : 0, d: date(n.d) };
+      }
+    }
+    if (o && o.regions && typeof o.regions === 'object') {
+      for (const [m, d] of Object.entries(o.regions).slice(0, 50)) if (idSur(m) && date(d)) propre.regions[m] = date(d);
+    }
+    return propre;
+  }
   const TAILLES = ['normale', 'grande', 'tres-grande'];
   const ZOOM_TAILLE = { normale: 1, grande: 1.2, 'tres-grande': 1.4 }; // le plan de travail grandit avec le texte
   const accesPropre = (o) => ({
@@ -363,6 +380,7 @@
     plateau.dataset.vide = `Tous les ${elements()[1]} sont placés.`;
     document.title = `${coll.nom} · ${nomSite()}`; // onglets et favoris
     ecrire('boites-a-classer:collection', coll.id);
+    window.dispatchEvent(new CustomEvent('boites:collection', { detail: { collection: coll.id } })); // mode aventure
     fermerBilan();
     rendre();
   }
@@ -1303,7 +1321,7 @@
     const PROGRES = /^(reussi|expert):[A-Za-z0-9_-]{1,60}$/;
     const entrees = Object.entries(donnees)
       .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE)
-        && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU || k === CLE_SUIVI || k === CLE_ACCES));
+        && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU || k === CLE_SUIVI || k === CLE_ACCES || k === CLE_AVENTURE));
     const lireJSON = (v) => { try { return JSON.parse(v); } catch (e) { return null; } };
     let n = 0;
 
@@ -1335,6 +1353,7 @@
       if (PROGRES.test(k.slice(PREFIXE.length))) { if (/^[0-9TZ:.+-]{1,40}$/.test(v)) ecrire(k, v); continue; }
       if (k === CLE_NIVEAU) { if (niveauValide(v)) ecrire(k, v); continue; }
       if (k === CLE_ACCES) { try { ecrire(k, JSON.stringify(accesPropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
+      if (k === CLE_AVENTURE) { try { ecrire(k, JSON.stringify(aventurePropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
       if (k === CLE_SUIVI) { try { ecrire(k, JSON.stringify(suiviPropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
       const c = toutes().find((x) => PREFIXE + x.id === k);
       const o = lireJSON(v);
@@ -2326,6 +2345,8 @@
       if (n) lignes.unshift(['erreur', `${pluriel(n, 'carte est mal placée', 'cartes sont mal placées')} (en rouge) : à toi de trouver pourquoi !`]);
     }
     for (const e of places) elEtres.get(e.id).classList.add(fautifs.has(e.id) ? 'faux' : 'ok');
+    // Pour le mode aventure (app/aventure.js) : une vérification avec des cartes mal placées compte comme une erreur.
+    window.dispatchEvent(new CustomEvent('boites:verification', { detail: { collection: coll.id, complet, erreurs: fautifs.size } }));
     if (complet) {
       dire('Bravo ! Ta classification est correcte.');
       // Pour les défis qui attendent une collection réussie (calendrier de l'Avent, app/avent.js).
@@ -2438,6 +2459,7 @@
         entreeMenu('🌳 Voir ma classification en arbre', ouvrirArbre),
         entreeMenu('📊 Tableau des caractères', ouvrirTableau),
         titre('Jouer'),
+        ...(window.aventure ? [entreeMenu('🗺️ L\'Aventure des boîtes', () => window.aventure.ouvrir())] : []),
         entreeMenu('🎲 Jeu « Qui suis-je ? »', ouvrirJeu),
         ...(window.avent && window.avent.actif() ? [entreeMenu('🎄 Calendrier de l\'Avent', window.avent.ouvrir)] : []),
         entreeMenu(defi ? '⏹ Arrêter le défi chronométré' : '⏱ Défi chronométré (repart de zéro)', () => (defi ? arreterDefi() : lancerDefi())),
@@ -3155,6 +3177,7 @@
     }
     info.textContent = '💡 ' + texte;
     noterSuivi('indices');
+    window.dispatchEvent(new CustomEvent('boites:indice', { detail: { collection: coll.id } })); // mode aventure
     dire(texte);
   }
 
@@ -4465,6 +4488,17 @@
   window.boitesApp = {
     lire, ecrire, choisirCollection, feter: confettis,
     collection: (id) => toutes().find((c) => c.id === id) || null,
+    // Mode aventure (app/aventure.js).
+    collectionCourante: () => (coll ? coll.id : null),
+    reussie: (id) => !!lire('boites-a-classer:reussi:' + id),
+    marquerReussie: (id) => { if (!lire('boites-a-classer:reussi:' + id)) { ecrire('boites-a-classer:reussi:' + id, new Date().toISOString()); remplirSelect(); } },
+    viderPlan: () => { if (defi) arreterDefi(); etat = { boites: [], positions: {} }; sauver(); fermerBilan(); rendre(); }, // ↩ ramène l'ancien travail
+    elements: (id) => elements(toutes().find((c) => c.id === id) || coll),
+    message: (t) => { info.textContent = t; },
+    dire: (t) => dire(t),
+    calme: () => lireAcces().calme || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    avatar: () => (jetonCompte() && lire(CLE_AVATAR)) || '',
+    consultation: () => document.body.classList.contains('consultation'),
   };
 
   if (location.hash.startsWith('#transfert=')) recevoirTransfert().then(demarrer);
