@@ -187,6 +187,9 @@
   let fete = null;
   // « Niveau supérieur ! » : plein écran, rayons qui tournent, la photo qui monte avec son nouveau cadre, le compteur.
   function feter(avant, nv) {
+    // Une fenêtre modale (la victoire de l'Aventure…) passerait par-dessus : la fête attend qu'elle se ferme.
+    const modale = document.querySelector('dialog:modal');
+    if (modale) { modale.addEventListener('close', () => setTimeout(() => feter(avant, nv), 300), { once: true }); return; }
     if (fete) fete.remove();
     const f = el('div', 'niveau-fete');
     f.setAttribute('role', 'dialog');
@@ -268,7 +271,8 @@
   };
   // La réussite d'une collection est annoncée avant d'être écrite : on relit juste après.
   window.addEventListener('boites:reussite', () => bientot(120));
-  window.addEventListener('boites:aventure-etoiles', () => bientot(120)); // app/aventure.js, après l'écriture de « jeu:aventure »
+  // app/aventure.js, après l'écriture de « jeu:aventure » ; sa victoire s'ouvre ensuite (jusqu'à 1,1 s) : relue après elle.
+  window.addEventListener('boites:aventure-etoiles', () => bientot(1800));
   // La carte et le bouton du compte sont redessinés par le logiciel : on les complète à chaque fois.
   const observer = new MutationObserver(() => { if (derniere) { majBarre(derniere); majCarte(derniere); } });
   const carte = document.getElementById('sv-carte');
