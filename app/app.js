@@ -410,6 +410,8 @@
     }
     ajusterToile();
     marquerEnDirect();
+    const planVide = document.getElementById('plan-vide');
+    if (planVide) planVide.hidden = !!(etat.boites.length || Object.keys(etat.positions).length);
   }
 
   // Ligne d'information quand rien n'est survolé : dépend de la matière et du niveau.
@@ -2689,6 +2691,7 @@
     if (tuto) arreterTuto(false);
     for (const d of document.querySelectorAll('dialog[open]')) d.close();
     tuto = { etape: 0, boites: 0, boite: null, verifie: false, minuterie: setInterval(suivreTuto, 250) };
+    document.body.classList.add('tuto-actif');
     bulleTuto.hidden = false;
     montrerEtape();
   }
@@ -2698,6 +2701,7 @@
     if (!tuto) return;
     clearInterval(tuto.minuterie);
     tuto = null;
+    document.body.classList.remove('tuto-actif');
     bulleTuto.hidden = true;
     anneauTuto.hidden = true;
     if (fini) ecrire(CLE_AIDE, '1');
@@ -3291,6 +3295,10 @@
   }
 
   $('#nouvelle').addEventListener('click', nouvelleBoite);
+  const videBoite = document.getElementById('vide-boite');
+  const videTuto = document.getElementById('vide-tuto');
+  if (videBoite) videBoite.addEventListener('click', nouvelleBoite);
+  if (videTuto) videTuto.addEventListener('click', () => lancerTuto());
   $('#annuler').addEventListener('click', annuler);
   $('#retablir').addEventListener('click', retablir);
   boutonOutils.addEventListener('click', ouvrirMenuOutils);
