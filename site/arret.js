@@ -22,7 +22,7 @@
     s.onload = function () { if (window.hanter) window.hanter.suivre(e, fini, r); };
     document.head.appendChild(s);
   }
-  var NOMS = /Boîtes à (classer|hanter|lutins|œufs|fleurs)/g;
+  var NOMS = /Boîtes à (classer|hanter|lutins|œufs|fleurs|masques|sable|crayons)/g;
   function suivreTheme(theme, nom) {
     var racine = document.documentElement;
     if (!theme || !nom || (racine.dataset.theme || 'normal') === theme) return;

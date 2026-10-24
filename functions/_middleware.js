@@ -3,7 +3,7 @@
 //   son clip rassurant), sauf la page d'administration et ce dont elle a besoin pour le rouvrir, et le service client
 //   (les visiteurs peuvent y poser leurs questions pendant l'arrêt) ;
 // - les pages HTML partent habillées du thème du site (serveur/theme.js : décor, bandeau, nom du site), sauf les clips
-//   des événements (site/halloween/, site/noel/), qui ont le leur.
+//   des événements (site/halloween/, site/noel/, site/paques/…), qui ont le leur.
 
 import { maintenanceActive, PAGE_MAINTENANCE } from '../serveur/maintenance.js';
 import { lireTheme, habiller } from '../serveur/theme.js';
@@ -14,7 +14,7 @@ const TOUJOURS_OUVERT = [
   /^\/aide(\/|$)/, /^\/api\/support\//, /^\/arret\.js$/, // service client, ouvert pendant l'arrêt
   /^\/polices\//, /^\/fond-sciences\.svg$/, /^\/icone\.png$/, // utilisés par la page de maintenance
 ];
-const SANS_THEME = /^\/(api|halloween|noel)\//;
+const SANS_THEME = /^\/(api|halloween|noel|paques|printemps|carnaval|ete|rentree)\//;
 const PAGE = /(\/|\.html|\/[^./]+)$/; // adresse d'une page (et non d'un script, d'une image…)
 const CONDITIONS = ['If-None-Match', 'If-Modified-Since'];
 

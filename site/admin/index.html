@@ -297,6 +297,9 @@
             <option value="noel">🎄 Noël : Boîtes à lutins</option>
             <option value="paques">🐣 Pâques : Boîtes à œufs</option>
             <option value="printemps">🌸 Printemps : Boîtes à fleurs</option>
+            <option value="carnaval">🎭 Carnaval : Boîtes à masques</option>
+            <option value="ete">🌞 Été : Boîtes à sable</option>
+            <option value="rentree">📚 Rentrée : Boîtes à crayons</option>
           </select>
           <button type="button" class="bouton" id="appliquer-theme" disabled>Appliquer</button>
         </div>
@@ -309,6 +312,9 @@
               <option value="noel">🎄 Noël</option>
               <option value="paques">🐣 Pâques</option>
               <option value="printemps">🌸 Printemps</option>
+              <option value="carnaval">🎭 Carnaval</option>
+              <option value="ete">🌞 Été</option>
+              <option value="rentree">📚 Rentrée</option>
               <option value="normal">🔬 Normal</option>
             </select>
             <label>du <input type="date" id="theme-du" required></label>
@@ -330,6 +336,9 @@
             <option value="noel">🎄 Noël</option>
             <option value="paques">🐣 Pâques</option>
             <option value="printemps">🌸 Printemps</option>
+            <option value="carnaval">🎭 Carnaval</option>
+            <option value="ete">🌞 Été</option>
+            <option value="rentree">📚 Rentrée</option>
           </select>
           <button type="button" class="bouton" id="basculer-evenement" disabled></button>
         </div>
@@ -342,6 +351,9 @@
               <option value="noel">🎄 Noël</option>
               <option value="paques">🐣 Pâques</option>
               <option value="printemps">🌸 Printemps</option>
+              <option value="carnaval">🎭 Carnaval</option>
+              <option value="ete">🌞 Été</option>
+              <option value="rentree">📚 Rentrée</option>
             </select>
             <label>du <input type="datetime-local" id="evenement-debut" required></label>
             <label>au <input type="datetime-local" id="evenement-fin" required></label>
@@ -638,7 +650,7 @@
           function (p) { return p.au < r.jour ? 'terminé' : p.du <= r.jour ? 'en cours' : 'à venir'; },
           envoyerProgrammeTheme);
         $('#appliquer-theme').disabled = true;
-        document.title = document.title.replace(/Boîtes à (classer|hanter|lutins|œufs|fleurs)/, r.nom);
+        document.title = document.title.replace(/Boîtes à (classer|hanter|lutins|œufs|fleurs|masques|sable|crayons)/, r.nom);
         if (r.theme === 'normal') delete document.documentElement.dataset.theme;
         else document.documentElement.dataset.theme = r.theme;
         if (siteArrete !== null) afficherEtat(siteArrete);
@@ -670,7 +682,7 @@
         }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); chargerTheme(); });
       });
 
-      /* Événements (serveur/evenement.js : Noël, Halloween, Pâques, Printemps) : fond animé, personnages à attraper, boss et clip d'intro sur
+      /* Événements (serveur/evenement.js : Noël, Halloween, Pâques, Printemps, Carnaval, Été, Rentrée) : fond animé, personnages à attraper, boss et clip d'intro sur
          les pages ouvertes (site/evenement.js), quelques secondes après le déclenchement, sans recharger
          (functions/api/etat.js). Le choix de l'événement se fait dans la liste à côté du bouton. */
       var EVENEMENTS = {
@@ -678,8 +690,11 @@
         halloween: { emoji: '🎃', de: 'd\'Halloween', petits: 'fantômes', petit: 'fantôme', icone: '👻', boss: '👑 Roi des fantômes', vaincu: 'vaincu', badge: '🎃 Halloween' },
         paques: { emoji: '🐣', de: 'de Pâques', petits: 'œufs', petit: 'œuf', icone: '🥚', boss: '🐰 Lapin de Pâques', vaincu: 'attrapé', badge: '🐰 Pâques' },
         printemps: { emoji: '🌸', de: 'du printemps', petits: 'papillons', petit: 'papillon', icone: '🦋', boss: '🐝 Reine des abeilles', vaincu: 'attrapée', badge: '🌷 Printemps' },
+        carnaval: { emoji: '🎭', de: 'du carnaval', petits: 'masques', petit: 'masque', icone: '🎭', boss: '🥁 Géant du carnaval', vaincu: 'couvert de confettis', badge: '👑 Carnaval' },
+        ete: { emoji: '🌞', de: "de l'été", petits: 'crabes', petit: 'crabe', icone: '🦀', boss: '🐙 Grande Pieuvre', vaincu: 'attrapée', badge: '🐙 Été' },
+        rentree: { emoji: '📚', de: 'de la rentrée', petits: 'crayons', petit: 'crayon', icone: '✏️', boss: '🎒 Cartable géant', vaincu: 'attrapé', badge: '🎒 Rentrée' },
       };
-      var NOMS_EVENEMENTS = { halloween: 'Halloween', noel: 'Noël', paques: 'Pâques', printemps: 'Printemps' };
+      var NOMS_EVENEMENTS = { halloween: 'Halloween', noel: 'Noël', paques: 'Pâques', printemps: 'Printemps', carnaval: 'Carnaval', ete: 'Été', rentree: 'Rentrée' };
       var evenement = null, dernierFini = null;
       var fiche = function () { var x = evenement || dernierFini; return EVENEMENTS[x ? x.nom : $('#evenement-choix').value] || EVENEMENTS.noel; };
       function afficherEvenement(e, fini) {
@@ -844,7 +859,10 @@
       var LIBELLES = { verifie: ['✔', 'vérifié par le site'], halloween: ['🎃', 'Halloween (boss)'], 'participation-halloween': ['🧛', 'participation à Halloween'],
         noel: ['🎅', 'Noël (boss)'], 'participation-noel': ['⛄', 'participation à Noël'],
         paques: ['🐰', 'Pâques (boss)'], 'participation-paques': ['🥚', 'participation à Pâques'],
-        printemps: ['🌷', 'Printemps (boss)'], 'participation-printemps': ['🦋', 'participation au printemps'] };
+        printemps: ['🌷', 'Printemps (boss)'], 'participation-printemps': ['🦋', 'participation au printemps'],
+        carnaval: ['👑', 'Carnaval (boss)'], 'participation-carnaval': ['🎊', 'participation au carnaval'],
+        ete: ['🐙', 'Été (boss)'], 'participation-ete': ['🦀', 'participation à l\'été'],
+        rentree: ['🎒', 'Rentrée (boss)'], 'participation-rentree': ['✏️', 'participation à la rentrée'] };
       var badgesDe = function (c) { try { var l = JSON.parse(c.badges || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } };
       // Rôle d'un compte, dans l'ordre des étiquettes de la liste : admin, enseignant, élève (connecté par code), ordinaire.
       var roleDe = function (c) { return c.admin ? 'admin' : c.enseignant ? 'enseignant' : c.classe ? 'eleve' : 'ordinaire'; };
@@ -1104,6 +1122,12 @@
         ['participation-paques', '🥚', 'Participation', 'Pâques', 'argent'],
         ['printemps', '🌷', 'Printemps', 'Reine des abeilles attrapée', 'or'],
         ['participation-printemps', '🦋', 'Participation', 'Printemps', 'argent'],
+        ['carnaval', '👑', 'Carnaval', 'Géant couvert de confettis', 'or'],
+        ['participation-carnaval', '🎊', 'Participation', 'Carnaval', 'argent'],
+        ['ete', '🐙', 'Été', 'Grande Pieuvre attrapée', 'or'],
+        ['participation-ete', '🦀', 'Participation', 'Été', 'argent'],
+        ['rentree', '🎒', 'Rentrée', 'Cartable géant attrapé', 'or'],
+        ['participation-rentree', '✏️', 'Participation', 'Rentrée', 'argent'],
       ];
       function carteProfil(c, avatar, fond) {
         var el = function (balise, classe, texte) {

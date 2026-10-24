@@ -167,8 +167,11 @@ Choisi dans la page admin (« 🎨 Thème », `POST /api/admin/theme { theme }`,
 | `noel` | Boîtes à lutins | `site/noel/theme.css`, bandeau « 🎄 Événement de Noël prochainement… » |
 | `paques` | Boîtes à œufs | `site/paques/theme.css`, bandeau « 🐣 Événement de Pâques prochainement… » |
 | `printemps` | Boîtes à fleurs | `site/printemps/theme.css`, bandeau « 🌸 Événement du printemps prochainement… » |
+| `carnaval` | Boîtes à masques | `site/carnaval/theme.css`, bandeau « 🎭 Événement du carnaval prochainement… » |
+| `ete` | Boîtes à sable | `site/ete/theme.css`, bandeau « 🌞 Événement de l'été prochainement… » |
+| `rentree` | Boîtes à crayons | `site/rentree/theme.css`, bandeau « 📚 Événement de la rentrée prochainement… » |
 
-- Les fichiers gardent le nom « Boîtes à classer » et le thème sciences (c'est aussi ce que montre l'application de bureau). `functions/_middleware.js` habille chaque page HTML en l'envoyant (sauf les clips `site/halloween/` et `site/noel/`) : `data-theme` sur `<html>` (couleurs du logiciel, `app/style.css`), classe `theme-<nom>` et `<link>` du décor sur une page dont le `<html>` porte `data-decor` (l'accueil), retrait des éléments `data-theme-seul` d'un autre thème (bandeaux de l'accueil), nom du site dans `<title>` et dans les éléments `data-nom-site` (texte et attributs `content`, `title`, `aria-label` ; `data-nom-site="attributs"` : attributs seulement). Pas d'`ETag` sur ces pages : le navigateur les redemande en entier.
+- Les fichiers gardent le nom « Boîtes à classer » et le thème sciences (c'est aussi ce que montre l'application de bureau). `functions/_middleware.js` habille chaque page HTML en l'envoyant (sauf les clips des événements) : `data-theme` sur `<html>` (couleurs du logiciel, `app/style.css`), classe `theme-<nom>` et `<link>` du décor sur une page dont le `<html>` porte `data-decor` (l'accueil), retrait des éléments `data-theme-seul` d'un autre thème (bandeaux de l'accueil), nom du site dans `<title>` et dans les éléments `data-nom-site` (texte et attributs `content`, `title`, `aria-label` ; `data-nom-site="attributs"` : attributs seulement). Pas d'`ETag` sur ces pages : le navigateur les redemande en entier.
 - `GET /api/etat` renvoie `theme` et `nomSite` : le logiciel (`app/app.js`) et les pages du site (`site/arret.js`) les suivent sans recharger ; l'accueil se recharge 6 s après le changement.
 - Pour ajouter un nom ailleurs : écrire « Boîtes à classer » dans le fichier et marquer l'élément `data-nom-site` (dans le logiciel, `nomSite()`). Ne pas marquer le JSON-LD, le manifest, les noms de fichiers ni les cartes imprimées.
 - Pendant un événement, l'accueil prend le thème de l'événement et son nom (« Boîtes à lutins » pour Noël) le temps qu'il dure, quel que soit le thème du site.
@@ -182,6 +185,21 @@ Pendant le thème Noël (`data-theme="noel"`, § Thème du site), `app/avent.js`
 - Logiciel : bouton 🎄 dans la barre (pastille quand la case du jour attend), Outils → Jouer → « Calendrier de l'Avent », `#avent` ou `#avent=<jour>` dans l'adresse.
 - Accueil : section `.avent` (`data-theme-seul="noel"`, comme son `<script>` et son `<link>`), chaque case ouverte mène au logiciel.
 - Essais en local seulement : date simulée dans `localStorage`, clé `boites-a-classer-avent:date` (« AAAA-MM-JJ »).
+
+## Carnaval, Été et Rentrée (depuis la 4.2.0) (depuis la 4.2.0)
+
+Trois événements de plus sur le même modèle (fiches `carnaval`, `ete` et `rentree` de `site/evenement.js`), à déclencher depuis la page admin, à la main ou programmés. Avec Halloween, Noël, Printemps et Pâques, ils couvrent l'année scolaire :
+
+| | Carnaval 🎭 | Été 🌞 | Rentrée 📚 |
+|---|---|---|---|
+| Thème (`site/<nom>/`) | soir de fête, `fond-carnaval.svg`, `scene-carnaval.svg`, titres en Bangers | plage, `fond-ete.svg`, `scene-ete.svg`, titres en Lilita One | cahier à grands carreaux, `fond-rentree.svg`, `scene-rentree.svg`, titres en Patrick Hand |
+| Nom du site | Boîtes à masques | Boîtes à sable | Boîtes à crayons |
+| Petits personnages | masques 🎭, qui dansent partout | crabes 🦀, qui courent en bas de l'écran | crayons de couleur ✏️, qui volent partout |
+| Boss | 🥁 le Géant du carnaval : on lui lance des confettis, il danse et s'en va | 🐙 la Grande Pieuvre : elle replonge en laissant tomber coquillages et étoiles de mer | 🎒 le Cartable géant : il s'en va en laissant tomber des fournitures |
+| Badges | 👑 `carnaval` + ✔ `verifie` au gagnant, 🎊 `participation-carnaval` | 🐙 `ete` + ✔ `verifie`, 🦀 `participation-ete` | 🎒 `rentree` + ✔ `verifie`, ✏️ `participation-rentree` |
+| Clip d'intro | `site/carnaval/index.html`, « Le Carnaval de Venise » (domaine public) | `site/ete/index.html`, « Il était un petit navire » (domaine public) | `site/rentree/index.html`, « Au clair de la lune » (domaine public) |
+
+Le carnaval est un thème de nuit (étoiles et lune). L'été et la rentrée sont des thèmes de jour (`nuit: false`). Polices dans `site/polices/` (`bangers-latin.woff2`, `lilita-one-latin.woff2`, `patrick-hand-latin.woff2`, licence OFL). Les badges et les noms du site sont aux mêmes endroits que pour Pâques et le Printemps. Les clips ne sont pas habillés par le thème du site (`functions/_middleware.js`, `SANS_THEME`).
 
 ## Pâques et Printemps (depuis la 3.42.0)
 

@@ -1,0 +1,68 @@
+/* Thème Été de la page d'accueil (classe « theme-ete » sur <html>).
+   Plage en plein jour : ciel, soleil, sable, motif fond-ete.svg, scene-ete.svg, titres en Lilita One.
+   Dessins faits pour Boîtes à classer (GPL-3.0). */
+@font-face {
+  font-family: "Lilita One";
+  font-weight: 400;
+  font-display: swap;
+  src: url(../polices/lilita-one-latin.woff2) format("woff2");
+}
+:root.theme-ete {
+  color-scheme: light;
+  --fond: #e8f7ff;
+  --carte: rgb(255 255 255 / .95);
+  --encre: #14324a;
+  --doux: #3d6278;
+  --ligne: #d5e4f2;
+  --accent: #0e8fbf;
+  --accent-encre: #ffffff;
+  --accent-doux: #fff3c4;
+  --code: #eef5ff;
+  --voile: rgb(255 255 255 / .86);
+  --ombre: 0 8px 22px rgb(20 80 110 / .18);
+  --motif-opacite: .28;
+  --titre: "Lilita One", "Space Grotesk", system-ui, cursive;
+}
+.theme-ete body {
+  background:
+    radial-gradient(circle at 86% 12%, #fff7c2 0 16px, #ffe14a 32px, rgb(255 236 160 / .35) 64px, transparent 110px) fixed,
+    radial-gradient(40px 18px at 18% 16%, #fff 92%, transparent) fixed,
+    radial-gradient(26px 22px at 14% 14%, #fff 92%, transparent) fixed,
+    radial-gradient(36px 16px at 48% 8%, #fff 92%, transparent) fixed,
+    linear-gradient(180deg, #4eb6ef 0%, #b7e6fb 52%, #ffe7a8 100%) fixed;
+}
+.theme-ete body::before {
+  z-index: -3;
+  background: url(fond-ete.svg) 0 0 / 320px 320px;
+}
+.theme-ete body::after {
+  content: "";
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: min(34vh, 300px);
+  z-index: -2;
+  background: url(scene-ete.svg) center bottom / auto 100% repeat-x;
+  pointer-events: none;
+}
+.theme-ete main h1,
+.theme-ete main h2,
+.theme-ete main .carte h3,
+.theme-ete main .annonce p {
+  font-family: var(--titre);
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+.theme-ete main h1 { color: #e25b3a; text-shadow: 0 3px 0 #fff; }
+.theme-ete main h2 { color: #0c5f86; font-size: 2rem; text-shadow: 0 0 6px #fff, 0 2px 0 #fff; }
+.theme-ete main .carte h3 { color: #0e8fbf; font-size: 1.35rem; }
+.theme-ete .auteur { color: #e25b3a; }
+.theme-ete .annonce p {
+  background: linear-gradient(90deg, #0e8fbf, #1f8ec4 40%, #e25b3a);
+  color: #fff;
+  font-size: 1.35rem;
+  text-shadow: 0 1px 3px rgb(0 0 0 / .35);
+  box-shadow: var(--ombre);
+}
+.theme-ete .annonce a { color: #fff; font-family: "Space Grotesk", system-ui, sans-serif; font-size: .95rem; letter-spacing: 0; }
+.theme-ete .fonctions li::before { background: #0e8fbf; }
+.theme-ete footer { margin-bottom: 120px; }

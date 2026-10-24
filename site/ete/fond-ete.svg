@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <!-- Motif de l'été, mosaïque 320 px. Dessins faits pour Boîtes à classer (GPL-3.0). -->
+  <circle cx="48" cy="42" r="16" fill="#ffe14a" opacity=".85"/>
+  <g fill="none" stroke="#1f8ec4" stroke-width="4" stroke-linecap="round" opacity=".4">
+    <path d="M150 36c16 10 28 2 40 12"/><path d="M30 180c18 8 26 0 40 10"/>
+  </g>
+  <g transform="translate(230 70)" opacity=".85">
+    <path d="M0 10c8-16 24-16 30 0-8 6-22 6-30 0z" fill="#ffd1a8"/>
+    <path d="M6 12c6 8 16 8 18 0" fill="none" stroke="#e0892f" stroke-width="2"/>
+  </g>
+  <g transform="translate(70 230)" fill="#e25b3a" opacity=".8">
+    <circle cx="0" cy="0" r="8"/><circle cx="18" cy="2" r="6"/>
+    <path d="M-6-6l-8-8M22-4l8-8" stroke="#e25b3a" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <path d="M250 220l6 8 8-4-2 10 8 4-10 2 2 9-8-6-8 5 1-9-9-3 8-3z" fill="#ffb15a" opacity=".9"/>
+  <ellipse cx="160" cy="250" rx="18" ry="10" fill="#ffd7b0" opacity=".75"/>
+</svg>

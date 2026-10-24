@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <!-- Motif du carnaval, mosaïque 320 px. Dessins faits pour Boîtes à classer (GPL-3.0). -->
+  <g fill="#ffd23f" opacity=".8">
+    <path d="M36 28l3 8 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z"/>
+    <path d="M250 210l2.4 6 6 .8-4.6 4 1.4 6-5.2-3.2-5.2 3.2 1.4-6-4.6-4 6-.8z"/>
+  </g>
+  <g fill="#ff4f9a" opacity=".75">
+    <path d="M180 40l3 7 8 .6-6 4.4 2 7.4-7-4-7 4 2-7.4-6-4.4 8-.6z"/>
+    <rect x="70" y="150" width="7" height="16" rx="1.5" transform="rotate(24 73 158)"/>
+    <rect x="210" y="90" width="6" height="14" rx="1.5" transform="rotate(-18 213 97)" fill="#4dabff"/>
+  </g>
+  <g transform="translate(40 210)" opacity=".8">
+    <ellipse cx="0" cy="0" rx="16" ry="18" fill="#ffe08a"/>
+    <path d="M-16-4c2 10 8 14 16 14s14-4 16-14c-6 6-26 6-32 0z" fill="#7b2cbf"/>
+    <circle cx="-6" cy="2" r="2" fill="#1a1028"/><circle cx="6" cy="2" r="2" fill="#1a1028"/>
+  </g>
+  <g transform="translate(260 150)" opacity=".75">
+    <path d="M0 0c8-14 22-14 28 0-6 4-22 4-28 0z" fill="#ff4f9a"/>
+    <path d="M4 2c6 10 16 10 20 0" fill="none" stroke="#fff" stroke-width="2"/>
+  </g>
+</svg>

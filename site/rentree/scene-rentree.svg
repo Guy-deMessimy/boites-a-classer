@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="280" viewBox="0 0 1200 280">
+  <!-- Cour d'école, répétée en bas de l'accueil. Dessins faits pour Boîtes à classer (GPL-3.0). -->
+  <rect width="1200" height="280" fill="#e7f6d8"/>
+  <rect y="150" width="1200" height="130" fill="#d7ecb8"/>
+  <g transform="translate(80 70)">
+    <rect width="200" height="120" fill="#f4efe4" stroke="#c9b89a"/>
+    <polygon points="0,20 100,-20 200,20" fill="#e25b3a"/>
+    <rect x="84" y="58" width="32" height="62" fill="#8d5a32"/>
+    <rect x="28" y="48" width="28" height="24" fill="#9fd4f2"/><rect x="144" y="48" width="28" height="24" fill="#9fd4f2"/>
+  </g>
+  <g transform="translate(420 120)">
+    <rect x="14" y="40" width="10" height="50" fill="#6b4a2a"/>
+    <circle cx="19" cy="28" r="26" fill="#3f9a46"/>
+  </g>
+  <g transform="translate(980 110)">
+    <rect x="18" y="36" width="12" height="54" fill="#6b4a2a"/>
+    <circle cx="24" cy="26" r="28" fill="#2f8a3e"/>
+  </g>
+  <g transform="translate(620 150)">
+    <path d="M30 8c0-14 36-14 36 0" fill="none" stroke="#a35d16" stroke-width="6"/>
+    <rect x="16" y="8" width="64" height="52" rx="10" fill="#e0892f" stroke="#a35d16"/>
+  </g>
+  <g transform="translate(800 80) rotate(8)">
+    <rect width="16" height="90" rx="3" fill="#ffd23f"/>
+    <polygon points="0,0 16,0 8,-10" fill="#f6d7a8"/>
+    <rect y="78" width="16" height="12" fill="#333"/>
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-// Effets des événements du site (serveur/evenement.js : Halloween, Noël, Pâques, Printemps), chargés par site/arret.js et app/app.js
+// Effets des événements du site (serveur/evenement.js : Halloween, Noël, Pâques, Printemps, Carnaval, Été, Rentrée), chargés par site/arret.js et app/app.js
 // quand un admin en a déclenché un (page site/admin/). Chaque événement a sa fiche dans THEMES (petits personnages à
 // attraper, boss, textes, couleurs, décor). Préfixe « hanter » (classes, window.hanter) : historique, Halloween d'abord.
 // - accueil : s'il ne porte pas déjà le thème de l'événement (classe « theme-<nom> » sur <html>,
@@ -8,7 +8,7 @@
 //   un point à un compte connecté (functions/api/evenement/[action].js). « Chasser les … » les renvoie (choix gardé
 //   dans le navigateur ; dans le logiciel, l'entrée est dans 🧰 Outils) ;
 // - quand tous ensemble en ont attrapé 30, le boss (Roi des fantômes, Père Noël, Lapin de Pâques, Reine des abeilles)
-//   apparaît chez tout le monde : chaque
+//   (et le Géant du carnaval, la Grande Pieuvre, le Cartable géant) apparaît chez tout le monde : chaque
 //   clic (compte connecté) lui retire 1 000 PV, la barre suit les clics de tous ; celui qui a cliqué le plus gagne les
 //   badges « vérifié par le site » et celui de l'événement (écran de victoire, une fois) ; tout participant gagne le
 //   badge de participation ;
@@ -188,6 +188,60 @@
   var PETALE_CERISIER = '<i class="hanter-printemps-petale-chute"></i>';
   var GOUTTE_MIEL = '<i class="hanter-printemps-miel"></i>';
 
+  // Carnaval : masque vénitien à plumes. Le Géant porte le même masque, une couronne et un costume rayé.
+  var MASQUE = '<svg viewBox="0 0 100 124" aria-hidden="true">'
+    + '<path d="M50 34L34 6l14 22z" fill="#ff4f9a"/><path d="M50 34L50 2l8 26z" fill="#ffd23f"/><path d="M50 34L68 8l-6 22z" fill="#4dabff"/>'
+    + '<path d="M16 52c0-16 14-24 34-24s34 8 34 24c2 22-8 40-34 48C24 92 14 74 16 52z" fill="#f6e8ff" stroke="#7b2cbf" stroke-width="3"/>'
+    + '<path d="M22 58c8-10 16-10 24 0" fill="none" stroke="#e0b84a" stroke-width="3" stroke-linecap="round"/>'
+    + '<path d="M54 58c8-10 16-10 24 0" fill="none" stroke="#e0b84a" stroke-width="3" stroke-linecap="round"/>'
+    + '<ellipse cx="34" cy="64" rx="11" ry="8" fill="#1a1028"/><ellipse cx="66" cy="64" rx="11" ry="8" fill="#1a1028"/>'
+    + '<circle cx="30" cy="62" r="2" fill="#fff"/><circle cx="62" cy="62" r="2" fill="#fff"/>'
+    + '<path d="M36 82c8 8 20 8 28 0" fill="none" stroke="#c43b8a" stroke-width="2.5" stroke-linecap="round"/>'
+    + '<circle cx="50" cy="74" r="2.4" fill="#e0b84a"/></svg>';
+  var GEANT_CARNAVAL = '<svg viewBox="0 0 200 250" aria-hidden="true">'
+    + '<path d="M70 118c-18 8-28 36-22 78h104c6-42-4-70-22-78" fill="#7b2cbf"/>'
+    + '<path d="M78 150h44v46H78z" fill="#ffd23f"/><path d="M122 150h22v46h-22z" fill="#ff4f9a"/>'
+    + '<path d="M48 140c-20 10-28 34-22 58h28l8-40z" fill="#ff4f9a"/><path d="M152 140c20 10 28 34 22 58h-28l-8-40z" fill="#4dabff"/>'
+    + '<circle cx="38" cy="210" r="12" fill="#ffd23f"/><circle cx="162" cy="210" r="12" fill="#ffd23f"/>'
+    + '<ellipse cx="100" cy="108" rx="46" ry="40" fill="#f6e8ff" stroke="#7b2cbf" stroke-width="4"/>'
+    + '<path d="M62 100c14-16 24-16 36 0" fill="none" stroke="#e0b84a" stroke-width="4"/><path d="M102 100c12-16 24-16 36 0" fill="none" stroke="#e0b84a" stroke-width="4"/>'
+    + '<ellipse cx="78" cy="108" rx="12" ry="9" fill="#1a1028"/><ellipse cx="122" cy="108" rx="12" ry="9" fill="#1a1028"/>'
+    + '<path d="M78 128c12 10 32 10 44 0" fill="none" stroke="#c43b8a" stroke-width="3"/>'
+    + '<path d="M58 78l10-36 16 20 16-28 16 28 16-20 10 36q-42-12-84 0z" fill="#ffcf33" stroke="#b8860b" stroke-width="3"/>'
+    + '<path d="M46 70l-8-28 18 16z" fill="#ff4f9a"/><path d="M100 48l6-26 8 22z" fill="#ffd23f"/><path d="M150 68l12-26-6 24z" fill="#4dabff"/></svg>';
+  var CONFETTI = '<i class="hanter-carnaval-confetti"></i>';
+
+  // Été : crabe qui trottine, Grande Pieuvre qui replonge.
+  var CRABE = '<svg viewBox="0 0 120 90" aria-hidden="true">'
+    + '<ellipse cx="60" cy="52" rx="28" ry="20" fill="#e25b3a" stroke="#a33a22" stroke-width="3"/>'
+    + '<path d="M34 46c-16-18-28-8-24 8 4 8 16 6 24-2z" fill="#ff7a4d" stroke="#a33a22" stroke-width="2"/>'
+    + '<path d="M86 46c16-18 28-8 24 8-4 8-16 6-24-2z" fill="#ff7a4d" stroke="#a33a22" stroke-width="2"/>'
+    + '<circle cx="46" cy="28" r="5" fill="#fff" stroke="#a33a22" stroke-width="2"/><circle cx="74" cy="28" r="5" fill="#fff" stroke="#a33a22" stroke-width="2"/>'
+    + '<path d="M46 18V8M74 18V8" stroke="#a33a22" stroke-width="2"/><circle cx="46" cy="6" r="3" fill="#1a1028"/><circle cx="74" cy="6" r="3" fill="#1a1028"/>'
+    + '<path d="M40 66l-10 14M50 70l-4 16M70 70l4 16M80 66l10 14" stroke="#a33a22" stroke-width="3" stroke-linecap="round"/></svg>';
+  var PIEUVRE = '<svg viewBox="0 0 200 250" aria-hidden="true">'
+    + '<path d="M40 150c-8 30 4 70 22 78 6-20 2-40-4-52 10 28 22 40 30 36-6-22-2-44 6-58 8 24 20 36 28 30-8-26 0-48 10-60 12 22 22 34 28 24-10-28-2-50 8-64 8 16 10 40 4 66-8-30 6-62 18-78-30 8-48-4-58-20-8 22-28 30-48 22-16-8-28-4-44 16z" fill="#7a4ad4"/>'
+    + '<ellipse cx="100" cy="92" rx="62" ry="52" fill="#9b6cf0" stroke="#5b32b0" stroke-width="4"/>'
+    + '<ellipse cx="76" cy="92" rx="16" ry="18" fill="#fff"/><ellipse cx="124" cy="92" rx="16" ry="18" fill="#fff"/>'
+    + '<circle cx="80" cy="96" r="7" fill="#1a1028"/><circle cx="128" cy="96" r="7" fill="#1a1028"/>'
+    + '<path d="M84 118q16 12 32 0" fill="none" stroke="#5b32b0" stroke-width="3" stroke-linecap="round"/>'
+    + '<circle cx="58" cy="168" r="4" fill="#d7c4ff"/><circle cx="96" cy="188" r="4" fill="#d7c4ff"/><circle cx="140" cy="172" r="4" fill="#d7c4ff"/></svg>';
+  var COQUILLAGE = '<i class="hanter-ete-coquille"></i>';
+  var ETOILE_MER = '<i class="hanter-ete-etoile"></i>';
+
+  // Rentrée : crayon de couleur, cartable qui s'ouvre en laissant tomber des fournitures.
+  var CRAYON = '<svg viewBox="0 0 48 140" aria-hidden="true">'
+    + '<path d="M10 28h28v78H10z" fill="#ff5a7a"/><path d="M10 28h28l-4 10H14z" fill="#ffd1da"/>'
+    + '<path d="M14 106h20l-10 22z" fill="#f4d7a8"/><path d="M18 118h12l-6 10z" fill="#3a3a3a"/>'
+    + '<rect x="10" y="16" width="28" height="12" fill="#d7d7e0"/><rect x="10" y="6" width="28" height="12" rx="3" fill="#ff8fab"/></svg>';
+  var CARTABLE = '<svg viewBox="0 0 200 220" aria-hidden="true">'
+    + '<path d="M70 48h60v24H70z" fill="#c47a2c"/><rect x="28" y="64" width="144" height="130" rx="16" fill="#e0892f" stroke="#a35d16" stroke-width="4"/>'
+    + '<path d="M28 108h144v28H28z" fill="#c47a2c"/>'
+    + '<rect x="86" y="100" width="28" height="22" rx="4" fill="#ffd56a" stroke="#a35d16" stroke-width="3"/>'
+    + '<rect x="46" y="128" width="46" height="40" rx="6" fill="#f2b15a" stroke="#a35d16" stroke-width="3"/>'
+    + '<path d="M52 48c0-22 18-36 48-36s48 14 48 36" fill="none" stroke="#a35d16" stroke-width="8" stroke-linecap="round"/></svg>';
+  var FOURNITURE = '<i class="hanter-rentree-gomme"></i>';
+
   /* Fiches des événements : ce qui change d'un événement à l'autre. */
   var THEMES = {
     halloween: {
@@ -256,6 +310,54 @@
         'rgb(255 170 210 / .2)', '#9fe3b0', '#ffd1e6', 'rgb(64 32 104 / .94)', '#ffb3d9', '#a888e0', 'rgb(255 150 205 / .85)', 'rgb(150 100 220 / .5)', '#c0266f', 'rgb(52 26 86 / .62)', 800],
       decor: decorPaques,
       nuit: false, // thème de jour : ni étoiles ni lune dans creerFond (le décor a son soleil)
+    },
+    carnaval: {
+      emoji: '🎭', de: 'du carnaval', police: 'Bangers', site: 'Boîtes à masques',
+      petit: { svg: MASQUE, emoji: '🎭', un: 'masque', des: 'masques', attrape: 'Hop !', coucou: 'Olà !', vide: 'Ils dansent toujours !',
+        hauteur: [8, 68], duree: [9, 16] }, // ils dansent partout dans la nuit
+      boss: { svg: GEANT_CARNAVAL, titre: '🥁 Le Géant du carnaval', nom: 'le Géant du carnaval', Nom: 'Le Géant du carnaval', emoji: '🎊',
+        apparu: "🥁 Le Géant du carnaval est arrivé ! Tout le monde lui lance des confettis : clique dessus !", agir: 'lui lancer des confettis',
+        vaincu: 'couvert de confettis', victoire: '🎊 Bravo !', coup: ['confetti', 'confettis'], coupPorte: ['confetti lancé', 'confettis lancés'], plus: 'a lancé le plus de confettis',
+        rien: "Tu n'as pas lancé de confettis au Géant cette fois-ci.", connecte: 'Connecte-toi la prochaine fois pour lancer des confettis au Géant !',
+        enCours: '🥁 Le Géant du carnaval est là : tout le monde lui lance des confettis ! ', lePlus: 'le plus de confettis',
+        salut: 'Olà !', cadeaux: [CONFETTI, '🎊', CONFETTI, '⭐', CONFETTI, '🎭'] },
+      badge: ['carnaval', '👑', 'badge Carnaval'],
+      // Soir de fête : carte violette, titres or, bouton magenta.
+      couleurs: ['#ff4f9a', '#1a1028', 'linear-gradient(180deg,#3a1468,#22083f)', '#7a4ad4', '#e4d4ff', '#ffd23f', 'rgb(255 210 63 / .45)',
+        'rgb(255 79 154 / .18)', '#ffd23f', '#fff1c2', 'rgb(28 10 52 / .94)', '#ffd23f', '#7a4ad4', 'rgb(255 210 63 / .8)', 'rgb(255 220 240 / .7)', '#c2185b', 'rgb(12 6 28 / .78)', 400],
+      decor: decorCarnaval,
+    },
+    ete: {
+      emoji: '🌞', de: "de l'été", police: 'Lilita One', site: 'Boîtes à sable',
+      petit: { svg: CRABE, emoji: '🦀', un: 'crabe', des: 'crabes', attrape: 'Hop !', coucou: 'Clic clic !', vide: 'Ils courent toujours !',
+        hauteur: [58, 82], duree: [7, 12] }, // ils trottinent sur le sable, en bas de l'écran
+      boss: { svg: PIEUVRE, titre: '🐙 La Grande Pieuvre', nom: 'la Grande Pieuvre', Nom: 'La Grande Pieuvre', emoji: '🐚',
+        apparu: "🐙 La Grande Pieuvre est sortie de l'eau ! Tout le monde l'attrape : clique dessus !", agir: "l'attraper",
+        vaincu: 'attrapée', victoire: '🐚 Bravo !', coup: ['clic', 'clics'], coupPorte: ['clic', 'clics'], plus: "l'a attrapée le plus de fois",
+        rien: "Tu n'as pas attrapé la Grande Pieuvre cette fois-ci.", connecte: 'Connecte-toi la prochaine fois pour attraper la Grande Pieuvre !',
+        enCours: "🐙 La Grande Pieuvre est là : tout le monde l'attrape ! ", lePlus: 'le plus de clics',
+        salut: 'Bloub !', cadeaux: [COQUILLAGE, ETOILE_MER, '🐚', COQUILLAGE, '⭐', ETOILE_MER] },
+      badge: ['ete', '🐙', 'badge Été'],
+      couleurs: ['#0e8fbf', '#ffffff', 'linear-gradient(180deg,#0c6e96,#08445e)', '#3aa0c8', '#d4f1fb', '#ffd23f', 'rgb(255 210 63 / .4)',
+        'rgb(255 210 63 / .16)', '#ffb15a', '#fff3c4', 'rgb(8 60 84 / .94)', '#ffd23f', '#1f7ea8', 'rgb(255 196 80 / .8)', 'rgb(255 248 220 / .85)', '#e25b3a', 'rgb(6 40 58 / .55)', 400],
+      decor: decorEte,
+      nuit: false,
+    },
+    rentree: {
+      emoji: '📚', de: 'de la rentrée', police: 'Patrick Hand', site: 'Boîtes à crayons',
+      petit: { svg: CRAYON, emoji: '✏️', un: 'crayon', des: 'crayons', attrape: 'Hop !', coucou: 'Bonjour !', vide: 'Ils volent toujours !',
+        hauteur: [8, 70], duree: [8, 15] }, // ils traversent la classe en tournoyant
+      boss: { svg: CARTABLE, titre: '🎒 Le Cartable géant', nom: 'le Cartable géant', Nom: 'Le Cartable géant', emoji: '✏️',
+        apparu: '🎒 Le Cartable géant est arrivé ! Tout le monde l\'attrape : clique dessus !', agir: "l'attraper",
+        vaincu: 'attrapé', victoire: '✏️ Bravo !', coup: ['clic', 'clics'], coupPorte: ['clic', 'clics'], plus: "l'a attrapé le plus de fois",
+        rien: "Tu n'as pas attrapé le Cartable géant cette fois-ci.", connecte: 'Connecte-toi la prochaine fois pour attraper le Cartable géant !',
+        enCours: "🎒 Le Cartable géant est là : tout le monde l'attrape ! ", lePlus: 'le plus de clics',
+        salut: 'Ding !', cadeaux: [FOURNITURE, '✏️', '📏', FOURNITURE, '📓', '✏️'] },
+      badge: ['rentree', '🎒', 'badge Rentrée'],
+      couleurs: ['#1f6fd6', '#ffffff', 'linear-gradient(180deg,#1d4e89,#14365f)', '#6aa2e0', '#dce9f8', '#ffd23f', 'rgb(255 210 63 / .4)',
+        'rgb(255 210 63 / .14)', '#ff8a3d', '#fff6d8', 'rgb(16 42 74 / .94)', '#ffd23f', '#3d7ec4', 'rgb(255 196 70 / .75)', 'rgb(255 250 230 / .88)', '#e25b3a', 'rgb(12 28 48 / .45)', 400],
+      decor: decorRentree,
+      nuit: false,
     },
   };
   var accueilDe = function (nom) { return racine.classList.contains('theme-' + nom); };
@@ -363,11 +465,61 @@
       + ':root[data-evenement="printemps"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-printemps-fondu 1.4s forwards}}',
   ];
 
+  var STYLE_CARNAVAL = [
+    '.hanter-carnaval-confetti{display:inline-block;width:.45em;height:.7em;border-radius:2px;background:linear-gradient(180deg,#ff4f9a,#ffd23f);transform:rotate(18deg)}',
+    '.hanter-carnaval-chute{position:absolute;top:0;left:var(--x);width:var(--t);height:calc(var(--t) * 1.6);border-radius:2px;background:var(--c);animation:hanter-carnaval-tombe var(--d) linear var(--r) infinite;will-change:transform}',
+    '@keyframes hanter-carnaval-tombe{from{transform:translate(0,-8vh) rotate(0)}to{transform:translate(var(--dx),108vh) rotate(var(--a))}}',
+    '.hanter-carnaval-guirlande{position:absolute;left:0;right:0;top:0;height:42px;display:flex}',
+    '.hanter-carnaval-fanion{flex:1;height:28px;background:var(--c);clip-path:polygon(0 0,100% 0,50% 100%)}',
+    ':root[data-evenement="carnaval"] .hanter-fantome:not(.coucou):not(.pouf)>div{animation:hanter-carnaval-danse .55s ease-in-out infinite}',
+    '@keyframes hanter-carnaval-danse{0%,100%{transform:rotate(-14deg) translateY(0)}50%{transform:rotate(14deg) translateY(-18px)}}',
+    ':root[data-evenement="carnaval"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-carnaval-sort 1.7s ease-in forwards}',
+    '@keyframes hanter-carnaval-sort{0%{transform:translate(-50%,-50%)}20%{transform:translate(-50%,-62%) rotate(-8deg) scale(1.08)}45%{transform:translate(-20%,-48%) rotate(12deg)}100%{transform:translate(60vw,-20vh) rotate(40deg) scale(.35);opacity:.3}}',
+    '@keyframes hanter-saison-fondu{to{opacity:0}}',
+    '@media (prefers-reduced-motion:reduce){.hanter-carnaval-chute{display:none}:root[data-evenement="carnaval"] .hanter-fantome>div{animation:none!important}:root[data-evenement="carnaval"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-saison-fondu 1.2s forwards}}',
+  ];
+
+  var STYLE_ETE = [
+    '.hanter-ete-soleil{position:absolute;left:86%;top:11%;width:340px;height:340px;margin:-170px 0 0 -170px;border-radius:50%;background:radial-gradient(circle,rgb(255 248 210 / .8) 0 16%,rgb(255 214 80 / .28) 38%,transparent 66%)}',
+    '.hanter-ete-vague{position:absolute;left:0;right:0;bottom:0;height:16vh;background:linear-gradient(180deg,transparent,#7ed0f2 30%,#1f8ec4);opacity:.85}',
+    '.hanter-ete-coquille{display:inline-block;width:.7em;height:.55em;border-radius:60% 60% 40% 40%;background:radial-gradient(circle at 30% 30%,#fff,#ffd1a8 40%,#e0892f)}',
+    '.hanter-ete-etoile{display:inline-block;width:.7em;height:.7em;background:#ffb15a;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}',
+    ':root[data-evenement="ete"] .hanter-fantome:not(.coucou):not(.pouf)>div{animation:hanter-ete-trotte .32s ease-in-out infinite}',
+    '@keyframes hanter-ete-trotte{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-10px) rotate(6deg)}}',
+    ':root[data-evenement="ete"] .hanter-fantome.gauche svg{transform:scaleX(-1)}',
+    ':root[data-evenement="ete"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-ete-plonge 1.6s ease-in forwards}',
+    '@keyframes hanter-ete-plonge{0%{transform:translate(-50%,-50%)}30%{transform:translate(-50%,-70%) scale(1.05)}100%{transform:translate(-50%,80vh) scale(.7);opacity:.2}}',
+    '.hanter-ete-mouette{position:absolute;left:0;top:var(--y);width:var(--t);height:calc(var(--t) * .42);animation:hanter-ete-vol var(--d) linear var(--r) infinite}',
+    '.hanter-ete-mouette.retour{animation-direction:reverse}',
+    '.hanter-ete-mouette::before,.hanter-ete-mouette::after{content:"";position:absolute;top:28%;width:58%;height:72%;background:#fff;border-radius:80% 8% 70% 20%;box-shadow:0 2px 0 #c5dff0}',
+    '.hanter-ete-mouette::after{left:46%;transform:scaleX(-1)}',
+    '@keyframes hanter-ete-vol{from{transform:translateX(-18vw)}to{transform:translateX(112vw)}}',
+    '.hanter-ete-bord{position:absolute;left:0;right:0;bottom:13vh;height:36px}',
+    '@media (prefers-reduced-motion:reduce){.hanter-ete-mouette{display:none}:root[data-evenement="ete"] .hanter-fantome>div{animation:none!important}:root[data-evenement="ete"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-saison-fondu 1.2s forwards}}',
+  ];
+
+  var STYLE_RENTREE = [
+    '.hanter-rentree-gomme{display:inline-block;width:.85em;height:.5em;border-radius:2px;background:linear-gradient(90deg,#ff8fab 0 30%,#f4f4f8 30%)}',
+    '.hanter-rentree-regle{position:absolute;left:0;right:0;top:0;bottom:0;background:repeating-linear-gradient(180deg,transparent 0 27px,rgb(90 150 220 / .18) 27px 28px),repeating-linear-gradient(90deg,transparent 0 27px,rgb(90 150 220 / .12) 27px 28px);opacity:.35}',
+    '.hanter-rentree-feuille{position:absolute;top:0;left:var(--x);width:var(--t);height:calc(var(--t) * 1.28);border-radius:2px;background:linear-gradient(#fff,#eef4ff);box-shadow:0 1px 3px rgb(30 60 100 / .22);animation:hanter-rentree-tombe var(--d) linear var(--r) infinite}',
+    '.hanter-rentree-feuille i{display:block;height:16%;margin:14% 12% 0;background:rgb(37 99 235 / .28)}',
+    '@keyframes hanter-rentree-tombe{from{transform:translate(0,-12vh) rotate(0)}to{transform:translate(var(--dx),112vh) rotate(var(--a))}}',
+    '.hanter-rentree-pomme{position:absolute;bottom:4vh;left:var(--x);font-size:var(--t);line-height:1;filter:drop-shadow(0 3px 0 rgb(120 40 20 / .25))}',
+    ':root[data-evenement="rentree"] .hanter-fantome:not(.coucou):not(.pouf) svg{animation:hanter-rentree-tourne 1.6s linear infinite}',
+    '@keyframes hanter-rentree-tourne{to{transform:rotate(360deg)}}',
+    ':root[data-evenement="rentree"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-rentree-part 1.5s ease-in forwards}',
+    '@keyframes hanter-rentree-part{0%{transform:translate(-50%,-50%)}18%{transform:translate(-50%,-40%) scale(1.08,.9)}40%{transform:translate(-50%,-70%) }100%{transform:translate(55vw,-30vh) rotate(-12deg) scale(.4);opacity:.35}}',
+    '@media (prefers-reduced-motion:reduce){.hanter-rentree-feuille{display:none}:root[data-evenement="rentree"] .hanter-fantome svg{animation:none!important}:root[data-evenement="rentree"] .hanter-boss-zone.vaincu .hanter-boss{animation:hanter-saison-fondu 1.2s forwards}}',
+  ];
+
   var STYLE = [
     '@font-face{font-family:"Creepster";font-display:swap;src:url(' + BASE + 'polices/creepster-latin.woff2) format("woff2")}',
     '@font-face{font-family:"Mountains of Christmas";font-weight:700;font-display:swap;src:url(' + BASE + 'polices/mountains-of-christmas-latin.woff2) format("woff2")}',
     '@font-face{font-family:"Sniglet";font-weight:800;font-display:swap;src:url(' + BASE + 'polices/sniglet-latin.woff2) format("woff2")}',
     '@font-face{font-family:"Pacifico";font-display:swap;src:url(' + BASE + 'polices/pacifico-latin.woff2) format("woff2")}',
+    '@font-face{font-family:"Bangers";font-display:swap;src:url(' + BASE + 'polices/bangers-latin.woff2) format("woff2")}',
+    '@font-face{font-family:"Lilita One";font-display:swap;src:url(' + BASE + 'polices/lilita-one-latin.woff2) format("woff2")}',
+    '@font-face{font-family:"Patrick Hand";font-display:swap;src:url(' + BASE + 'polices/patrick-hand-latin.woff2) format("woff2")}',
     Object.keys(THEMES).map(function (k) { return variables(THEMES[k]); }).join('\n'),
     '.hanter-en-cours .panneau{-webkit-backdrop-filter:none;backdrop-filter:none}', // le flou suivrait chaque image du fond animé
     '.hanter-fond{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}',
@@ -486,7 +638,7 @@
     '.hanter-intro iframe{display:block;width:100%;height:100%;border:0}',
     '.hanter-passer{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;padding:.5rem 1rem;border:1px solid rgb(255 255 255 / .5);border-radius:999px;background:rgb(0 0 0 / .55);color:#fff;font:600 15px/1.2 system-ui,sans-serif;cursor:pointer}',
     '.hanter-revoir{padding:0;border:0;background:none;color:#fff;font:600 .95rem "Space Grotesk",system-ui,sans-serif;letter-spacing:0;text-decoration:underline;cursor:pointer;white-space:nowrap}',
-  ].concat(STYLE_PAQUES, STYLE_PRINTEMPS).join('\n'); // fiches de saison : leurs règles à elles
+  ].concat(STYLE_PAQUES, STYLE_PRINTEMPS, STYLE_CARNAVAL, STYLE_ETE, STYLE_RENTREE).join('\n'); // fiches de saison : leurs règles à elles
 
   function lire(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function ecrire(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
@@ -651,10 +803,73 @@
     f.appendChild(pre);
   }
 
+  function decorCarnaval(f) {
+    var g = el('div', 'hanter-carnaval-guirlande'), COULEURS = ['#ff4f9a', '#ffd23f', '#4dabff', '#7a4ad4', '#ff8a3d'];
+    for (var i = 0; i < 18; i++) {
+      var fanion = el('i', 'hanter-carnaval-fanion');
+      fanion.style.setProperty('--c', COULEURS[i % COULEURS.length]);
+      g.appendChild(fanion);
+    }
+    f.appendChild(g);
+    for (var j = 0; j < 48; j++) {
+      var c = el('i', 'hanter-carnaval-chute'), d = hasard(8, 16);
+      c.style.setProperty('--x', hasard(0, 100) + 'vw');
+      c.style.setProperty('--t', hasard(6, 12) + 'px');
+      c.style.setProperty('--c', COULEURS[j % COULEURS.length]);
+      c.style.setProperty('--dx', hasard(-12, 12) + 'vw');
+      c.style.setProperty('--a', hasard(-400, 400) + 'deg');
+      c.style.setProperty('--d', d + 's');
+      c.style.setProperty('--r', -hasard(0, d) + 's');
+      f.appendChild(c);
+    }
+  }
+
+  function decorEte(f) {
+    f.append(el('div', 'hanter-ete-soleil'), el('div', 'hanter-ete-vague'));
+    for (var i = 0; i < 4; i++) {
+      var m = el('div', 'hanter-ete-mouette' + (i % 2 ? ' retour' : '')), d = hasard(16, 26);
+      m.style.setProperty('--y', hasard(6, 26) + 'vh');
+      m.style.setProperty('--t', hasard(36, 58) + 'px');
+      m.style.setProperty('--d', d + 's');
+      m.style.setProperty('--r', -(i * d / 4) + 's');
+      f.appendChild(m);
+    }
+    var bord = el('div', 'hanter-ete-bord');
+    for (var j = 0; j < 9; j++) {
+      var s = el('i', j % 2 ? 'hanter-ete-etoile' : 'hanter-ete-coquille');
+      s.style.position = 'absolute';
+      s.style.left = (4 + j * 10.5) + 'vw';
+      s.style.bottom = hasard(0, 10) + 'px';
+      s.style.fontSize = hasard(18, 30) + 'px';
+      bord.appendChild(s);
+    }
+    f.appendChild(bord);
+  }
+
+  function decorRentree(f) {
+    f.appendChild(el('div', 'hanter-rentree-regle'));
+    for (var i = 0; i < 16; i++) {
+      var p = el('div', 'hanter-rentree-feuille', '<i></i>'), d = hasard(9, 16);
+      p.style.setProperty('--x', hasard(-4, 96) + 'vw');
+      p.style.setProperty('--t', hasard(12, 22) + 'px');
+      p.style.setProperty('--dx', hasard(-10, 12) + 'vw');
+      p.style.setProperty('--a', hasard(-200, 200) + 'deg');
+      p.style.setProperty('--d', d + 's');
+      p.style.setProperty('--r', -hasard(0, d) + 's');
+      f.appendChild(p);
+    }
+    for (var j = 0; j < 4; j++) {
+      var a = el('div', 'hanter-rentree-pomme', '🍎');
+      a.style.setProperty('--x', (10 + j * 22 + hasard(0, 6)) + 'vw');
+      a.style.setProperty('--t', hasard(22, 34) + 'px');
+      f.appendChild(a);
+    }
+  }
+
   function creerFond() {
     var f = el('div', 'hanter-fond');
     f.setAttribute('aria-hidden', 'true');
-    if (T.nuit !== false) f.append(etoiles('hanter-etoiles'), etoiles('hanter-etoiles b'), el('div', 'hanter-lune')); // Pâques, printemps : de jour
+    if (T.nuit !== false) f.append(etoiles('hanter-etoiles'), etoiles('hanter-etoiles b'), el('div', 'hanter-lune')); // Pâques, printemps, été, rentrée : de jour
     T.decor(f);
     return f;
   }
@@ -757,6 +972,12 @@
     'participation-paques': ['🥚', 'Participation à Pâques', 'hanter-badge'],
     printemps: ['🌷', 'Badge Printemps', 'hanter-badge'],
     'participation-printemps': ['🦋', 'Participation au printemps', 'hanter-badge'],
+    carnaval: ['👑', 'Badge Carnaval', 'hanter-badge'],
+    'participation-carnaval': ['🎊', 'Participation au carnaval', 'hanter-badge'],
+    ete: ['🐙', 'Badge Été', 'hanter-badge'],
+    'participation-ete': ['🦀', 'Participation à l\'été', 'hanter-badge'],
+    rentree: ['🎒', 'Badge Rentrée', 'hanter-badge'],
+    'participation-rentree': ['✏️', 'Participation à la rentrée', 'hanter-badge'],
   };
   // Couleurs du rond choisies par l'admin (FONDS_AVATAR, functions/api/admin/[action].js), teintes sombres de app/profil.css.
   var FONDS = { bleu: '#2c5aa8', vert: '#24704a', jaune: '#806a1c', orange: '#8a4f22', rouge: '#8a3340', rose: '#84376a', violet: '#5d43a0', nuit: '#1a1838' };
@@ -1144,9 +1365,9 @@
     // Le nom du site suit le thème prêté (« Boîtes à lutins » pour Noël) le temps de l'événement.
     var h1 = document.querySelector('h1');
     [[h1, 'textContent'], [document, 'title']].forEach(function (x) {
-      if (!x[0] || !/Boîtes à (classer|hanter|lutins|œufs|fleurs)/.test(x[0][x[1]])) return;
+      if (!x[0] || !/Boîtes à (classer|hanter|lutins|œufs|fleurs|masques|sable|crayons)/.test(x[0][x[1]])) return;
       themePrete.noms.push([x[0], x[1], x[0][x[1]]]);
-      x[0][x[1]] = x[0][x[1]].replace(/Boîtes à (classer|hanter|lutins|œufs|fleurs)/g, THEMES[nom].site);
+      x[0][x[1]] = x[0][x[1]].replace(/Boîtes à (classer|hanter|lutins|œufs|fleurs|masques|sable|crayons)/g, THEMES[nom].site);
     });
   }
   function rendreTheme() {

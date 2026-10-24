@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="280" viewBox="0 0 1200 280">
+  <!-- Rue du carnaval, répétée en bas de l'accueil. Dessins faits pour Boîtes à classer (GPL-3.0). -->
+  <rect width="1200" height="280" fill="#2a1248"/>
+  <path d="M0 150h1200v130H0z" fill="#3a1860"/>
+  <path d="M0 168c40-16 70 10 120 0s80-18 130 4 90 8 140-8 70-12 120 6 100 10 150-6 80-14 130 4 90 12 140-4 80-10 130 6 70 8 140-6v110H0z" fill="#241038"/>
+  <g fill="#ffd23f">
+    <path d="M40 20l18 28H22z"/><path d="M90 20l18 28H72z"/><path d="M140 20l18 28h-36z"/>
+    <path d="M640 16l18 28h-36z"/><path d="M690 16l18 28h-36z"/><path d="M740 16l18 28h-36z"/>
+  </g>
+  <g fill="#ff4f9a">
+    <path d="M400 28l16 26h-32z"/><path d="M448 28l16 26h-32z"/><path d="M980 24l16 26h-32z"/><path d="M1028 24l16 26h-32z"/>
+  </g>
+  <g>
+    <rect x="180" y="70" width="8" height="90" fill="#5a3a20"/>
+    <circle cx="184" cy="62" r="16" fill="#ff4f9a"/>
+    <rect x="1040" y="64" width="8" height="96" fill="#5a3a20"/>
+    <circle cx="1044" cy="56" r="16" fill="#4dabff"/>
+  </g>
+  <g transform="translate(520 150)">
+    <ellipse cx="40" cy="36" rx="34" ry="30" fill="#ffe08a"/>
+    <path d="M8 24c4 16 16 22 32 22s28-6 32-22c-12 10-52 10-64 0z" fill="#7b2cbf"/>
+    <circle cx="28" cy="38" r="3"/><circle cx="52" cy="38" r="3"/>
+    <path d="M30 52q10 8 20 0" fill="none" stroke="#c2185b" stroke-width="3"/>
+  </g>
+</svg>

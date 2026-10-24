@@ -957,6 +957,21 @@ body.consultation #exercices { display: none; }
   --motif: url(../printemps/fond-printemps.svg);
   --motif-opacite: .3;
 }
+:root[data-theme="carnaval"], :root.hanter-en-cours[data-evenement="carnaval"] {
+  --plan-theme: linear-gradient(180deg, #fbf1ff 0%, #fff4e6 100%);
+  --motif: url(../carnaval/fond-carnaval.svg);
+  --motif-opacite: .22;
+}
+:root[data-theme="ete"], :root.hanter-en-cours[data-evenement="ete"] {
+  --plan-theme: linear-gradient(180deg, #eafaff 0%, #fff8e6 100%);
+  --motif: url(../ete/fond-ete.svg);
+  --motif-opacite: .3;
+}
+:root[data-theme="rentree"], :root.hanter-en-cours[data-evenement="rentree"] {
+  --plan-theme: linear-gradient(180deg, #f4f8ff 0%, #fffaf0 100%);
+  --motif: url(../rentree/fond-rentree.svg);
+  --motif-opacite: .35;
+}
 @media screen and (prefers-color-scheme: dark) {
   :root[data-theme="halloween"], :root.hanter-en-cours[data-evenement="halloween"] {
     --plan-theme: linear-gradient(180deg, #0f0a1a 0%, #1a1028 60%, #24122d 100%);
@@ -974,10 +989,22 @@ body.consultation #exercices { display: none; }
     --plan-theme: linear-gradient(180deg, #0f1b26 0%, #13200f 100%);
     --motif-opacite: .18;
   }
+  :root[data-theme="carnaval"], :root.hanter-en-cours[data-evenement="carnaval"] {
+    --plan-theme: linear-gradient(180deg, #170b26 0%, #26102a 100%);
+    --motif-opacite: .18;
+  }
+  :root[data-theme="ete"], :root.hanter-en-cours[data-evenement="ete"] {
+    --plan-theme: linear-gradient(180deg, #08202a 0%, #1f1d10 100%);
+    --motif-opacite: .18;
+  }
+  :root[data-theme="rentree"], :root.hanter-en-cours[data-evenement="rentree"] {
+    --plan-theme: linear-gradient(180deg, #0f1824 0%, #1c1a12 100%);
+    --motif-opacite: .2;
+  }
 }
-:root[data-theme="halloween"] #zone, :root[data-theme="noel"] #zone, :root[data-theme="paques"] #zone, :root[data-theme="printemps"] #zone, :root.hanter-en-cours[data-evenement] #zone { background: var(--plan-theme); }
-:root[data-theme="halloween"] #espace, :root[data-theme="noel"] #espace, :root[data-theme="paques"] #espace, :root[data-theme="printemps"] #espace, :root.hanter-en-cours[data-evenement] #espace { background: none; }
-:root[data-theme="halloween"] #zone::before, :root[data-theme="noel"] #zone::before, :root[data-theme="paques"] #zone::before, :root[data-theme="printemps"] #zone::before, :root.hanter-en-cours[data-evenement] #zone::before {
+:root[data-theme="halloween"] #zone, :root[data-theme="noel"] #zone, :root[data-theme="paques"] #zone, :root[data-theme="printemps"] #zone, :root[data-theme="carnaval"] #zone, :root[data-theme="ete"] #zone, :root[data-theme="rentree"] #zone, :root.hanter-en-cours[data-evenement] #zone { background: var(--plan-theme); }
+:root[data-theme="halloween"] #espace, :root[data-theme="noel"] #espace, :root[data-theme="paques"] #espace, :root[data-theme="printemps"] #espace, :root[data-theme="carnaval"] #espace, :root[data-theme="ete"] #espace, :root[data-theme="rentree"] #espace, :root.hanter-en-cours[data-evenement] #espace { background: none; }
+:root[data-theme="halloween"] #zone::before, :root[data-theme="noel"] #zone::before, :root[data-theme="paques"] #zone::before, :root[data-theme="printemps"] #zone::before, :root[data-theme="carnaval"] #zone::before, :root[data-theme="ete"] #zone::before, :root[data-theme="rentree"] #zone::before, :root.hanter-en-cours[data-evenement] #zone::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -986,7 +1013,7 @@ body.consultation #exercices { display: none; }
   pointer-events: none;
 }
 /* Les boîtes gardent un fond plein : le motif ne passe pas derrière les cartes rangées. */
-:root[data-theme="halloween"] .boite, :root[data-theme="noel"] .boite, :root[data-theme="paques"] .boite, :root[data-theme="printemps"] .boite, :root.hanter-en-cours[data-evenement] .boite { background: linear-gradient(var(--c-fond), var(--c-fond)), var(--plan); }
+:root[data-theme="halloween"] .boite, :root[data-theme="noel"] .boite, :root[data-theme="paques"] .boite, :root[data-theme="printemps"] .boite, :root[data-theme="carnaval"] .boite, :root[data-theme="ete"] .boite, :root[data-theme="rentree"] .boite, :root.hanter-en-cours[data-evenement] .boite { background: linear-gradient(var(--c-fond), var(--c-fond)), var(--plan); }
 @media print {
   #zone::before { content: none !important; }
   #zone { background: none !important; }

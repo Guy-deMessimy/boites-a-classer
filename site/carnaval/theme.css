@@ -1,0 +1,70 @@
+/* Thème Carnaval de la page d'accueil (classe « theme-carnaval » sur <html>).
+   Soir de fête : violet, or et magenta, lune, motif fond-carnaval.svg, rue scene-carnaval.svg, titres en Bangers.
+   Dessins faits pour Boîtes à classer (GPL-3.0). */
+@font-face {
+  font-family: "Bangers";
+  font-weight: 400;
+  font-display: swap;
+  src: url(../polices/bangers-latin.woff2) format("woff2");
+}
+:root.theme-carnaval {
+  color-scheme: dark;
+  --fond: #1a1030;
+  --carte: rgb(42 18 72 / .92);
+  --encre: #fff8e8;
+  --doux: #e7d7ff;
+  --ligne: #6a3d96;
+  --accent: #ff4f9a;
+  --accent-encre: #ffffff;
+  --accent-doux: #fff3c4;
+  --code: #2a1248;
+  --voile: rgb(24 10 40 / .8);
+  --ombre: 0 8px 22px rgb(20 10 40 / .35);
+  --motif-opacite: .28;
+  --titre: "Bangers", "Space Grotesk", system-ui, cursive;
+}
+.theme-carnaval body {
+  background:
+    radial-gradient(circle at 84% 12%, #fff4c2 0 9px, #ffe08a 20px, rgb(255 220 140 / .25) 42px, transparent 80px) fixed,
+    radial-gradient(circle at 12% 18%, #fff 0 1px, transparent 2px) fixed,
+    radial-gradient(circle at 28% 8%, #fff 0 1px, transparent 2px) fixed,
+    radial-gradient(circle at 46% 22%, #fff 0 1.2px, transparent 2.2px) fixed,
+    radial-gradient(circle at 63% 11%, #fff 0 1px, transparent 2px) fixed,
+    radial-gradient(circle at 72% 28%, #fff 0 1px, transparent 2px) fixed,
+    linear-gradient(180deg, #12081f 0%, #3a1860 46%, #7a2e78 100%) fixed;
+}
+.theme-carnaval body::before {
+  z-index: -3;
+  background: url(fond-carnaval.svg) 0 0 / 320px 320px;
+}
+.theme-carnaval body::after {
+  content: "";
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: min(34vh, 300px);
+  z-index: -2;
+  background: url(scene-carnaval.svg) center bottom / auto 100% repeat-x;
+  pointer-events: none;
+}
+.theme-carnaval main h1,
+.theme-carnaval main h2,
+.theme-carnaval main .carte h3,
+.theme-carnaval main .annonce p {
+  font-family: var(--titre);
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+.theme-carnaval main h1 { color: #ffd23f; text-shadow: 0 3px 0 #7b2cbf; }
+.theme-carnaval main h2 { color: #fff4c8; font-size: 2rem; text-shadow: 0 2px 0 #3a1860; }
+.theme-carnaval main .carte h3 { color: #ff4f9a; font-size: 1.35rem; }
+.theme-carnaval .auteur { color: #ffd23f; }
+.theme-carnaval .annonce p {
+  background: linear-gradient(90deg, #7b2cbf, #ff4f9a 55%, #c2410c);
+  color: #fff;
+  font-size: 1.35rem;
+  text-shadow: 0 1px 3px rgb(0 0 0 / .35);
+  box-shadow: var(--ombre);
+}
+.theme-carnaval .annonce a { color: #fff; font-family: "Space Grotesk", system-ui, sans-serif; font-size: .95rem; letter-spacing: 0; }
+.theme-carnaval .fonctions li::before { background: #ff4f9a; }
+.theme-carnaval footer { margin-bottom: 120px; }

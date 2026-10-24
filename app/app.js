@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '4.1.2';
+  const VERSION = '4.2.0';
   const FOURNIES = window.COLLECTIONS || [];
   const PALETTE = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b',
     '#17a2b8', '#7a8b23', '#b5651d', '#5465ff', '#c0392b', '#16a085'];
@@ -3585,7 +3585,8 @@
   }
 
   // Badges du compte, à côté de son nom (site/evenement.js) : « vérifié par le site » ✔, boss d'Halloween 🎃, de Noël 🎅,
-  // de Pâques 🐰 ou du printemps 🌷, participation 🧛 ⛄ 🥚 🦋. Toujours dans cet ordre.
+  // de Pâques 🐰, du printemps 🌷, du carnaval 👑, de l'été 🐙 ou de la rentrée 🎒, participation 🧛 ⛄ 🥚 🦋 🎊 🦀 ✏️.
+  // Toujours dans cet ordre.
   const BADGES = {
     verifie: ['✔', 'Vérifié par le site', 'badge-verifie'],
     halloween: ['🎃', 'Badge Halloween', 'badge'],
@@ -3596,6 +3597,12 @@
     'participation-paques': ['🥚', 'Participation à Pâques', 'badge'],
     printemps: ['🌷', 'Badge Printemps', 'badge'],
     'participation-printemps': ['🦋', 'Participation au printemps', 'badge'],
+    carnaval: ['👑', 'Badge Carnaval', 'badge'],
+    'participation-carnaval': ['🎊', 'Participation au carnaval', 'badge'],
+    ete: ['🐙', 'Badge Été', 'badge'],
+    'participation-ete': ['🦀', 'Participation à l\'été', 'badge'],
+    rentree: ['🎒', 'Badge Rentrée', 'badge'],
+    'participation-rentree': ['✏️', 'Participation à la rentrée', 'badge'],
   };
   function badgesCompte() {
     // Toujours dans le même ordre : celui de BADGES.
@@ -3621,6 +3628,12 @@
     'participation-paques': ['Participation', 'Pâques', 'argent'],
     printemps: ['Printemps', 'Reine des abeilles attrapée', 'or'],
     'participation-printemps': ['Participation', 'Printemps', 'argent'],
+    carnaval: ['Carnaval', 'Géant couvert de confettis', 'or'],
+    'participation-carnaval': ['Participation', 'Carnaval', 'argent'],
+    ete: ['Été', 'Grande Pieuvre attrapée', 'or'],
+    'participation-ete': ['Participation', 'Été', 'argent'],
+    rentree: ['Rentrée', 'Cartable géant attrapé', 'or'],
+    'participation-rentree': ['Participation', 'Rentrée', 'argent'],
   };
   // Teinte (0 à 359) tirée d'un nom : la même pour un même nom, d'un appareil à l'autre.
   function teinte(nom) {
@@ -3716,6 +3729,12 @@
     'participation-paques': 'Attraper un œuf ou le Lapin de Pâques pendant Pâques',
     printemps: 'Attraper le plus de fois la Reine des abeilles au printemps',
     'participation-printemps': 'Attraper un papillon ou la Reine des abeilles au printemps',
+    carnaval: 'Lancer le plus de confettis au Géant du carnaval',
+    'participation-carnaval': 'Attraper un masque ou lancer des confettis au Géant pendant le carnaval',
+    ete: 'Attraper le plus de fois la Grande Pieuvre pendant l\'été',
+    'participation-ete': 'Attraper un crabe ou la Grande Pieuvre pendant l\'été',
+    rentree: 'Attraper le plus de fois le Cartable géant à la rentrée',
+    'participation-rentree': 'Attraper un crayon ou le Cartable géant à la rentrée',
   };
   const commentMedaille = (b) => COMMENT_MEDAILLE[b]
     || (b.startsWith('participation-') ? 'Participer à l\'événement ' + MEDAILLES[b][1] : 'Vaincre le boss de l\'événement ' + MEDAILLES[b][0]);
