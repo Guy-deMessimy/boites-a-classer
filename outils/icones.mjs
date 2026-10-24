@@ -8,6 +8,9 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright-core');
+// sharp arrive avec wrangler (miniflare) : il range les PNG en palette, cinq fois plus légers et sans différence visible
+// (les icônes partent dans le logiciel de bureau et dans le cache du service worker).
+const sharp = require('sharp');
 
 const RONDE = readFileSync('icone/icone.svg', 'utf8');
 const PLEIN = readFileSync('icone/icone-plein.svg', 'utf8');
@@ -23,7 +26,7 @@ async function png(svg, taille, sortie) {
     c.getContext('2d').drawImage(img, 0, 0, t, t);
     return c.toDataURL('image/png').split(',')[1];
   }, [url, taille]);
-  writeFileSync(sortie, Buffer.from(donnees, 'base64'));
+  writeFileSync(sortie, await sharp(Buffer.from(donnees, 'base64')).png({ palette: true, quality: 95, effort: 10, compressionLevel: 9 }).toBuffer());
 }
 
 await png(RONDE, 1024, 'icone/icone-1024.png');
