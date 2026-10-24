@@ -27,12 +27,6 @@
 //   POST /api/admin/support-reponse { id, texte } répond au visiteur → { messages }
 //   POST /api/admin/support-resolu  { id, resolu } marque la conversation résolue (ou non) → 204
 //   POST /api/admin/support-suppression { id }  efface la conversation → 204
-//   GET  /api/admin/robot                      → { actif, cle, conso }  robot du service client (serveur/robot.js) : en
-//                                                service ? clé d'API configurée ? conso { aujourdhui, trenteJours :
-//                                                { reponses, jetons, cout ($ estimés) }, limiteJour }
-//   POST /api/admin/robot { actif }            le met en service (true) ou le coupe (false) → même réponse
-//   POST /api/admin/robot-essai { texte, role } pose une question au robot sans rien garder → { texte, transfere }
-//                                                (role : 'anonyme' | 'eleve' | 'enseignant' ; 503 sans clé)
 //   GET  /api/admin/maintenance                           → { active }  le site est-il arrêté ? (serveur/maintenance.js)
 //   POST /api/admin/maintenance  { active }               arrête (true) ou rouvre (false) le site → { active }
 //   GET  /api/admin/evenement                             → { evenement: { nom, depuis } | null, fini: { nom, depuis, fin } | null,
@@ -55,7 +49,6 @@
 
 import { sessionValide, texte, sha256, hasard } from '../../../serveur/comptes.js';
 import { maintenanceActive, changerMaintenance } from '../../../serveur/maintenance.js';
-import { robotActif, changerRobot, consommation, essayer } from '../../../serveur/robot.js';
 import { EVENEMENTS, lireEtat, changerEvenement, classement, oublierCache, SEUIL_BOSS, lireProgrammeEvenements, changerProgrammeEvenements } from '../../../serveur/evenement.js';
 import { effacerCompte } from '../../../serveur/classes.js';
 import { THEMES, lireReglageTheme, periodeDuJour, changerTheme, verifierProgramme, changerProgramme } from '../../../serveur/theme.js';
@@ -275,7 +268,7 @@ const actions = {
         qui: f.compte ? (f.avatar ? f.avatar + ' ' : '') + (f.classe ? f.nom : f.identifiant) : 'Visiteur sans compte n° ' + f.id.slice(0, 4),
         detail: f.classe ? `élève · ${f.classe} (${f.de || '?'})` : '',
         resolu: !!f.resolu, maj: f.maj, non_lus: f.non_lus,
-        dernier: ({ admin: 'Vous : ', robot: '🤖 ' }[f.dernier_auteur] || '') + String(f.dernier || '').slice(0, 140),
+        dernier: ({ admin: 'Vous : ', auto: 'Auto : ' }[f.dernier_auteur] || '') + String(f.dernier || '').slice(0, 140),
       })),
     });
   },
@@ -323,30 +316,6 @@ const actions = {
       env.DB.prepare('DELETE FROM support_fils WHERE id = ?').bind(id),
     ]);
     return rien();
-  },
-
-  async robot(request, env) {
-    if (request.method === 'POST') {
-      const { actif } = await lireCorps(request);
-      if (typeof actif !== 'boolean') return erreur('« actif » doit valoir true ou false', 400);
-      await changerRobot(env, actif);
-    }
-    return json({ actif: await robotActif(env), cle: !!env.ANTHROPIC_API_KEY, conso: await consommation(env) });
-  },
-
-  async 'robot-essai'(request, env) {
-    if (!env.ANTHROPIC_API_KEY) return erreur('pas de clé d\'API : le robot ne peut pas répondre', 503);
-    const { texte, role } = await lireCorps(request);
-    const t = typeof texte === 'string' ? texte.trim() : '';
-    if (!t || t.length > TEXTE_MAX) return erreur(`question vide ou trop longue (${TEXTE_MAX} caractères au plus)`, 400);
-    let r;
-    try {
-      r = await essayer(env, t, role);
-    } catch (e) {
-      return erreur('le robot n\'a pas répondu : ' + (e.message || e), 502);
-    }
-    if (!r) return erreur('limite de réponses du jour atteinte', 429);
-    return json(r);
   },
 
   async maintenance(request, env) {
@@ -408,7 +377,7 @@ const actions = {
 const METHODES = {
   comptes: ['GET'], activite: ['GET'], travail: ['GET'], 'mot-de-passe': ['POST'], suppression: ['POST'], enseignant: ['POST'], avatar: ['POST'], avatars: ['POST'],
   support: ['GET'], 'support-non-lus': ['GET'], 'support-fil': ['GET'], 'support-reponse': ['POST'], 'support-resolu': ['POST'], 'support-suppression': ['POST'],
-  collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'], robot: ['GET', 'POST'], 'robot-essai': ['POST'],
+  collection: ['POST'], 'collection-suppression': ['POST'], collections: ['GET'], maintenance: ['GET', 'POST'],
   evenement: ['GET', 'POST'], theme: ['GET', 'POST'], classement: ['GET'],
 };
 

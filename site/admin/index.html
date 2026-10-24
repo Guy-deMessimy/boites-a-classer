@@ -247,15 +247,7 @@
     .bulle { max-width: 85%; padding: 6px 10px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92rem; }
     .bulle.client { align-self: flex-start; background: var(--fond); }
     .bulle.admin { align-self: flex-end; background: var(--accent); color: var(--accent-encre); }
-    .bulle.robot { align-self: flex-end; background: var(--accent-doux); border: 1px dashed var(--accent); }
-    .bulle.note { align-self: center; max-width: 95%; background: none; color: var(--doux); font-size: .82rem; text-align: center; }
-    .robot-etat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 12px; font-size: .9rem; color: var(--doux); }
-    .robot-essai { margin: 0 0 14px; }
-    .robot-essai summary { cursor: pointer; font-weight: 600; }
-    .robot-essai form { align-items: flex-start; }
-    .robot-essai select { padding: .4rem .6rem; border: 1px solid var(--ligne); border-radius: 10px; background: var(--carte); color: var(--encre); font: inherit; }
-    .robot-reponse { margin: 8px 0 0; padding: 8px 12px; border: 1px dashed var(--accent); border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .robot-reponse:empty { display: none; }
+    .bulle.auto { align-self: flex-end; background: var(--accent-doux); color: var(--encre); }
     .bulle small { display: block; opacity: .7; font-size: .72rem; }
     .support form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .support textarea {
@@ -369,21 +361,7 @@
       </section>
       <section class="support" id="support">
         <h2>💬 Service client <span class="badge" id="support-badge" hidden></span></h2>
-        <p class="robot-etat"><span id="robot-texte">🤖 Robot : …</span> <button type="button" class="bouton" id="robot-basculer" hidden></button></p>
-        <p class="robot-etat" id="robot-conso" hidden></p>
-        <details class="robot-essai" id="robot-essai" hidden>
-          <summary>🧪 Essayer le robot</summary>
-          <form id="robot-essai-form">
-            <textarea id="robot-question" maxlength="2000" placeholder="Une question comme celles des visiteurs…" aria-label="Question pour le robot" required></textarea>
-            <select id="robot-role" aria-label="Qui pose la question">
-              <option value="anonyme">Visiteur sans compte</option>
-              <option value="eleve">Élève</option>
-              <option value="enseignant">Enseignant</option>
-            </select>
-            <button type="submit" class="bouton principal">Demander</button>
-          </form>
-          <p class="robot-reponse" id="robot-reponse" aria-live="polite"></p>
-        </details>
+        <p class="aide">Chaque visiteur voit d'abord « Bonjour, veuillez décliner votre problème. Merci » ; à son premier message, il reçoit « Je vous transfère au service client. Merci » et la conversation arrive ici.</p>
         <div class="support-grille">
           <ul class="support-liste" id="support-liste"></ul>
           <div id="support-fil" hidden>
@@ -848,7 +826,6 @@
           remplirSerie();
           chargerActivite();
           chargerSupport();
-          chargerRobot();
           chargerCollectionsSite();
         }).catch(function (e) { horsSession('Impossible de joindre le serveur : ' + e.message); });
       }
@@ -1540,7 +1517,7 @@
           b.className = 'bulle ' + m.auteur;
           b.textContent = m.texte;
           var d = document.createElement('small');
-          d.textContent = ({ admin: 'Vous · ', robot: '🤖 Robot · ' }[m.auteur] || '') + dateCourte(m.date);
+          d.textContent = ({ admin: 'Vous · ', auto: 'Message automatique · ' }[m.auteur] || '') + dateCourte(m.date);
           b.appendChild(d);
           return b;
         }));
@@ -1591,57 +1568,6 @@
           message('Conversation supprimée.');
           chargerSupport();
         });
-      });
-
-      /* Robot du service client (serveur/robot.js) : il répond tout de suite et transmet ici ce qui demande une personne. */
-
-      function afficherRobot(r) {
-        $('#robot-texte').textContent = !r.cle
-          ? '🤖 Robot : pas de clé d\'API (secret ANTHROPIC_API_KEY à mettre dans Cloudflare) : les messages arrivent tous ici.'
-          : r.actif
-            ? '🤖 Robot en service : il répond tout de suite et vous transmet ce qui demande une personne (non lus ci-dessous).'
-            : '🤖 Robot coupé : les messages arrivent tous ici.';
-        var b = $('#robot-basculer');
-        b.hidden = !r.cle;
-        b.textContent = r.actif ? 'Couper le robot' : 'Mettre le robot en service';
-        b.dataset.actif = r.actif ? '1' : '';
-        $('#robot-essai').hidden = !r.cle;
-        var c = r.conso;
-        $('#robot-conso').hidden = !c || !r.cle;
-        if (c) {
-          var dollars = function (x) { return x.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 3 }) + ' $'; };
-          $('#robot-conso').textContent = 'Aujourd\'hui : ' + c.aujourdhui.reponses + ' réponse' + (c.aujourdhui.reponses > 1 ? 's' : '')
-            + ' (≈ ' + dollars(c.aujourdhui.cout) + ', au plus ' + c.limiteJour + ' par jour) · 30 jours : ' + c.trenteJours.reponses
-            + ' (≈ ' + dollars(c.trenteJours.cout) + '). Estimation : la facture d\'Anthropic fait foi.';
-        }
-      }
-      function chargerRobot() {
-        appel('robot').then(function (x) { if (x.statut === 200) afficherRobot(x.r); }).catch(function () { /* on réessaiera */ });
-      }
-      $('#robot-basculer').addEventListener('click', function (ev) {
-        var b = ev.currentTarget;
-        b.disabled = true;
-        appel('robot', { actif: !b.dataset.actif }).then(function (x) {
-          if (x.statut !== 200) { message('Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.', true); return; }
-          afficherRobot(x.r);
-          message(x.r.actif ? 'Robot en service.' : 'Robot coupé : les nouveaux messages arrivent tous ici.');
-        }).catch(function (e) { message('Impossible de joindre le serveur : ' + e.message, true); })
-          .then(function () { b.disabled = false; });
-      });
-
-      $('#robot-essai-form').addEventListener('submit', function (ev) {
-        ev.preventDefault();
-        var question = $('#robot-question').value.trim();
-        if (!question) return;
-        var b = ev.target.querySelector('button');
-        b.disabled = true;
-        $('#robot-reponse').textContent = '🤖 Le robot réfléchit…';
-        appel('robot-essai', { texte: question, role: $('#robot-role').value }).then(function (x) {
-          if (x.statut !== 200) { $('#robot-reponse').textContent = 'Échec : ' + (x.r.erreur || 'serveur ' + x.statut) + '.'; return; }
-          $('#robot-reponse').textContent = (x.r.texte || '(pas de texte)') + (x.r.transfere ? '\n\n→ Il aurait transmis la conversation à l\'administrateur.' : '');
-          chargerRobot();
-        }).catch(function (e) { $('#robot-reponse').textContent = 'Impossible de joindre le serveur : ' + e.message; })
-          .then(function () { b.disabled = false; });
       });
 
       /* Collections du site (publiées par l'admin ou par les enseignants) */
