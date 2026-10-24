@@ -655,6 +655,7 @@
         carte.style.setProperty('--teinte', teinte(e.nom || '?'));
         var rond = rondEleve(e);
         rond.classList.add('grand');
+        if ((e.badges || []).indexOf('verifie') >= 0) rond.classList.add('verifie'); // coche bleue (../app/profil.css)
         if (rond.dataset.fond) carte.dataset.fond = rond.dataset.fond;
         var qui = el('div', 'cp-qui');
         var nom = el('strong', 'cp-nom', e.nom);

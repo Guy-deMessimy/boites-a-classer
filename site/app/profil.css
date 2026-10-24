@@ -256,3 +256,56 @@ button.mini-profil:focus-visible { outline: 2px solid var(--accent, #2f6fde); ou
 .m-etat { color: var(--ok, #17955a); font-size: .7rem; font-weight: 700; line-height: 1.2; }
 .m-comment { color: var(--cp-doux); font-size: .7rem; font-style: italic; line-height: 1.3; }
 @media (max-width: 420px) { .cp-toutes { margin-inline: 14px; } }
+
+/* ---------- Relief des ronds (3.44.0) ----------
+   Un reflet en haut à gauche et un liseré à peine plus foncé (plus clair en sombre) font ressortir la photo ; l'emoji a une
+   petite ombre. En sombre, les couleurs du rond sont plus vives (plus de kaki ni de brun éteint) et le bandeau de la carte
+   les adoucit. Sur la grande carte, un compte vérifié par le site a une coche bleue en bas de son rond (.verifie). */
+.avatar { --avatar-reflet: rgb(255 255 255 / .6); --avatar-lisere: rgb(0 0 0 / .12); }
+@media screen and (prefers-color-scheme: dark) {
+  .avatar { --avatar-reflet: rgb(255 255 255 / .16); --avatar-lisere: rgb(255 255 255 / .18); }
+  [data-fond="bleu"] { --avatar-fond: #2c5aa8; }
+  [data-fond="vert"] { --avatar-fond: #24704a; }
+  [data-fond="jaune"] { --avatar-fond: #806a1c; }
+  [data-fond="orange"] { --avatar-fond: #8a4f22; }
+  [data-fond="rouge"] { --avatar-fond: #8a3340; }
+  [data-fond="rose"] { --avatar-fond: #84376a; }
+  [data-fond="violet"] { --avatar-fond: #5d43a0; }
+  [data-fond="nuit"] { --avatar-fond: #1a1838; }
+  .carte-profil[data-fond] { --cp-bandeau: color-mix(in srgb, var(--avatar-fond) 60%, var(--cp-surface)); }
+}
+.avatar[data-fond]:not(.defaut),
+#compte.connecte .avatar[data-fond]:not(.defaut),
+.mini-profil .avatar[data-fond]:not(.defaut),
+.carte-profil .avatar.grand[data-fond]:not(.defaut) {
+  background: radial-gradient(circle at 32% 26%, var(--avatar-reflet) 0, transparent 58%), var(--avatar-fond);
+  box-shadow: inset 0 0 0 1.5px var(--avatar-lisere);
+}
+.carte-profil .avatar.grand[data-fond]:not(.defaut) { box-shadow: 0 2px 8px rgb(28 34 51 / .16), inset 0 0 0 1.5px var(--avatar-lisere); }
+.avatar:not(.defaut) { text-shadow: 0 1px 1.5px rgb(0 0 0 / .2); }
+.avatar.defaut {
+  background: radial-gradient(circle at 32% 26%, rgb(255 255 255 / .32) 0, transparent 55%),
+    linear-gradient(140deg, hsl(var(--teinte, 215) 78% 64%), hsl(calc(var(--teinte, 215) + 38) 70% 46%));
+}
+/* Le rond de la barre grandit un peu (bouton en pilule de 38 px). */
+#compte .avatar { width: 26px; height: 26px; font-size: 16px; }
+#compte .avatar.defaut { font-size: 13px; }
+.avatar.verifie { position: relative; }
+.avatar.verifie::after {
+  content: "✔";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 30%;
+  height: 30%;
+  border: 3px solid var(--cp-surface, #fff);
+  border-radius: 50%;
+  background: #1d9bf0;
+  color: #fff;
+  font-size: .3em;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: none;
+}

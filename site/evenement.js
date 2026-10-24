@@ -759,7 +759,7 @@
     'participation-printemps': ['🦋', 'Participation au printemps', 'hanter-badge'],
   };
   // Couleurs du rond choisies par l'admin (FONDS_AVATAR, functions/api/admin/[action].js), teintes sombres de app/profil.css.
-  var FONDS = { bleu: '#213a63', vert: '#1d4430', jaune: '#4d4117', orange: '#55331b', rouge: '#56242a', rose: '#522443', violet: '#3a2b5c', nuit: '#0f0e22' };
+  var FONDS = { bleu: '#2c5aa8', vert: '#24704a', jaune: '#806a1c', orange: '#8a4f22', rouge: '#8a3340', rose: '#84376a', violet: '#5d43a0', nuit: '#1a1838' };
   function teinte(nom) { // même calcul que teinte() dans app/app.js : la même couleur que dans son logiciel
     var h = 7;
     Array.from(nom).forEach(function (c) { h = (h * 31 + c.codePointAt(0)) % 360; });
@@ -771,7 +771,7 @@
     r.setAttribute('aria-hidden', 'true');
     if (qui && qui.avatar) {
       r.textContent = qui.avatar;
-      if (FONDS[qui.avatar_fond]) r.style.background = FONDS[qui.avatar_fond];
+      if (FONDS[qui.avatar_fond]) r.style.background = 'radial-gradient(circle at 32% 26%, rgb(255 255 255 / .16) 0, transparent 58%), ' + FONDS[qui.avatar_fond];
     } else {
       r.classList.add('initiale');
       r.style.setProperty('--teinte', teinte(nom || '?'));

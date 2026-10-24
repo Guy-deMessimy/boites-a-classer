@@ -3637,6 +3637,7 @@
     const rond = rondProfil(el('span', 'grand'), nom, lire(CLE_AVATAR), lire(CLE_AVATAR_FOND));
     if (rond.dataset.fond) carte.dataset.fond = rond.dataset.fond; else delete carte.dataset.fond; // le bandeau prend la couleur du rond
     rond.title = lire(CLE_AVATAR) ? 'Photo de profil (choisie par l\'administrateur)' : 'Pas encore de photo de profil : l\'administrateur peut en choisir une';
+    if (badgesCompte().includes('verifie')) { rond.classList.add('verifie'); rond.title += ' · vérifié par le site'; }
     const qui = el('div', 'cp-qui');
     const n = el('strong', 'cp-nom', nom);
     n.title = nom;

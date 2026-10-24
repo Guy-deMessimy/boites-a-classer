@@ -160,6 +160,7 @@
     .outils select { max-width: min(100%, 14em); padding: .4rem .7rem; border: 1px solid var(--ligne); border-radius: 999px; background: var(--carte); color: var(--encre); font: inherit; font-size: .9rem; }
     .outils select.actif { border-color: var(--accent); }
     .filtres { align-items: center; }
+    .table-comptes td:first-child { min-width: 13em; }
     .compte-nombre { margin-left: auto; color: var(--doux); font-size: .9rem; }
     .defile { overflow-x: auto; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
     table { width: 100%; border-collapse: collapse; font-size: .92rem; }
@@ -1116,6 +1117,7 @@
         carte.style.setProperty('--teinte', teinte(nom));
         var rond = rondCompte({ nom: c.nom, classe: c.classe, identifiant: c.identifiant, avatar: avatar || null, avatar_fond: fond || null });
         rond.classList.add('grand');
+        if (badgesDe(c).indexOf('verifie') >= 0) rond.classList.add('verifie');
         if (rond.dataset.fond) carte.dataset.fond = rond.dataset.fond;
         var qui = el('div', 'cp-qui');
         var n = el('strong', 'cp-nom', nom);
