@@ -1,6 +1,7 @@
 // Passe avant chaque requête du site :
-// - quand un admin a arrêté le site (serveur/maintenance.js), tout répond par la page « Boîtes à classer revient dans
-//   peu de temps… », sauf la page d'administration et ce dont elle a besoin pour le rouvrir ;
+// - quand un admin a arrêté le site (serveur/maintenance.js), tout répond par la page d'arrêt (« Défaut majeur », avec
+//   son clip rassurant), sauf la page d'administration et ce dont elle a besoin pour le rouvrir, et le service client
+//   (les visiteurs peuvent y poser leurs questions pendant l'arrêt) ;
 // - les pages HTML partent habillées du thème du site (serveur/theme.js : décor, bandeau, nom du site), sauf les clips
 //   des événements (site/halloween/, site/noel/), qui ont le leur.
 
@@ -10,6 +11,7 @@ import { lireTheme, habiller } from '../serveur/theme.js';
 const TOUJOURS_OUVERT = [
   /^\/admin(\/|$)/, // page d'administration (connexion et bouton de réouverture)
   /^\/api\/(admin|compte)\//,
+  /^\/aide(\/|$)/, /^\/api\/support\//, /^\/arret\.js$/, // service client, ouvert pendant l'arrêt
   /^\/polices\//, /^\/fond-sciences\.svg$/, /^\/icone\.png$/, // utilisés par la page de maintenance
 ];
 const SANS_THEME = /^\/(api|halloween|noel)\//;

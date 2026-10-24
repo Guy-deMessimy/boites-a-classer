@@ -224,6 +224,8 @@ Page `site/aide/` (« 💬 Service client » sur l'accueil, dans la fenêtre �
 
 **Messages automatiques** (depuis la 3.43.2, à la place du robot IA des 3.40.2 à 3.43.1, retiré à la demande de l'utilisateur) : la page `site/aide/` affiche toujours en tête « Bonjour, veuillez décliner votre problème. Merci » (`ACCUEIL`, pas gardé en base) ; au premier message d'une conversation, ou au premier après « Marquer résolu », `functions/api/support/[action].js` ajoute « Je vous transfère au service client. Merci » (`REPONSE_AUTO`, auteur `auto`), puis la conversation attend l'administrateur comme avant. Les réglages `robot-support` et `robot-conso:…` éventuellement restés dans `reglages` ne servent plus.
 
+Pendant un arrêt du site, le service client reste ouvert (`/aide/`, `/api/support/*` et `/arret.js` dans `TOUJOURS_OUVERT` de `functions/_middleware.js` ; sur `/aide/`, `site/arret.js` ne recharge pas la page à l'arrêt) et la page d'arrêt (`serveur/maintenance.js`) montre un petit clip rassurant (« Défaut majeur ? » → pas de panique → grosse mise à jour → travail gardé → 4.1), puis « Défaut majeur » avec un bouton « 💬 Poser une question au service client ».
+
 ## Collections du site et réservées à l'admin (depuis la 2.4.0)
 
 Depuis la 3.13.0, un **enseignant** crée aussi des collections du site et ne modifie ou retire que les siennes (`collections.auteur`, 30 au plus) : `GET/POST/DELETE /api/collections` (`functions/api/collections.js`) ; avec une session, le GET marque `modifiable` celles que l'on peut modifier. Un admin les gère toutes (et garde les actions `collection` de son API).
