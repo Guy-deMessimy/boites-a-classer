@@ -403,7 +403,8 @@ body.consultation #exercices { display: none; }
   transition: border-color .15s, box-shadow .15s;
 }
 #calque .etre { position: absolute; z-index: 500; }
-.etre-ico { font-size: 30px; line-height: 1; }
+.etre-ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--fond-ico); font-size: 28px; line-height: 1; }
+.etre-ico:has(img) { background: none; }
 .etre-ico img { width: 40px; height: 40px; object-fit: contain; pointer-events: none; }
 .etre-nom { font-size: .74rem; font-weight: 500; line-height: 1.1; text-align: center; padding: 0 3px; }
 @media (hover: hover) {
@@ -471,10 +472,17 @@ body.consultation #exercices { display: none; }
   position: fixed;
   z-index: 3000;
   min-width: 220px;
-  max-height: 60vh;
+  max-height: 60vh; /* remplacé par la place libre à l'ouverture (afficherMenu) */
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 6px;
-  background: var(--surface);
+  /* Ombres de défilement : un voile en haut ou en bas montre qu'il reste des choix cachés. */
+  background:
+    linear-gradient(var(--surface) 40%, transparent) top / 100% 28px no-repeat local,
+    linear-gradient(transparent, var(--surface) 60%) bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgb(28 34 51 / .18), transparent) top / 100% 12px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgb(28 34 51 / .18), transparent) bottom / 100% 12px no-repeat scroll,
+    var(--surface);
   border: 1px solid var(--ligne);
   border-radius: 14px;
   box-shadow: var(--ombre-3);
@@ -1168,3 +1176,38 @@ body.consultation #exercices { display: none; }
 @media (prefers-reduced-motion: reduce) { .tuto-anneau { animation: none; } }
 @media print { .tuto, .tuto-anneau { display: none !important; } }
 @media (max-width: 700px) { .tuto { width: calc(100vw - 16px); } }
+
+/* ---------- Finitions du style (3.44) ---------- */
+/* Fond rond derrière le dessin d'une carte : les emojis sombres (🐜 🕷 🦇) restent visibles en thème sombre. */
+:root { --fond-ico: #f1f4f9; }
+@media screen and (prefers-color-scheme: dark) { :root { --fond-ico: #d9e0ec; } }
+#plateau .etre-ico { width: 34px; height: 34px; }
+@media (max-width: 700px) { #plateau .etre-ico { width: 30px; height: 30px; } }
+:root[data-taille="grande"] #plateau .etre-ico { width: 44px; height: 44px; }
+:root[data-taille="tres-grande"] #plateau .etre-ico { width: 50px; height: 50px; }
+.etre.avec-attrs .etre-ico { width: 34px; height: 34px; font-size: 26px; }
+
+/* Résultat de la vérification (et de la correction en direct du niveau facile) : une pastille ✓ ou ✗ en plus de la
+   couleur du bord, lisible aussi pour les daltoniens et en noir et blanc. */
+.etre.ok::after, .etre.faux::after {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+.etre.ok::after { content: "✓"; background: var(--ok); }
+.etre.faux::after { content: "✗"; background: var(--faux); }
+#plateau .etre.ok, #plateau .etre.faux { position: relative; }
+
+/* Titre d'une boîte trop étroite : « … » au lieu d'un mot coupé net (le nom entier au survol). */
+.boite-titre { text-overflow: ellipsis; }
+.menu-ico { flex: none; width: 1.45em; margin-right: -.2em; text-align: center; }
