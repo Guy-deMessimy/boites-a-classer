@@ -7,6 +7,7 @@
   <title>Mes classes · Boîtes à classer</title>
   <link rel="icon" href="../icone.png">
   <link rel="stylesheet" href="../app/profil.css"><!-- petite carte de profil de chaque élève -->
+  <script src="../app/niveau.js"></script><!-- niveau, titre et cadre de chaque élève, calculés d'après son travail -->
   <style>
     /* Page « Mes classes » des enseignants (rôle donné par un admin) : classes, comptes des élèves, codes de connexion à
        imprimer, consultation du travail. Le serveur vérifie chaque appel (functions/api/classe/[action].js).
@@ -710,7 +711,11 @@
         }
         var fermer = bouton('Fermer', function () { fen.close(); }, 'principal');
         pied.appendChild(fermer);
-        carte.append(el('div', 'cp-bandeau'), identite, titre, liste, toutes, suivi, pied);
+        var joueur = suivis[e.id] && suivis[e.id].joueur;
+        if (joueur) BoitesNiveau.appliquerCadre(rond, joueur.cadre);
+        carte.append(el('div', 'cp-bandeau'), identite);
+        if (joueur) carte.append(BoitesNiveau.bloc(joueur, false)); // niveau, titre, barre d'XP
+        carte.append(titre, liste, toutes, suivi, pied);
         fen.setAttribute('aria-label', 'Carte de profil de ' + e.nom);
         fen.replaceChildren(carte);
         if (!fen.open) fen.showModal();
@@ -805,6 +810,14 @@
               var donnes = (classeChoisie() && classeChoisie().exercices) || [];
               var faits = donnes.filter(function (id) { return ids.indexOf(id) !== -1; }).length;
               suivis[x.e.id] = { reussies: ids.length, trophees: trophees, niveau: niveau, faits: faits, donnes: donnes.length }; // grande carte
+              // Niveau de joueur (XP, titre, cadre : ../app/niveau.js) : pastille à côté du prénom, cadre sur la photo.
+              var joueur = window.BoitesNiveau && BoitesNiveau.calculer(donnees);
+              var mini = joueur && x.cellule.parentElement.querySelector('.mini-profil');
+              if (mini) {
+                suivis[x.e.id].joueur = joueur;
+                if (!mini.querySelector('.niv-pastille')) mini.querySelector('.mp-nom').append(BoitesNiveau.pastille(joueur));
+                BoitesNiveau.appliquerCadre(mini.querySelector('.avatar'), joueur.cadre);
+              }
               x.cellule.textContent = (ids.length ? '✅ ' + ids.length : '0') + (trophees ? ' · 🏆 ' + trophees : '')
                 + (donnes.length ? ' · 📌 ' + faits + '/' + donnes.length : '');
               x.cellule.title = (ids.length ? 'Réussies : ' + ids.map(function (id) { return NOMS[id] || nomSite(id); }).join(', ') : 'Aucune collection réussie')
