@@ -564,7 +564,7 @@
         horsSession('Déconnecté.');
       });
 
-      /* Arrêt du site : tant qu'il dure, toutes les pages affichent « Boîtes à classer revient dans peu de temps… »
+      /* Arrêt du site : tant qu'il dure, toutes les pages affichent « Défaut majeur »
          (functions/_middleware.js), sauf cette page. */
       var siteArrete = null;
       function afficherEtat(arrete) {
@@ -575,7 +575,7 @@
         $('#etat-site').classList.toggle('arrete', arrete);
         $('#etat-texte').textContent = arrete ? '🔒 Le site est arrêté' : '🟢 Le site est ouvert';
         $('#etat-detail').textContent = arrete
-          ? 'Les visiteurs voient « ' + nomSite + ' revient dans peu de temps… ». Seule cette page reste accessible.'
+          ? 'Les visiteurs voient « Défaut majeur ». Seule cette page reste accessible.'
           : 'Tout le monde peut utiliser le logiciel.';
         b.className = 'bouton ' + (arrete ? 'rouvrir' : 'arreter');
         b.textContent = arrete ? '🔓 Rouvrir le site' : '🔒 Arrêter le site';

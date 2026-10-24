@@ -33,7 +33,7 @@ export const PAGE_MAINTENANCE = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Boîtes à classer revient bientôt</title>
+  <title>Défaut majeur · Boîtes à classer</title>
   <link rel="icon" href="/icone.png">
   <style>
     @font-face {
@@ -108,8 +108,8 @@ export const PAGE_MAINTENANCE = `<!doctype html>
 <body>
   <main>
     <img src="/icone.png" alt="">
-    <h1 data-nom-site>Boîtes à classer revient dans peu de temps…</h1>
-    <p>Le site est momentanément fermé. Ton travail est bien gardé : la page reviendra toute seule dès la réouverture.</p>
+    <h1>Défaut majeur</h1>
+    <p>Le site est fermé le temps de le réparer. Ton travail est bien gardé : la page reviendra toute seule dès la réouverture.</p>
   </main>
   <script>
     // Dès que l'admin rouvre le site, /api/etat ne répond plus 503 : on recharge, et la vraie page revient.
