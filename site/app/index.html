@@ -63,6 +63,18 @@
     <div id="espace" aria-label="Plan de travail">
       <div id="toile"><div id="calque"></div></div>
     </div>
+    <div id="plan-vide" class="plan-vide" hidden>
+      <div class="plan-vide-carte">
+        <div class="plan-vide-dessin" aria-hidden="true">📦</div>
+        <h2>Ton plan de travail est vide</h2>
+        <p>Crée une boîte, donne-lui un attribut, puis glisse dedans les cartes du bas qui le possèdent.</p>
+        <div class="plan-vide-boutons">
+          <button type="button" class="btn principal" id="vide-boite">＋ Nouvelle boîte</button>
+          <button type="button" class="btn" id="vide-tuto">🎓 Me montrer pas à pas</button>
+        </div>
+      </div>
+      <p class="plan-vide-bas" aria-hidden="true">↓ Les cartes à classer sont en bas ↓</p>
+    </div>
     <div class="zoom" role="group" aria-label="Annuler et zoom">
       <button id="chrono" class="chrono" title="Défi chronométré : appuie pour l'arrêter" hidden><svg class="ico"><use href="#i-chrono"/></svg><span>0:00</span></button>
       <button id="annuler" class="histoire" title="Annuler (Ctrl+Z)" aria-label="Annuler" disabled><svg class="ico"><use href="#i-annuler"/></svg></button>
