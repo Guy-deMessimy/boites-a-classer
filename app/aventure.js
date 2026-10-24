@@ -472,9 +472,27 @@
       const i = niveauxDe(r).indexOf(c);
       app.message(`🗺️ ${r.nom}, niveau ${i + 1} : range toutes les cartes dans des boîtes, puis appuie sur « Vérifier ». (↩ ramène ton travail d'avant.)`);
       montrerHud();
+      attendreFete();
     };
     if (app.calme()) fin();
     else { fen.classList.add('av-depart'); setTimeout(() => { fen.classList.remove('av-depart'); fin(); }, 380); }
+  }
+
+  // La fête « Niveau supérieur ! » (app/niveau.js) peut s'ouvrir juste après le départ, quand la fenêtre de l'aventure
+  // se ferme : le temps de la lire ne compte pas, le chrono repart de zéro quand elle se ferme.
+  function attendreFete() {
+    const jusqua = Date.now() + 1500;
+    const ouverte = () => document.querySelector('.niveau-fete:not(.sortie)');
+    const guetter = () => {
+      if (!partie) return;
+      if (!ouverte()) { if (Date.now() < jusqua) setTimeout(guetter, 100); return; }
+      const suivre = setInterval(() => {
+        if (ouverte()) return;
+        clearInterval(suivre);
+        if (partie) { partie.debut = Date.now(); session.ecrire(partie); montrerHud(); }
+      }, 150);
+    };
+    guetter();
   }
 
   function montrerHud() {
