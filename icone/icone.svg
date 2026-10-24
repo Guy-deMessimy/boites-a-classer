@@ -1,10 +1,74 @@
+<!-- Logo de Boîtes à classer (4.1) : une île de l'Aventure, le carton qui s'illumine. Source des icônes : node outils/icones.mjs -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <rect x="64" y="64" width="896" height="896" rx="200" fill="#2f6fde"/>
-  <rect x="190" y="210" width="644" height="604" rx="56" fill="#ffffff" fill-opacity=".14" stroke="#ffffff" stroke-width="40"/>
-  <rect x="190" y="210" width="644" height="96" rx="40" fill="#ffffff"/>
-  <rect x="262" y="370" width="300" height="370" rx="40" fill="#29a35a" fill-opacity=".35" stroke="#7ee2a8" stroke-width="32"/>
-  <rect x="612" y="370" width="160" height="200" rx="34" fill="#e8a10c" fill-opacity=".35" stroke="#ffd166" stroke-width="32"/>
-  <circle cx="412" cy="555" r="62" fill="#ffffff"/>
-  <circle cx="692" cy="470" r="38" fill="#ffffff"/>
-  <circle cx="692" cy="680" r="38" fill="#ffffff" fill-opacity=".85"/>
+  <defs>
+    <filter id="flou" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="ombre" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#04172c" flood-opacity=".35"/></filter>
+    <linearGradient id="or" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c8"/><stop offset=".45" stop-color="#ffd34d"/><stop offset=".6" stop-color="#f5b301"/><stop offset="1" stop-color="#d48a00"/></linearGradient>
+    <linearGradient id="carton" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d39a58"/><stop offset="1" stop-color="#9c6a33"/></linearGradient>
+    <linearGradient id="rabat" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#c48a4c"/><stop offset="1" stop-color="#e2b680"/></linearGradient>
+    <linearGradient id="rabat-fond" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8a5a2b"/><stop offset="1" stop-color="#b77f40"/></linearGradient>
+    <linearGradient id="faisceau" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff3c4" stop-opacity=".95"/><stop offset=".45" stop-color="#ffd34d" stop-opacity=".35"/><stop offset="1" stop-color="#ffd34d" stop-opacity="0"/></linearGradient>
+    <radialGradient id="mer" cx=".5" cy=".5" r=".75"><stop offset="0" stop-color="#2a86cc"/><stop offset=".4" stop-color="#1f6fb2"/><stop offset="1" stop-color="#0b3d6b"/></radialGradient>
+    <radialGradient id="halo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe9a0" stop-opacity=".85"/><stop offset=".45" stop-color="#ffc94a" stop-opacity=".3"/><stop offset="1" stop-color="#ffc94a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="violet" cx=".5" cy=".45" r=".75"><stop offset="0" stop-color="#7448d0"/><stop offset=".45" stop-color="#3f1f86"/><stop offset="1" stop-color="#1c0c40"/></radialGradient>
+    <radialGradient id="sable" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#fff2c8"/><stop offset=".35" stop-color="#f4e1b5"/><stop offset="1" stop-color="#e2c48a"/></radialGradient>
+    <pattern id="vagues" width="140" height="84" patternUnits="userSpaceOnUse">
+      <path d="M14 26 q13 -11 26 0 q13 11 26 0 M84 68 q13 -11 26 0 q13 11 26 0" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="5" stroke-linecap="round"/>
+    </pattern>
+    <clipPath id="forme"><rect x="64" y="64" width="896" height="896" rx="210"/></clipPath>
+    <linearGradient id="reflet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".3" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  </defs>
+  <g clip-path="url(#forme)">
+    <g transform="translate(512 512) scale(.875) translate(-512 -512)">
+    <rect width="1024" height="1024" fill="url(#mer)"/>
+    <rect width="1024" height="1024" fill="url(#vagues)"/>
+    <path d="M512 600 L1612 600 L1606 715 Z M512 600 L1558.2 939.9 L1516.9 1047.4 Z M512 600 L1401.9 1246.6 L1329.5 1336 Z M512 600 L1158.6 1489.9 L1062 1552.6 Z M512 600 L851.9 1646.2 L740.7 1676 Z M512 600 L512 1700 L397 1694 Z M512 600 L172.1 1646.2 L64.6 1604.9 Z M512 600 L-134.6 1489.9 L-224 1417.5 Z M512 600 L-377.9 1246.6 L-440.6 1150 Z M512 600 L-534.2 939.9 L-564 828.7 Z M512 600 L-588 600 L-582 485 Z M512 600 L-534.2 260.1 L-492.9 152.6 Z M512 600 L-377.9 -46.6 L-305.5 -136 Z M512 600 L-134.6 -289.9 L-38 -352.6 Z M512 600 L172.1 -446.2 L283.3 -476 Z M512 600 L512 -500 L627 -494 Z M512 600 L851.9 -446.2 L959.4 -404.9 Z M512 600 L1158.6 -289.9 L1248 -217.5 Z M512 600 L1401.9 -46.6 L1464.6 50 Z M512 600 L1558.2 260.1 L1588 371.3 Z " fill="#ffd25a" fill-opacity="0.1"/>
+    <path d="M70 990 C170 900 140 800 270 760" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="16" stroke-linecap="round" stroke-dasharray="1 38"/>
+    <ellipse cx="530" cy="672" rx="400" ry="250" fill="#9fd6ff" fill-opacity=".28"/>
+    <path d="M190 690 C170 560 330 470 520 476 C730 470 880 560 860 680 C850 800 690 860 520 856 C340 860 205 800 190 690 Z" fill="url(#sable)"/>
+    <path d="M300 690 C290 600 400 560 520 560 C650 556 760 600 752 690 C746 760 650 790 522 790 C390 792 308 760 300 690 Z" fill="#43b05c"/>
+    <path d="M308 716 C340 770 420 792 522 792 C640 792 730 768 748 716 C720 750 640 770 522 770 C410 770 340 752 308 716 Z" fill="#000" fill-opacity=".15"/>
+    <g transform="translate(770 560)">
+      <path d="M0 0 C-6 -70 6 -130 26 -190" fill="none" stroke="#8a5a2b" stroke-width="20" stroke-linecap="round"/>
+      <path d="M26 -190 C-30 -220 -80 -200 -100 -160 C-60 -190 -10 -190 26 -190 Z M26 -190 C80 -230 140 -210 160 -170 C110 -200 60 -196 26 -190 Z M26 -190 C0 -250 30 -290 70 -296 C40 -260 34 -226 26 -190 Z M26 -190 C-40 -170 -70 -120 -60 -80 C-40 -130 -10 -170 26 -190 Z M26 -190 C90 -170 120 -120 110 -84 C90 -130 60 -166 26 -190 Z" fill="#2f9e55" stroke="#1f7a43" stroke-width="5" stroke-linejoin="round"/>
+    </g>
+    <circle cx="512" cy="520" r="250" fill="url(#halo)"/>
+    
+    <ellipse cx="500" cy="736.7" rx="174" ry="20.3" fill="#04172c" fill-opacity=".35" filter="url(#flou)"/>
+    <path d="M389.8 519.2 L610.2 519.2 L592.8000000000001 449.6 L407.2 449.6 Z" fill="url(#rabat-fond)"/>
+    <path d="M355 548.2 L645 548.2 L610.2 519.2 L389.8 519.2 Z" fill="#5c3a18"/>
+    <path d="M395.8 523.2 L604.2 523.2 L833.5 -2.7999999999999545 L166.5 -2.7999999999999545 Z" fill="url(#faisceau)"/>
+    <ellipse cx="500" cy="535.1500000000001" rx="104.39999999999999" ry="15.950000000000001" fill="#fff6d6" filter="url(#flou)"/>
+    <path d="M355 548.2 L389.8 519.2 L297 490.20000000000005 L276.7 527.9000000000001 Z" fill="url(#rabat)"/>
+    <path d="M645 548.2 L610.2 519.2 L703 490.20000000000005 L723.3 527.9000000000001 Z" fill="url(#rabat)"/>
+    <rect x="355" y="548.2" width="290" height="179.8" rx="17.4" fill="url(#carton)"/>
+    <rect x="355" y="548.2" width="290" height="10.15" rx="4.930000000000001" fill="#e3b47a"/>
+    <rect x="479.7" y="548.2" width="40.6" height="179.8" fill="#fff" fill-opacity=".13"/>
+    <rect x="355" y="707.7" width="290" height="20.3" rx="10.15" fill="#000" fill-opacity=".14"/>
+    <g transform="rotate(-5 433.3 641.696)">
+      <rect x="378.2" y="584.1600000000001" width="104.39999999999999" height="104.284" rx="10.15" fill="#fffaf0"/>
+      <rect x="388.35" y="596.7460000000001" width="84.1" height="79.11200000000001" rx="8.7" fill="none" stroke="#29a35a" stroke-width="6.38"/>
+      <rect x="395.6" y="618.322" width="43.5" height="46.748000000000005" rx="6.38" fill="none" stroke="#2f7ed8" stroke-width="5.8"/>
+      <rect x="444.9" y="607.5340000000001" width="20.3" height="26.970000000000002" rx="4.35" fill="none" stroke="#e8a10c" stroke-width="5.22"/>
+    </g>
+    
+    <path d="M500 177.4 L528.1 242.7 L598.9 249.2 L545.5 296.1 L561.1 365.5 L500 329.2 L438.9 365.5 L454.5 296.1 L401.1 249.2 L471.9 242.7 Z" fill="#b07a00"/>
+    <path d="M500 168 L528.1 233.3 L598.9 239.9 L545.5 286.8 L561.1 356.1 L500 319.8 L438.9 356.1 L454.5 286.8 L401.1 239.9 L471.9 233.3 Z" fill="url(#or)" stroke="#fff3c4" stroke-width="8.3" stroke-linejoin="round"/>
+    <path d="M487.5 224.2 L496.7 244.8 L519.2 247.2 L502.4 262.3 L507.1 284.4 L487.5 273 L468 284.4 L472.7 262.3 L455.9 247.2 L478.4 244.8 Z" fill="#fff" fill-opacity=".55"/>
+    <path d="M360 276 Q364.32 295.68 384 300 Q364.32 304.32 360 324 Q355.68 304.32 336 300 Q355.68 295.68 360 276 Z" fill="#fff"/><path d="M650 210 Q653.6 226.4 670 230 Q653.6 233.6 650 250 Q646.4 233.6 630 230 Q646.4 226.4 650 210 Z" fill="#fff"/>
+    <rect x="370" y="842" width="270" height="56" rx="20" fill="#29a35a" stroke="#fff" stroke-width="8"/>
+    <rect x="404" y="864" width="202" height="12" rx="6" fill="#fff"/>
+    <g transform="translate(842 862)">
+      <circle r="72" fill="#fffaf0" stroke="#c9a46a" stroke-width="8"/>
+      <path d="M0 -60 L14 0 L0 60 L-14 0 Z" fill="#d64545"/><path d="M0 60 L14 0 L0 0 Z M0 -60 L-14 0 L0 0 Z" fill="#000" fill-opacity=".2"/>
+      <path d="M-60 0 L0 -12 L60 0 L0 12 Z" fill="#c9a46a"/>
+      <circle r="9" fill="#5a3a00"/>
+    </g>
+    <g fill="#fff" fill-opacity=".9" filter="url(#ombre)">
+      <ellipse cx="190" cy="214" rx="110" ry="40"/><circle cx="160" cy="190" r="46"/><circle cx="222" cy="182" r="58"/>
+    </g>
+    </g>
+    <rect x="64" y="64" width="896" height="896" rx="210" fill="url(#reflet)"/>
+  </g>
+  <rect x="66" y="66" width="892" height="892" rx="208" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="4"/>
 </svg>
