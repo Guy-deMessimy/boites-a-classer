@@ -101,7 +101,8 @@
       opacity: var(--motif-opacite);
       pointer-events: none;
     }
-    main { max-width: 960px; margin: 0 auto; padding: 24px 16px 32px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 32px; }
+    body { overflow-x: clip; }
     /* Panneaux voilés : le texte reste lisible au-dessus du motif. */
     .panneau {
       padding: 20px;
@@ -212,7 +213,208 @@
 
     footer { margin-top: 48px; padding: 14px 20px; color: var(--doux); font-size: .9rem; }
     footer a { color: var(--accent); }
+
+    /* ---------- 4.1 : grande scène du haut (titre, boutons, boîtes qui se remplissent toutes seules) ----------
+       Les couleurs viennent des variables du thème (serveur/theme.js) ; le titre en dégradé seulement au thème normal. */
+    .scene {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+      align-items: center;
+      gap: 24px;
+      min-height: min(84vh, 720px);
+      padding: 32px 28px;
+      overflow: hidden;
+      border-radius: 28px;
+    }
+    .scene::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at 72% 42%, rgb(47 111 222 / .2), transparent 42%), radial-gradient(circle at 22% 78%, rgb(232 161 12 / .16), transparent 38%), radial-gradient(circle at 40% 10%, rgb(142 91 208 / .14), transparent 36%);
+      animation: scene-halo 16s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    @keyframes scene-halo { to { transform: translate(5%, -4%) rotate(10deg); } }
+    .scene > * { position: relative; }
+    .scene-texte { display: flex; flex-direction: column; gap: 16px; }
+    .scene-texte > * { animation: scene-entree .9s cubic-bezier(.2, .8, .2, 1) both; }
+    .scene-texte > :nth-child(2) { animation-delay: .12s; }
+    .scene-texte > :nth-child(3) { animation-delay: .24s; }
+    .scene-texte > :nth-child(4) { animation-delay: .36s; }
+    .scene-texte > :nth-child(5) { animation-delay: .48s; }
+    .scene-texte > :nth-child(6) { animation-delay: .6s; }
+    @keyframes scene-entree { from { opacity: 0; transform: translateY(28px); } }
+    .nouveau-41 {
+      display: inline-flex; align-self: flex-start; align-items: center; gap: 10px; margin: 0;
+      padding: .3rem .9rem .3rem .35rem; border-radius: 999px; background: var(--carte); border: 1px solid var(--ligne);
+      font-weight: 600; font-size: .95rem; box-shadow: var(--ombre); text-decoration: none; color: var(--encre);
+    }
+    .pastille-41 { padding: .12rem .6rem; border-radius: 999px; background: linear-gradient(135deg, #ffd75a, #f5b301 55%, #ff8a3d); color: #2a1600; font-weight: 700; }
+    .scene h1 { font-size: clamp(2.6rem, 7.2vw, 5.4rem); line-height: 1; letter-spacing: -.02em; overflow-wrap: anywhere; }
+    :root:not([class*="theme-"]) .scene h1 {
+      background: linear-gradient(100deg, #2f6fde 0%, #8e5bd0 40%, #e4572e 72%, #e8a10c 100%) 0 0 / 220% 100%;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: scene-entree .9s .12s cubic-bezier(.2, .8, .2, 1) both, titre-reflet 7s 1s ease-in-out infinite alternate;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([class*="theme-"]) .scene h1 { background-image: linear-gradient(100deg, #7aa8ff 0%, #b892ff 40%, #ff8f6b 72%, #ffcf5a 100%); }
+    }
+    @keyframes titre-reflet { to { background-position: 100% 0; } }
+    .scene .sous-titre { font-size: clamp(1.05rem, 2vw, 1.25rem); }
+    .appels { display: flex; flex-wrap: wrap; gap: 10px; }
+    .bouton.grand { font-size: 1.12rem; padding: .85rem 1.5rem; box-shadow: 0 10px 24px rgb(47 111 222 / .32); }
+    button.bouton { font: inherit; font-weight: 600; cursor: pointer; border: 0; }
+    button.bouton.secondaire { border: 2px solid var(--accent); }
+    .bouton { transition: transform .15s, filter .15s; }
+    .bouton:hover { transform: translateY(-2px); }
+    .scene .connexion { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+    .scene .connexion .bouton { padding: .5rem .95rem; font-size: .95rem; }
+
+    /* Le plateau : des boîtes emboîtées en relief (elles suivent un peu la souris) et des cartes qui viennent s'y ranger
+       (script plus bas) ; la classification est juste : la chouette a des plumes, la grenouille et le poisson sont des
+       animaux sans plumes, le tournesol est une plante, le champignon n'est ni l'un ni l'autre. */
+    .diorama { position: relative; aspect-ratio: 6 / 5; perspective: 1100px; }
+    .plateau {
+      position: absolute; inset: 4% 3% 6%; transform-style: preserve-3d;
+      transform: rotateX(calc(14deg + var(--rx, 0deg))) rotateY(calc(-16deg + var(--ry, 0deg)));
+      transition: transform .25s ease-out;
+    }
+    .d-boite {
+      position: absolute; border: 3px solid var(--c); border-radius: 18px;
+      background: color-mix(in srgb, var(--c) 9%, transparent);
+      box-shadow: 0 12px 28px color-mix(in srgb, var(--c) 22%, transparent);
+      transform: translateZ(var(--z, 0px)); transition: background .35s, box-shadow .35s;
+    }
+    .d-boite > b {
+      position: absolute; left: 10px; top: -13px; padding: .12rem .6rem; border-radius: 999px; background: var(--c); color: #fff;
+      font-size: clamp(.6rem, 1.25vw, .85rem); font-weight: 700; white-space: nowrap; box-shadow: 0 3px 8px rgb(0 0 0 / .18);
+    }
+    .d-boite.ok { background: color-mix(in srgb, var(--c) 24%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 28%, transparent), 0 12px 28px color-mix(in srgb, var(--c) 30%, transparent); }
+    .d-carte {
+      position: absolute; left: var(--x); top: var(--y); width: 15%; aspect-ratio: 1 / 1.08;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      border-radius: 14px; background: #fff; color: #1f2430; box-shadow: 0 10px 20px rgb(20 30 60 / .28);
+      font-size: clamp(.5rem, 1.1vw, .78rem); font-weight: 600; transform: translate(-50%, -50%) translateZ(80px);
+    }
+    .d-carte span { font-size: 2.6em; line-height: 1; }
+    .d-bravo {
+      position: absolute; left: 50%; top: -2%; padding: .35rem 1rem; border-radius: 999px; background: #29a35a; color: #fff;
+      font-weight: 700; white-space: nowrap; transform: translate(-50%, -50%) translateZ(120px) scale(0); transition: transform .4s cubic-bezier(.3, 1.6, .5, 1);
+    }
+    .d-bravo.vu { transform: translate(-50%, -50%) translateZ(120px) scale(1); }
+    .d-confetti { position: absolute; width: 9px; height: 13px; border-radius: 2px; pointer-events: none; }
+
+    /* ---------- 4.1 : les nouveautés, une par rangée, animées quand elles arrivent à l'écran ---------- */
+    .nouveau { margin-top: 40px; padding: 32px clamp(18px, 4vw, 44px) 8px; border-radius: 28px; }
+    .sur-titre { display: flex; align-items: center; gap: 10px; margin: 0; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; font-size: .9rem; }
+    .nouveau > h2 { margin-top: 10px; font-size: clamp(1.7rem, 4.4vw, 2.6rem); line-height: 1.1; }
+    .atout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 28px; align-items: center; margin: 28px 0 44px; }
+    .atout.inverse .atout-illus { order: -1; }
+    .atout-texte { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+    .atout h3 { margin: 0; font-size: clamp(1.5rem, 3.4vw, 2.1rem); line-height: 1.15; }
+    .atout p { margin: 0; color: var(--doux); font-size: 1.05rem; }
+    .atout .etiquette { color: var(--accent); font-weight: 700; font-size: .9rem; text-transform: uppercase; letter-spacing: .06em; }
+    .atout .accroche { color: var(--encre); font-weight: 700; font-size: 1.15rem; }
+    .atout-illus { position: relative; aspect-ratio: 4 / 3; border-radius: 26px; overflow: hidden; box-shadow: var(--ombre); }
+
+    /* L'Aventure : l'océan, sept îles, la route en pointillés et le pion qui la suit. */
+    .illus-carte { background: radial-gradient(circle at 30% 20%, rgb(255 255 255 / .18), transparent 40%), linear-gradient(160deg, #2a86c9, #1f6fb2 40%, #0b3d6b); }
+    .illus-carte::before {
+      content: ""; position: absolute; inset: 0; opacity: .35;
+      background: radial-gradient(ellipse 22px 6px at 50% 50%, rgb(255 255 255 / .55) 40%, transparent 42%) 0 0 / 90px 46px;
+      animation: vagues 9s linear infinite;
+    }
+    @keyframes vagues { to { background-position: 90px 46px; } }
+    .ile {
+      position: absolute; left: var(--x); top: var(--y); width: 21%; aspect-ratio: 1.35; transform: translate(-50%, -50%) scale(.2); opacity: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      border-radius: 46% 54% 42% 58% / 55% 45% 55% 45%; background: radial-gradient(circle at 50% 40%, var(--c) 0 58%, #f4e1b5 60% 72%, transparent 74%);
+      color: #fff; font-weight: 700; font-size: clamp(.45rem, 1vw, .7rem); line-height: 1.1; text-shadow: 0 1px 2px rgb(0 0 0 / .45);
+      transition: transform .6s cubic-bezier(.3, 1.6, .5, 1), opacity .4s; transition-delay: var(--d);
+    }
+    .ile span { font-size: 2.1em; line-height: 1; }
+    .ile.ferme { filter: grayscale(.85) brightness(.85); }
+    .ile.ferme::after { content: "🔒"; position: absolute; right: 6%; top: 0; font-size: 1.6em; }
+    .vu .ile { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    .route { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .route path { fill: none; stroke: #fff; stroke-width: .7; stroke-dasharray: 1.6 1.6; opacity: .75; }
+    .pion { position: absolute; left: 14%; top: 72%; font-size: clamp(1rem, 2.6vw, 1.7rem); transform: translate(-50%, -80%); filter: drop-shadow(0 3px 4px rgb(0 0 0 / .4)); }
+    .vu .pion { animation: pion 9s 1.6s ease-in-out infinite; }
+    @keyframes pion { 0%, 8% { left: 14%; top: 72%; } 22%, 30% { left: 34%; top: 40%; } 44%, 52% { left: 56%; top: 66%; } 66%, 74% { left: 72%; top: 30%; } 92%, 100% { left: 14%; top: 72%; } }
+    .compteur-etoiles { position: absolute; right: 12px; top: 10px; padding: .25rem .7rem; border-radius: 999px; background: rgb(0 0 0 / .35); color: #ffd75a; font-weight: 700; }
+    .etoiles-niveau { position: absolute; left: 14%; top: 50%; transform: translateX(-50%); display: flex; gap: 2px; font-size: clamp(.9rem, 2.2vw, 1.4rem); }
+    .etoiles-niveau i { font-style: normal; opacity: 0; transform: translateY(-30px) scale(1.6); }
+    .vu .etoiles-niveau i { animation: etoile-tombe .5s cubic-bezier(.3, 1.6, .5, 1) forwards; }
+    .vu .etoiles-niveau i:nth-child(1) { animation-delay: 1.4s; }
+    .vu .etoiles-niveau i:nth-child(2) { animation-delay: 1.8s; }
+    .vu .etoiles-niveau i:nth-child(3) { animation-delay: 2.2s; }
+    @keyframes etoile-tombe { to { opacity: 1; transform: none; } }
+
+    /* Les niveaux : une fiche de profil, la barre d'XP qui se remplit, puis « NIVEAU SUPÉRIEUR ! ». */
+    .illus-niveau { display: grid; place-items: center; background: linear-gradient(160deg, #1b2a55, #2c1b55 60%, #3b1d4a); }
+    .fiche { position: relative; width: 74%; padding: 6% 6% 7%; border-radius: 22px; background: #fff; color: #1f2430; box-shadow: 0 16px 34px rgb(0 0 0 / .35); text-align: center; }
+    .fiche-bandeau { position: absolute; inset: 0 0 auto; height: 34%; border-radius: 22px 22px 0 0; background: linear-gradient(rgb(255 255 255 / .25) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(90deg, rgb(255 255 255 / .25) 1px, transparent 1px) 0 0 / 10px 10px, #e4572e; }
+    .rond { position: relative; display: inline-grid; place-items: center; width: 32%; aspect-ratio: 1; padding: 5px; border-radius: 50%; background: var(--cadre, #fff); box-shadow: 0 6px 14px rgb(0 0 0 / .25); }
+    .rond > span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 34% 28%, rgb(255 255 255 / .55), transparent 38%), var(--fond-rond, #e4572e); font-size: clamp(1.4rem, 4vw, 2.6rem); }
+    .fiche .nom { margin: 6px 0 2px; font-weight: 700; font-size: clamp(.9rem, 1.8vw, 1.15rem); }
+    .fiche .nom b { color: #1d9bf0; }
+    .fiche .titre-niveau { position: relative; height: 1.4em; color: #5f6675; font-weight: 600; font-size: clamp(.75rem, 1.5vw, .95rem); }
+    .fiche .titre-niveau span { position: absolute; inset: 0; }
+    .xp { margin-top: 8px; height: 12px; border-radius: 999px; background: #e6e9f0; overflow: hidden; }
+    .xp i { display: block; width: 18%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd75a, #f5b301); }
+    .niveau-sup { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; pointer-events: none; }
+    .niveau-sup::before { content: ""; position: absolute; left: 50%; top: 50%; width: 160%; aspect-ratio: 1; margin: -80% 0 0 -80%; background: repeating-conic-gradient(rgb(255 214 90 / .28) 0 10deg, transparent 10deg 24deg); border-radius: 50%; }
+    .niveau-sup b { position: relative; padding: .4rem 1rem; border-radius: 14px; background: linear-gradient(135deg, #ffd75a, #f5b301); color: #2a1600; font-size: clamp(1rem, 2.8vw, 1.7rem); letter-spacing: .04em; box-shadow: 0 8px 22px rgb(0 0 0 / .35); }
+    .vu .xp i { animation: xp 7s 1s ease-in-out infinite; }
+    .vu .niveau-sup { animation: niveau-sup 7s 1s ease-in-out infinite; }
+    .vu .niveau-sup::before { animation: tourne 12s linear infinite; }
+    .vu .titre-niveau .avant { animation: titre-avant 7s 1s infinite; }
+    .vu .titre-niveau .apres { animation: titre-apres 7s 1s infinite; }
+    .titre-niveau .apres { opacity: 0; }
+    @keyframes xp { 0% { width: 18%; } 38%, 44% { width: 100%; } 46%, 100% { width: 8%; } }
+    @keyframes niveau-sup { 0%, 42% { opacity: 0; transform: scale(.6); } 48%, 70% { opacity: 1; transform: none; } 78%, 100% { opacity: 0; transform: scale(1.1); } }
+    @keyframes titre-avant { 0%, 44% { opacity: 1; } 46%, 98% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes titre-apres { 0%, 44% { opacity: 0; } 46%, 98% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes tourne { to { transform: rotate(1turn); } }
+
+    /* Les cadres de la photo de profil, débloqués par niveau. */
+    .illus-cadres { display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 4% 6%; padding: 6%; background: linear-gradient(160deg, #fff6dc, #ffe9f2 50%, #e6f0ff); }
+    .illus-cadres figure { margin: 0; width: 26%; display: flex; flex-direction: column; align-items: center; gap: 6px; opacity: 0; transform: translateY(24px) scale(.8); transition: transform .6s cubic-bezier(.3, 1.6, .5, 1), opacity .4s; transition-delay: var(--d); }
+    .vu.illus-cadres figure { opacity: 1; transform: none; }
+    .illus-cadres .rond { width: 82%; }
+    .illus-cadres figcaption { color: #3a3550; font-weight: 700; font-size: clamp(.6rem, 1.3vw, .85rem); }
+    .cadre-arc { overflow: hidden; }
+    .cadre-arc::before { content: ""; position: absolute; inset: -30%; background: conic-gradient(#ff4d4d, #ffb84d, #fff04d, #4dff88, #4dd2ff, #6b4dff, #e04dff, #ff4d4d); animation: tourne 3s linear infinite; }
+    .cadre-arc > span { position: relative; }
+    @media (prefers-color-scheme: dark) { .illus-cadres { background: linear-gradient(160deg, #2a2440, #1d2a44); } .illus-cadres figcaption { color: #e4e2f0; } }
+
+    /* Apparition au défilement (classe « vu » posée par le script) ; sans script, tout est visible. */
+    .avec-js .revele { opacity: 0; transform: translateY(42px); transition: opacity .8s ease-out, transform .8s cubic-bezier(.2, .8, .2, 1); }
+    .avec-js .revele.vu { opacity: 1; transform: none; }
+
+    @media (max-width: 820px) {
+      .scene { grid-template-columns: minmax(0, 1fr); min-height: 0; padding: 24px 18px; }
+      /* Sur téléphone, les boutons passent juste sous le titre, avant le texte. */
+      .scene h1 { order: 1; }
+      .scene .appels { order: 2; }
+      .scene .sous-titre { order: 3; }
+      .scene .connexion { order: 4; }
+      .scene .auteur { order: 5; }
+      .diorama { width: 100%; max-width: 520px; margin: 0 auto; }
+      .atout, .atout.inverse { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+      .atout.inverse .atout-illus { order: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .scene::before, .scene-texte > *, :root:not([class*="theme-"]) .scene h1 { animation: none; }
+      .avec-js .revele { opacity: 1; transform: none; transition: none; }
+      .illus-carte::before, .vu .pion, .vu .xp i, .vu .niveau-sup, .vu .niveau-sup::before, .cadre-arc::before, .vu .titre-niveau span { animation: none; }
+      .ile, .illus-cadres figure, .etoiles-niveau i { transition: none; opacity: 1; transform: translate(-50%, -50%); }
+      .illus-cadres figure, .etoiles-niveau i { transform: none; }
+      .xp i { width: 70%; }
+    }
   </style>
+  <script>document.documentElement.classList.add('avec-js');</script>
   <!-- Décor du thème choisi dans la page admin (fond, police) : functions/_middleware.js ajoute ici son <link> et la
        classe theme-… de <html> (data-decor), sauf pour le thème sciences (serveur/theme.js). -->
   <link rel="stylesheet" href="app/avent.css" data-theme-seul="noel">
@@ -226,16 +428,35 @@
     <aside class="annonce" aria-label="Annonce" data-theme-seul="paques"><p>🐣 Événement de Pâques prochainement… <a href="nouveautes/">Toutes les nouveautés</a></p></aside>
     <aside class="annonce" aria-label="Annonce" data-theme-seul="printemps"><p>🌸 Événement du printemps prochainement… <a href="nouveautes/">Toutes les nouveautés</a></p></aside>
 
-    <header class="panneau">
-      <img src="icone.png" alt="">
-      <div>
+    <header class="panneau scene">
+      <div class="scene-texte">
+        <a class="nouveau-41" href="#nouveau"><span class="pastille-41">4.1</span> La plus grande mise à jour est arrivée</a>
         <h1 data-nom-site>Boîtes à classer</h1>
         <p class="sous-titre">Un logiciel gratuit pour apprendre à classer dans des boîtes emboîtées, selon les attributs partagés : êtres vivants, aliments, mots, nombres, figures, villes, périodes de l'histoire, vocabulaire anglais.</p>
+        <div class="appels">
+          <a class="bouton grand" href="app/index.html">Ouvrir le logiciel</a>
+          <button class="bouton secondaire" type="button" id="voir-bande-annonce">▶ Bande-annonce</button>
+          <a class="bouton secondaire" href="#telecharger">Télécharger</a>
+        </div>
+        <div class="connexion">
+          <a class="bouton secondaire" href="app/index.html#compte">Se connecter ou créer un compte</a>
+          <a class="bouton secondaire" href="aide/">💬 Service client</a>
+        </div>
         <p class="auteur">Ce site a été réalisé par Gabriel Des Rioux de Messimy.</p>
       </div>
-      <div class="connexion">
-        <a class="bouton secondaire" href="app/index.html#compte">Se connecter ou créer un compte</a>
-        <a class="bouton secondaire" href="aide/">💬 Service client</a>
+      <div class="diorama" aria-hidden="true">
+        <div class="plateau">
+          <div class="d-boite" style="--c:#29a35a;left:0;top:4%;width:100%;height:92%"><b>est un être vivant</b></div>
+          <div class="d-boite" style="--c:#2f7ed8;--z:26px;left:4%;top:18%;width:56%;height:72%"><b>est un animal</b></div>
+          <div class="d-boite" style="--c:#8e5bd0;--z:52px;left:8%;top:46%;width:27%;height:38%"><b>a des plumes</b></div>
+          <div class="d-boite" style="--c:#e8a10c;--z:26px;left:65%;top:18%;width:31%;height:40%"><b>est une plante</b></div>
+          <div class="d-carte" style="--x:21.5%;--y:66%" data-boite="2"><span>🦉</span>chouette</div>
+          <div class="d-carte" style="--x:47%;--y:36%" data-boite="1"><span>🐸</span>grenouille</div>
+          <div class="d-carte" style="--x:47%;--y:70%" data-boite="1"><span>🐟</span>poisson</div>
+          <div class="d-carte" style="--x:80.5%;--y:40%" data-boite="3"><span>🌻</span>tournesol</div>
+          <div class="d-carte" style="--x:80.5%;--y:76%" data-boite="0"><span>🍄</span>champignon</div>
+          <div class="d-bravo">✓ Tout est juste !</div>
+        </div>
       </div>
     </header>
 
@@ -244,6 +465,71 @@
       <h2 id="titre-avent">🎄 Calendrier de l'Avent</h2>
       <p class="avent-texte"></p>
       <div class="avent-grille"></div>
+    </section>
+
+    <section id="nouveau" class="nouveau panneau" aria-labelledby="titre-nouveau">
+      <p class="sur-titre"><span class="pastille-41">4.1</span> Nouveau</p>
+      <h2 id="titre-nouveau">Tout ce qui change avec la 4.1</h2>
+
+      <article class="atout">
+        <div class="atout-texte">
+          <p class="etiquette">Nouveau mode de jeu</p>
+          <h3>🗺️ L'Aventure des boîtes</h3>
+          <p>Sept îles à conquérir, des dizaines de niveaux, trois étoiles à décrocher ! Chaque île est une matière : l'Archipel des Savants, l'Île des Mots, les Montagnes des Nombres, l'Île du Temps, la Terre des Explorateurs, le Royaume d'Outre-Manche et l'Île des Mélodies.</p>
+          <p class="accroche">Classe, gagne des étoiles, débloque le monde.</p>
+          <a class="bouton" href="app/index.html">Partir à l'aventure</a>
+        </div>
+        <div class="atout-illus illus-carte" aria-hidden="true">
+          <svg class="route" viewBox="0 0 100 75" preserveAspectRatio="none"><path d="M14 54 C20 40 26 32 34 30 S48 46 56 49 S66 26 72 22.5 S88 34 86 52 S60 66 44 62"/></svg>
+          <div class="ile" style="--c:#29a35a;--x:14%;--y:72%;--d:.1s"><span>🔬</span>Archipel des Savants</div>
+          <div class="ile" style="--c:#8e5bd0;--x:34%;--y:40%;--d:.25s"><span>📜</span>Île des Mots</div>
+          <div class="ile" style="--c:#2f7ed8;--x:56%;--y:66%;--d:.4s"><span>🔺</span>Montagnes des Nombres</div>
+          <div class="ile" style="--c:#c98a2e;--x:72%;--y:30%;--d:.55s"><span>🏰</span>Île du Temps</div>
+          <div class="ile ferme" style="--c:#17a2b8;--x:87%;--y:68%;--d:.7s"><span>🧭</span>Terre des Explorateurs</div>
+          <div class="ile ferme" style="--c:#d64545;--x:44%;--y:84%;--d:.85s"><span>💂</span>Royaume d'Outre-Manche</div>
+          <div class="ile ferme" style="--c:#d6457b;--x:88%;--y:14%;--d:1s"><span>🎵</span>Île des Mélodies</div>
+          <div class="etoiles-niveau"><i>⭐</i><i>⭐</i><i>⭐</i></div>
+          <div class="pion">🧭</div>
+          <div class="compteur-etoiles">⭐ 21</div>
+        </div>
+      </article>
+
+      <article class="atout inverse">
+        <div class="atout-texte">
+          <p class="etiquette">Nouveau sur ton profil</p>
+          <h3>⬆️ Monte de niveau</h3>
+          <p>Chaque collection réussie te fait grandir : collections, trophées 🏆, étoiles ⭐ du calendrier et de l'Aventure, défis… tout rapporte de l'XP. De l'Apprenti classeur au Maître des boîtes !</p>
+          <p class="accroche">Chaque collection réussie te fait grandir.</p>
+        </div>
+        <div class="atout-illus illus-niveau" aria-hidden="true">
+          <div class="fiche">
+            <div class="fiche-bandeau"></div>
+            <div class="rond" style="--cadre:linear-gradient(135deg,#ffe58a,#f5b301,#b8860b)"><span>🦊</span></div>
+            <p class="nom">Léa <b>✔</b></p>
+            <div class="titre-niveau"><span class="avant">Niv. 4 · Petit classeur</span><span class="apres">Niv. 5 · Classeur curieux</span></div>
+            <div class="xp"><i></i></div>
+          </div>
+          <div class="niveau-sup"><b>NIVEAU SUPÉRIEUR !</b></div>
+        </div>
+      </article>
+
+      <article class="atout">
+        <div class="atout-texte">
+          <p class="etiquette">À débloquer</p>
+          <h3>🖼️ Des cadres pour ta photo</h3>
+          <p>Bronze, argent, or, émeraude, arc-en-ciel qui tourne, et même la galaxie : chaque niveau gagné débloque un nouveau cadre autour de ta photo de profil, avec tes médailles et la coche bleue des comptes vérifiés.</p>
+          <p class="accroche">Monte de niveau, débloque ton cadre.</p>
+          <a class="bouton" href="app/index.html#compte">Créer mon profil</a>
+        </div>
+        <div class="atout-illus illus-cadres" aria-hidden="true">
+          <figure style="--d:.05s"><div class="rond" style="--cadre:linear-gradient(135deg,#f0b27a,#a0522d,#e8a36b);--fond-rond:#2f7ed8"><span>🐼</span></div><figcaption>Bronze</figcaption></figure>
+          <figure style="--d:.15s"><div class="rond" style="--cadre:linear-gradient(135deg,#f5f7fa,#9aa3ad,#e3e7eb);--fond-rond:#29a35a"><span>🐸</span></div><figcaption>Argent</figcaption></figure>
+          <figure style="--d:.25s"><div class="rond" style="--cadre:linear-gradient(135deg,#ffe58a,#f5b301,#b8860b);--fond-rond:#e4572e"><span>🦊</span></div><figcaption>Or</figcaption></figure>
+          <figure style="--d:.35s"><div class="rond" style="--cadre:linear-gradient(135deg,#7ef0c0,#0f9d6b,#0b6b4a);--fond-rond:#8e5bd0"><span>🦄</span></div><figcaption>Émeraude</figcaption></figure>
+          <figure style="--d:.45s"><div class="rond cadre-arc" style="--fond-rond:#e8a10c"><span>🦁</span></div><figcaption>Arc-en-ciel</figcaption></figure>
+          <figure style="--d:.55s"><div class="rond" style="--cadre:radial-gradient(1.5px 1.5px at 20% 30%,#fff 50%,transparent 60%),radial-gradient(1.5px 1.5px at 70% 20%,#fff 50%,transparent 60%),radial-gradient(1.5px 1.5px at 80% 75%,#fff 50%,transparent 60%),radial-gradient(1.5px 1.5px at 30% 80%,#fff 50%,transparent 60%),linear-gradient(135deg,#2b1055,#7597de);--fond-rond:#1b2a55"><span>🚀</span></div><figcaption>Galaxie</figcaption></figure>
+        </div>
+      </article>
     </section>
 
     <section class="pub">
@@ -450,6 +736,93 @@
       });
     } catch (e) { /* stockage indisponible */ }
   </script>
+  <script>
+    // 4.1 : le plateau de la grande scène (cartes qui se rangent toutes seules, relief qui suit la souris), les
+    // apparitions au défilement, et le bouton de la bande-annonce (app/revelation.js). Rien ne bouge si l'appareil
+    // demande moins d'animations.
+    (function () {
+      var calme = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var revelees = document.querySelectorAll('.atout, .atout-illus, .matiere, .enseignants, .en-ligne, #telecharger + .grille .carte, .fonctions, .pub');
+      if ('IntersectionObserver' in window && !calme) {
+        var vue = new IntersectionObserver(function (l) {
+          l.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('vu'); vue.unobserve(e.target); } });
+        }, { rootMargin: '0px 0px -12% 0px' });
+        revelees.forEach(function (e) { if (!e.classList.contains('atout-illus')) e.classList.add('revele'); vue.observe(e); });
+      } else revelees.forEach(function (e) { e.classList.add('vu'); });
+
+      var b = document.getElementById('voir-bande-annonce');
+      if (b) b.addEventListener('click', function () {
+        if (window.boitesRevelation) window.boitesRevelation.bandeAnnonce(); else location.href = 'lancement/';
+      });
+
+      var diorama = document.querySelector('.diorama'), plateau = diorama && diorama.querySelector('.plateau');
+      if (!plateau) return;
+      var boites = plateau.querySelectorAll('.d-boite'), cartes = plateau.querySelectorAll('.d-carte'), bravo = plateau.querySelector('.d-bravo');
+      if (calme || !plateau.animate) { bravo.classList.add('vu'); return; }
+      // Relief qui suit la souris (souris seulement : rien au doigt).
+      if (matchMedia('(pointer: fine)').matches) {
+        document.querySelector('.scene').addEventListener('pointermove', function (e) {
+          var r = diorama.getBoundingClientRect();
+          plateau.style.setProperty('--ry', (((e.clientX - r.left) / r.width - .5) * 16).toFixed(1) + 'deg');
+          plateau.style.setProperty('--rx', ((.5 - (e.clientY - r.top) / r.height) * 10).toFixed(1) + 'deg');
+        });
+      }
+      var COULEURS = ['#2f7ed8', '#e4572e', '#29a35a', '#8e5bd0', '#e8a10c', '#d6457b'];
+      var pause = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+      function confettis() {
+        for (var i = 0; i < 28; i++) {
+          var c = document.createElement('i');
+          c.className = 'd-confetti';
+          c.style.background = COULEURS[i % COULEURS.length];
+          c.style.left = '50%'; c.style.top = '4%';
+          plateau.appendChild(c);
+          var a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 180;
+          c.animate([{ transform: 'translateZ(130px)', opacity: 1 },
+            { transform: 'translate(' + Math.cos(a) * d + 'px,' + (Math.sin(a) * d * .7 + 140) + 'px) translateZ(130px) rotate(' + (Math.random() * 720 - 360) + 'deg)', opacity: 0 }],
+            { duration: 1600 + Math.random() * 600, easing: 'cubic-bezier(.15,.6,.4,1)' }).onfinish = function () { this.effect.target.remove(); };
+        }
+      }
+      // Une partie : les cartes arrivent une à une (d'un bord, en tournant), leur boîte s'allume, puis « Tout est juste ! ».
+      async function partie() {
+        var w = diorama.clientWidth, h = diorama.clientHeight;
+        cartes.forEach(function (c) { c.style.opacity = 0; });
+        await pause(500);
+        for (var i = 0; i < cartes.length; i++) {
+          var c = cartes[i], cote = i % 2 ? 1 : -1;
+          c.style.opacity = '';
+          await c.animate([
+            { transform: 'translate(calc(-50% + ' + cote * w * .55 + 'px), calc(-50% - ' + h * .5 + 'px)) translateZ(260px) rotate(' + cote * 40 + 'deg) scale(.6)', opacity: 0 },
+            { transform: 'translate(calc(-50% + ' + cote * w * .2 + 'px), calc(-50% - ' + h * .35 + 'px)) translateZ(200px) rotate(' + cote * 12 + 'deg) scale(1.1)', opacity: 1, offset: .55 },
+            { transform: 'translate(-50%, -50%) translateZ(80px)', opacity: 1 }],
+            { duration: 900, easing: 'cubic-bezier(.3,.7,.3,1)' }).finished;
+          var boite = boites[+c.dataset.boite];
+          boite.classList.add('ok');
+          c.animate([{ transform: 'translate(-50%, -50%) translateZ(80px) scale(1)' }, { transform: 'translate(-50%, -50%) translateZ(80px) scale(1.12)' }, { transform: 'translate(-50%, -50%) translateZ(80px) scale(1)' }], { duration: 300 });
+          setTimeout(function (b) { b.classList.remove('ok'); }, 700, boite);
+          await pause(250);
+        }
+        bravo.classList.add('vu');
+        confettis();
+        await pause(3200);
+        bravo.classList.remove('vu');
+        await Promise.all(Array.prototype.map.call(cartes, function (c, i) {
+          return c.animate([{ transform: 'translate(-50%, -50%) translateZ(80px)', opacity: 1 }, { transform: 'translate(-50%, -50%) translateZ(80px) scale(.3)', opacity: 0 }],
+            { duration: 400, delay: i * 70, fill: 'forwards' }).finished;
+        }));
+        cartes.forEach(function (c) { c.getAnimations().forEach(function (a) { a.cancel(); }); });
+      }
+      var enMarche = false, visible = true;
+      async function boucle() {
+        if (enMarche) return;
+        enMarche = true;
+        while (visible && document.visibilityState === 'visible') await partie();
+        enMarche = false;
+      }
+      new IntersectionObserver(function (l) { visible = l[0].isIntersecting; if (visible) boucle(); }).observe(diorama);
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && visible) boucle(); });
+    }());
+  </script>
+  <script src="app/revelation.js" defer></script>
   <script src="/arret.js"></script>
 </body>
 </html>
