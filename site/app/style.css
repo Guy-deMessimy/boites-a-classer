@@ -23,9 +23,9 @@
   --accent: #2f6fde;
   --accent-fonce: #2259bd;
   --sur-accent: #fff;
-  --ok: #17955a;
-  --ok-fonce: #117646;
-  --faux: #d93a3a;
+  --ok: #117646; /* texte blanc 5,67:1 (avant #17955a, 3,83:1) */
+  --ok-fonce: #0d5e38;
+  --faux: #c62f2f; /* texte blanc 5,46:1 ; sur --fond-faux 4,84:1 (avant 4,04:1) */
   --manque: #e08a00;
   --surface: #fff;
   --survol: #eef3fd;
@@ -113,7 +113,7 @@ body {
 
 button, select, input { font: inherit; color: inherit; }
 button { touch-action: manipulation; }
-:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; } /* 4,72:1 sur blanc, 4,20:1 sur --fond ; en sombre 5,21:1 */
 
 .court, .txt-confirmer { display: none; }
 .txt-normal { display: inline-flex; align-items: center; gap: .3em; }
@@ -208,7 +208,7 @@ button { touch-action: manipulation; }
   box-shadow: var(--relief), 0 2px 6px color-mix(in srgb, var(--ok) 35%, transparent);
 }
 #verifier:hover { background: var(--ok-fonce); border-color: var(--ok-fonce); }
-.actions .attention, .btn.attention { background: var(--faux); border-color: var(--faux); color: #fff; box-shadow: var(--relief); }
+.actions .attention, .btn.attention { background: var(--faux); border-color: var(--faux); color: var(--sur-accent); box-shadow: var(--relief); }
 .actions .attention:hover, .btn.attention:hover { filter: brightness(1.06); background: var(--faux); border-color: var(--faux); }
 #effacer.confirmer { background: var(--fond-faux); border-color: var(--faux); color: var(--faux); font-weight: 600; }
 /* Un petit trait sépare « faire » (boîte, vérifier, recommencer) de « ranger » (outils, fichier, compte). */
@@ -217,7 +217,7 @@ button { touch-action: manipulation; }
 #compte { border-radius: 999px; padding-inline: .9rem; }
 #compte.connecte { border-color: color-mix(in srgb, var(--ok) 55%, var(--ligne)); background: var(--fond-ok); color: var(--ok); font-weight: 600; }
 /* Badges gagnés pendant les événements (« vérifié par le site », Halloween), à côté du nom du compte. */
-.badge-verifie { display: inline-grid; place-items: center; width: 1.1em; height: 1.1em; margin-left: .3em; border-radius: 50%; background: #1d9bf0; color: #fff; font-size: .7em; font-weight: 900; vertical-align: .1em; }
+.badge-verifie { display: inline-grid; place-items: center; width: 1.1em; height: 1.1em; margin-left: .3em; border-radius: 50%; background: #0870b0; color: #fff; font-size: .7em; font-weight: 900; vertical-align: .1em; }
 .badge { margin-left: .25em; }
 .bandeau-consultation { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; padding: .45rem 1rem; background: var(--fond-jaune); border-bottom: 1px solid var(--bord-jaune); font-size: .9rem; }
 .bandeau-consultation[hidden] { display: none; }
@@ -227,10 +227,10 @@ body.consultation { grid-template-rows: auto auto 1fr auto auto; }
 #sv-admin .btn, #sv-enseignant .btn, .sv-aide .btn { display: inline-flex; color: inherit; text-decoration: none; }
 .sv-aide { margin: 1.4rem 0 0; padding-top: .9rem; border-top: 1px solid var(--ligne-douce); font-size: .9rem; }
 .sv-aide a:not(.btn) { color: var(--accent); }
-#sv-aide-nouveau, .sv-messages { color: #c0392b; }
-#compte.reponse::after { content: ""; display: inline-block; width: .55em; height: .55em; margin-left: .3em; border-radius: 50%; background: #e4572e; vertical-align: super; }
+#sv-aide-nouveau, .sv-messages { color: var(--faux); }
+#compte.reponse::after { content: ""; display: inline-block; width: .55em; height: .55em; margin-left: .3em; border-radius: 50%; background: #c4401c; vertical-align: super; }
 body.consultation #exercices { display: none; }
-.compteur { display: inline-block; min-width: 1.4em; margin-left: .35em; padding: 0 .35em; border-radius: 1em; background: #e4572e; color: #fff; font-size: .8em; font-weight: 600; line-height: 1.4; text-align: center; }
+.compteur { display: inline-block; min-width: 1.4em; margin-left: .35em; padding: 0 .35em; border-radius: 1em; background: #c4401c; color: #fff; font-size: .8em; font-weight: 600; line-height: 1.4; text-align: center; }
 .compteur[hidden] { display: none; }
 
 /* Plan de travail : papier millimétré, comme la page d'accueil (un trait tous les 24 px, un plus marqué tous les 120 px). */
@@ -323,12 +323,15 @@ body.consultation #exercices { display: none; }
   align-items: center;
   gap: 4px;
   padding: 5px 6px;
+  /* Le bandeau reprend --c, mais plafonne sa clarté : un or ou un vert clair gardent leur teinte
+     et le texte blanc reste au-dessus de 4,5:1 (le repli var(--c) sert si oklch relative n'est pas lu). */
   background: var(--c);
+  background: oklch(from var(--c) min(l, 0.52) c h);
   color: #fff;
   border-radius: 13px 13px 0 0;
 }
 .boite:active, .boite-tete:active { cursor: grabbing; }
-.poignee { flex: none; padding: 0 2px; font-size: 1.1rem; line-height: 1; opacity: .85; }
+.poignee { flex: none; padding: 0 2px; font-size: 1.1rem; line-height: 1; border-radius: 4px; }
 
 .boite-titre {
   flex: 1;
@@ -344,7 +347,13 @@ body.consultation #exercices { display: none; }
   -webkit-user-select: text;
 }
 .boite-titre::placeholder { color: var(--doux); font-weight: 400; }
-.boite-titre:focus { outline: 2px solid rgb(255 255 255 / .9); outline-offset: 1px; }
+/* Double anneau (blanc puis encre fixe) : visible sur un or clair comme sur un bleu foncé, en clair et en sombre. */
+.boite-tete :focus-visible,
+.boite-titre:focus {
+  outline: 2px solid #1c2233;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fff;
+}
 
 .boite-menu, .boite-suppr {
   flex: none;
@@ -355,13 +364,13 @@ body.consultation #exercices { display: none; }
   padding: 0;
   border: none;
   border-radius: 8px;
-  background: rgba(255, 255, 255, .22);
+  background: rgba(255, 255, 255, .18); /* icône blanche ≥ 3:1 sur le bandeau plafonné */
   color: #fff;
   font-weight: 700;
   cursor: pointer;
   line-height: 1;
 }
-.boite-menu:hover, .boite-suppr:hover { background: rgba(255, 255, 255, .42); }
+.boite-menu:hover, .boite-suppr:hover { background: rgba(255, 255, 255, .26); }
 /* ▾ et × (écrits par app.js) remplacés par les mêmes icônes que la barre. */
 .boite-menu, .boite-suppr { font-size: 0; }
 .boite-menu::before, .boite-suppr::before {
@@ -413,7 +422,7 @@ body.consultation #exercices { display: none; }
 .etre-ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--fond-ico); font-size: 28px; line-height: 1; }
 .etre-ico:has(img) { background: none; }
 .etre-ico img { width: 40px; height: 40px; object-fit: contain; pointer-events: none; }
-.etre-nom { font-size: .74rem; font-weight: 500; line-height: 1.1; text-align: center; padding: 0 3px; }
+.etre-nom { font-size: max(.75rem, 12px); font-weight: 500; line-height: 1.1; text-align: center; padding: 0 3px; }
 @media (hover: hover) {
   .etre:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--ligne)); box-shadow: 0 6px 14px rgb(28 34 51 / .14); }
 }
@@ -431,7 +440,6 @@ body.consultation #exercices { display: none; }
   transition: none;
 }
 .etre:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.poignee:focus-visible { outline: 2px solid #fff; outline-offset: 1px; border-radius: 3px; }
 .etre.ok { border-color: var(--ok); box-shadow: 0 0 0 3px rgba(31, 157, 85, .25); }
 .etre.faux { border-color: var(--faux); box-shadow: 0 0 0 3px rgba(217, 58, 58, .3); }
 /* Niveau facile : une pastille par attribut en haut de la carte, de la couleur de sa boîte. */
@@ -510,7 +518,7 @@ body.consultation #exercices { display: none; }
 .menu button:hover { background: var(--survol); color: var(--accent); }
 .menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--survol); }
 .menu hr { margin: 5px 4px; border: 0; border-top: 1px solid var(--ligne); }
-.menu-titre { margin: 8px 10px 3px; color: var(--doux); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.menu-titre { margin: 8px 10px 3px; color: var(--doux); font-size: max(.75rem, 12px); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .menu-titre:first-child { margin-top: 4px; }
 .menu-attr { max-height: 50vh; }
 /* Choix du niveau : une ligne par niveau, avec ce qu'il change. */
@@ -581,7 +589,7 @@ body.consultation #exercices { display: none; }
   appearance: none;
   -webkit-appearance: none;
 }
-.fenetre select:focus { outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 0; border-color: var(--accent); }
+.fenetre select:focus { outline: 3px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
 .fenetre input[type="text"], .fenetre input[type="password"] {
   min-width: 0;
   min-height: 38px;
@@ -592,7 +600,7 @@ body.consultation #exercices { display: none; }
   user-select: text;
   -webkit-user-select: text;
 }
-.fenetre input[type="text"]:focus, .fenetre input[type="password"]:focus { outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 0; border-color: var(--accent); }
+.fenetre input[type="text"]:focus, .fenetre input[type="password"]:focus { outline: 3px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
 .message { min-height: 1.4em; margin: .6rem 0 0; font-size: .9rem; font-weight: 600; color: var(--doux); }
 
 @keyframes apparait { from { opacity: 0; transform: translateY(6px) scale(.985); } }
@@ -664,7 +672,7 @@ body.consultation #exercices { display: none; }
   white-space: nowrap;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  color: var(--c);
+  color: color-mix(in srgb, var(--c) 60%, #000); /* ≥ 5,4:1 sur blanc ; la pastille garde --c */
   font-size: .82rem;
 }
 .etre-ligne { display: flex; align-items: center; gap: 6px; }
@@ -790,11 +798,17 @@ body.consultation #exercices { display: none; }
   .boite-tete { padding: 5px 6px; }
   .poignee { font-size: 1.4rem; padding: 0 6px; }
   .boite-titre { height: 30px; }
-  .boite-menu, .boite-suppr { width: 30px; height: 30px; }
+  .boite-menu, .boite-suppr { position: relative; width: 40px; height: 40px; }
+  /* La zone tactile dépasse le dessin pour viser 44 px sans élargir encore le bandeau. */
+  .boite-menu::after, .boite-suppr::after { content: ""; position: absolute; inset: -2px; }
   .boite-coin { width: 28px; height: 28px; }
   .menu button { padding: 10px 10px; }
-  .case { width: 42px; height: 42px; }
+  .case { width: 44px; height: 44px; }
   .case input { width: 24px; height: 24px; }
+  .zoom button { width: 44px; height: 44px; }
+  .suppr { width: 44px; height: 44px; }
+  .bilan-tete button, .fenetre .fermer { width: 44px; height: 44px; }
+  .bandeau-consultation .btn, .coll-actions .btn, .sv-versions .btn { min-height: 44px; }
 }
 
 /* Téléphones */
@@ -826,9 +840,9 @@ body.consultation #exercices { display: none; }
   .etre-ligne input { width: 110px; }
   #info { padding: .35rem .7rem; font-size: .8rem; }
   #plateau { gap: 6px; padding: 6px 8px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
-  #plateau .etre { width: 66px; height: 60px; border-radius: 12px; }
+  #plateau .etre { width: 72px; height: 66px; border-radius: 12px; }
   #plateau .etre-ico { font-size: 24px; }
-  #plateau .etre-nom { font-size: .68rem; }
+  #plateau .etre-nom { font-size: max(.75rem, 12px); }
   .zoom { right: 8px; bottom: 8px; }
   #bilan { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 45vh; }
 }
@@ -875,7 +889,7 @@ body.consultation #exercices { display: none; }
 .tableau-caracteres thead th { position: sticky; top: 0; z-index: 1; background: var(--papier); font-weight: 600; border-bottom-color: var(--ligne); }
 .tableau-caracteres thead th .pastille { display: inline-block; margin-right: .3rem; vertical-align: middle; }
 .tableau-caracteres tbody th { position: sticky; left: 0; background: var(--papier); text-align: left; font-weight: 600; }
-.tableau-caracteres td.oui { color: var(--c); font-weight: 700; font-size: 1.1rem; }
+.tableau-caracteres td.oui { color: color-mix(in srgb, var(--c) 60%, #000); font-weight: 700; font-size: 1.1rem; }
 .tableau-caracteres tbody tr:hover td, .tableau-caracteres tbody tr:hover th { background: var(--survol); }
 .impression-titre { display: none; }
 .impression-cartes { display: none; }
@@ -1154,7 +1168,13 @@ body.consultation #exercices { display: none; }
 .boite-symbole { display: none; }
 :root.daltonien .boite-symbole:not(:empty) { display: inline; flex: none; color: #fff; font-size: .95rem; line-height: 1; text-shadow: 0 0 2px rgb(0 0 0 / .55); }
 :root.daltonien .etre-attrs { gap: 1px 3px; }
-:root.daltonien .etre-attrs i { width: auto; height: auto; border-radius: 0; background: none; box-shadow: none; color: var(--c); font-size: 10px; line-height: 1; }
+:root.daltonien .etre-attrs i { width: auto; height: auto; border-radius: 0; background: none; box-shadow: none; color: color-mix(in srgb, var(--c) 60%, #000); font-size: max(.75rem, 12px); line-height: 1; }
+/* En sombre, la même teinte éclaircie : ≥ 5,1:1 sur le survol le plus clair. */
+@media screen and (prefers-color-scheme: dark) {
+  .ed-tableau th.col-attr span,
+  .tableau-caracteres td.oui,
+  :root.daltonien .etre-attrs i { color: color-mix(in srgb, var(--c) 55%, #fff); }
+}
 
 /* Police plus lisible. */
 :root.police-lisible { --police: "OpenDyslexic", "Space Grotesk", system-ui, sans-serif; word-spacing: .08em; } /* la police est déjà large */
@@ -1225,16 +1245,16 @@ body.consultation #exercices { display: none; }
    couleur du bord, lisible aussi pour les daltoniens et en noir et blanc. */
 .etre.ok::after, .etre.faux::after {
   position: absolute;
-  top: -7px;
-  right: -7px;
+  top: -8px;
+  right: -8px;
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid var(--surface);
-  color: #fff;
-  font-size: 11px;
+  color: var(--sur-accent);
+  font-size: 12px;
   font-weight: 800;
   line-height: 1;
 }

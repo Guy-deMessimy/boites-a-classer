@@ -5,11 +5,11 @@
 .avent-case {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   aspect-ratio: 1; min-width: 0; padding: 4px; border: 2px solid #9e1b31; border-radius: 14px;
-  background: linear-gradient(160deg, #e8364f, #b3203a); color: #fff;
-  font: 700 1.3rem/1 "Space Grotesk", system-ui, sans-serif; text-decoration: none; cursor: pointer;
+  background: linear-gradient(160deg, #d12540, #b3203a); color: #fff;
+  font: 700 1.3rem/1 var(--police, "Space Grotesk", system-ui, sans-serif); text-decoration: none; cursor: pointer;
   box-shadow: inset 0 -3px 0 rgb(0 0 0 / .2); transition: transform .15s;
 }
-.avent-case:nth-child(3n+2) { background: linear-gradient(160deg, #2fa05a, #1f6e3d); border-color: #185c32; }
+.avent-case:nth-child(3n+2) { background: linear-gradient(160deg, #147a40, #0f5c32); border-color: #0c4a28; }
 .avent-case:nth-child(3n) { background: linear-gradient(160deg, #f4c24d, #d39a1c); border-color: #b07d0e; color: #3a2400; }
 .avent-case .etat { font-size: .9rem; }
 .avent-case.fermee { cursor: default; filter: grayscale(.7) brightness(.9); opacity: .6; }
