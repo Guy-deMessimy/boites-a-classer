@@ -197,16 +197,10 @@
     f.setAttribute('aria-label', 'Niveau supérieur : niveau ' + nv.niveau + ', ' + nv.titre);
     const contenu = el('div', 'nf-contenu');
     const rond = el('span', 'avatar nf-avatar');
-    const photo = connecte() && app.lire('boites-a-classer-compte:avatar');
     const nom = app.lire('boites-a-classer-compte:identifiant') || '';
-    if (photo) {
-      rond.textContent = photo;
-      const fond = app.lire('boites-a-classer-compte:avatar-fond');
-      if (fond) rond.dataset.fond = fond;
-    } else if (connecte() && nom) {
-      rond.classList.add('defaut');
-      rond.textContent = ([...nom][0] || '?').toLocaleUpperCase('fr-FR');
-    } else rond.textContent = '⭐';
+    // Même rond que la barre et la carte : sans photo, l'initiale prend la teinte du nom, pas le bleu par défaut.
+    if (connecte() && app.rondProfil) app.rondProfil(rond, nom);
+    else rond.textContent = '⭐';
     appliquerCadre(rond, nv.cadre);
     const compteur = el('span', 'nf-nombre', String(avant));
     const niveau = el('p', 'nf-niveau');
