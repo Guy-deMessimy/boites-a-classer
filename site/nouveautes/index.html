@@ -9,10 +9,10 @@
   <style>
     /* Journal des nouveautés, écrit pour les utilisateurs (le détail technique est dans le README et l'historique Git). */
     @font-face { font-family: "Space Grotesk"; font-weight: 300 700; font-display: swap; src: url(../polices/space-grotesk-latin.woff2) format("woff2"); }
-    :root { --fond: #f6f4ef; --carte: #fff; --encre: #1f2430; --doux: #5f6675; --ligne: #e2ddd2; --accent: #2f6fde; --accent-doux: #e8effc;
+    :root { --fond: #f6f4ef; --carte: #fff; --encre: #1f2430; --doux: #5f6675; --ligne: #e2ddd2; --accent: #2f6fde; --accent-encre: #fff; --accent-doux: #e8effc;
       --degrade: linear-gradient(160deg, #eaf6f4 0%, #eef3fc 50%, #f3effb 100%); --grille: rgb(58 123 213 / .07); }
     @media (prefers-color-scheme: dark) {
-      :root { --fond: #15171c; --carte: #1e2128; --encre: #ecedf0; --doux: #a3a8b4; --ligne: #30343d; --accent: #5b8ff0; --accent-doux: #1f2a40;
+      :root { --fond: #15171c; --carte: #1e2128; --encre: #ecedf0; --doux: #a3a8b4; --ligne: #30343d; --accent: #5b8ff0; --accent-encre: #0d1220; --accent-doux: #1f2a40;
         --degrade: linear-gradient(160deg, #0f1f22 0%, #131b2c 50%, #1a1730 100%); --grille: rgb(120 165 235 / .06); }
     }
     * { box-sizing: border-box; }
@@ -22,6 +22,10 @@
     }
     main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
     a { color: var(--accent); }
+    .entete { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 4px; }
+    .abo { display: inline-block; padding: .45rem 1rem; border-radius: 999px; background: var(--accent); color: var(--accent-encre); font-weight: 600; text-decoration: none; }
+    .abo:hover { filter: brightness(1.08); }
+    .abo:focus-visible, a:focus-visible { outline: 3px solid var(--encre); outline-offset: 3px; }
     h1 { margin: 8px 0 4px; font-size: clamp(1.6rem, 5vw, 2.2rem); }
     .intro { margin: 0 0 20px; color: var(--doux); }
     .version { margin: 0 0 12px; padding: 14px 18px; border: 1px solid var(--ligne); border-radius: 16px; background: var(--carte); }
@@ -34,7 +38,10 @@
 </head>
 <body>
   <main>
-    <a href="../" data-nom-site>← Boîtes à classer</a>
+    <nav class="entete" aria-label="Liens du site">
+      <a href="../" data-nom-site>← Boîtes à classer</a>
+      <a class="abo" href="https://boites-a-classer.sumupstore.com/" target="_blank" rel="noopener noreferrer" aria-label="Abonnement (nouvel onglet)">Abonnement</a>
+    </nav>
     <h1>🎉 Nouveautés</h1>
     <p class="intro">Ce qui a changé, de la plus récente à la plus ancienne. Le logiciel en ligne se met à jour tout seul ; la version de bureau se télécharge à nouveau depuis l'accueil.</p>
 

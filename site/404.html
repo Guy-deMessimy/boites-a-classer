@@ -29,6 +29,7 @@
     .liens { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
     a { display: inline-block; padding: .6rem 1.1rem; border: 2px solid var(--accent); border-radius: 999px; color: var(--accent); font-weight: 600; text-decoration: none; }
     a.principal { background: var(--accent); color: var(--accent-encre); }
+    a:focus-visible { outline: 3px solid var(--encre); outline-offset: 3px; }
   </style>
 </head>
 <body>
@@ -38,6 +39,7 @@
     <p>L'adresse demandée n'existe pas (ou plus). Rien de grave : voici où aller.</p>
     <div class="liens">
       <a class="principal" href="/">Accueil</a>
+      <a class="principal" href="https://boites-a-classer.sumupstore.com/" target="_blank" rel="noopener noreferrer" aria-label="Abonnement (nouvel onglet)">Abonnement</a>
       <a href="/app/">Ouvrir le logiciel</a>
       <a href="/aide/">💬 Service client</a>
     </div>
