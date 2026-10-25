@@ -1318,9 +1318,12 @@
   // sauvegarde en ligne, qui devient alors l'état de ce navigateur). Renvoie le nombre d'éléments récupérés.
   function importerSauvegarde(donnees, ecraser) {
     const PREFIXE = 'boites-a-classer:';
-    // Progression (« reussi:<id> », « expert:<id> » : une date) et niveau, à côté des plans de travail. Avant la 3.31.0,
-    // la progression était envoyée mais pas reprise : une version reçue l'effaçait de ce navigateur.
-    const PROGRES = /^(reussi|expert):[A-Za-z0-9_-]{1,60}$/;
+    // Progression (une date) : « reussi:<id> », « expert:<id> », « defi-fait:<id> », « avent:AAAA-MM-JJ ».
+    // À côté, le cadre choisi et le niveau déjà fêté. Avant la 3.31.0, la progression était envoyée mais pas reprise :
+    // une version reçue l'effaçait de ce navigateur. « cadre » et « niveau-vu » passent le filtre (ce sont des id simples)
+    // mais aucune collection ne porte ce nom : sans branche à eux, ils n'étaient jamais écrits.
+    const PROGRES = /^(reussi|expert|defi-fait):[A-Za-z0-9_-]{1,60}$|^avent:\d{4}-\d{2}-\d{2}$/;
+    const CLE_CADRE = PREFIXE + 'cadre', CLE_VU = PREFIXE + 'niveau-vu';
     const entrees = Object.entries(donnees)
       .filter(([k, v]) => typeof v === 'string' && k.startsWith(PREFIXE)
         && (idSur(k.slice(PREFIXE.length)) || PROGRES.test(k.slice(PREFIXE.length)) || k === CLE_NIVEAU || k === CLE_SUIVI || k === CLE_ACCES || k === CLE_AVENTURE));
@@ -1353,6 +1356,13 @@
       if (k === CLE_MES_COLLECTIONS || (!ecraser && lire(k) !== null)) continue;
       if (k === PREFIXE + 'collection' || k === PREFIXE + 'zoom') { ecrire(k, v.slice(0, 80)); continue; }
       if (PROGRES.test(k.slice(PREFIXE.length))) { if (/^[0-9TZ:.+-]{1,40}$/.test(v)) ecrire(k, v); continue; }
+      if (k === CLE_CADRE) { if (/^[a-z-]{1,20}$/.test(v)) ecrire(k, v); continue; }
+      if (k === CLE_VU) {
+        // Ne jamais redescendre : une fête « Niveau supérieur ! » déjà vue ne se rejoue pas sur cet appareil.
+        const recu = parseInt(v, 10), deja = parseInt(lire(k), 10) || 0;
+        if (recu >= 1 && recu <= 999) ecrire(k, String(Math.max(recu, deja)));
+        continue;
+      }
       if (k === CLE_NIVEAU) { if (niveauValide(v)) ecrire(k, v); continue; }
       if (k === CLE_ACCES) { try { ecrire(k, JSON.stringify(accesPropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
       if (k === CLE_AVENTURE) { try { ecrire(k, JSON.stringify(aventurePropre(JSON.parse(v)))); } catch (e) { /* illisible */ } continue; }
@@ -1364,7 +1374,7 @@
       n++;
     }
 
-    // 3. Avec « ecraser » : les plans de travail absents de la version reçue disparaissent aussi d'ici.
+    // 3. Avec « ecraser » : absent de la version reçue, absent d'ici (plans, étoiles, défis, cadre…).
     if (ecraser) {
       const gardes = new Set(entrees.map(([k]) => k));
       for (const k of Object.keys(donneesLocales())) {
@@ -3426,9 +3436,11 @@
 
   // Le serveur ne reconnaît plus la session (expirée, mot de passe changé ailleurs, compte supprimé) : on l'oublie.
   // Ce qui attendait d'être envoyé reste marqué « en attente » et partira à la prochaine connexion.
+  // Même nettoyage qu'à la déconnexion (photo, couleur du rond, dates des médailles), sauf l'identifiant,
+  // qui reste pré-rempli. Sinon, sur un poste partagé, le compte suivant hérite des dates « Gagnée le … ».
   function sessionExpiree() {
     if (lire(CLE_ELEVE)) oublier(CLE_IDENTIFIANT); // un prénom, pas un identifiant à proposer
-    for (const k of [CLE_JETON, CLE_ADMIN, CLE_ENSEIGNANT, CLE_ELEVE, CLE_BADGES]) oublier(k);
+    for (const k of CLES_COMPTE) if (k !== CLE_IDENTIFIANT) oublier(k);
     oublier(CLE_VERSION);
     oublier(CLE_DATE);
     remplirSelect();
@@ -3573,6 +3585,8 @@
   function ouvrirSession(identifiant, jeton, etat) {
     clearTimeout(minuterieEnvoi);
     for (const k of [CLE_CODE, CLE_VERSION, CLE_DATE]) oublier(k); // un code éventuel reste valable sur le serveur
+    // Les dates des médailles restent sur l'appareil : un autre compte ne doit pas les reprendre (poste partagé).
+    if (lire(CLE_IDENTIFIANT) !== identifiant) oublier(CLE_BADGES_VUS);
     ecrire(CLE_JETON, jeton);
     ecrire(CLE_IDENTIFIANT, identifiant);
     retenirDroits(etat);
@@ -4525,6 +4539,8 @@
     dire: (t) => dire(t),
     calme: () => lireAcces().calme || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     avatar: () => (jetonCompte() && lire(CLE_AVATAR)) || '',
+    // Même rond que la barre et la carte (photo, ou initiale sur la teinte du nom) : fête « Niveau supérieur ! ».
+    rondProfil: (el, nom) => rondProfil(el, nom, lire(CLE_AVATAR), lire(CLE_AVATAR_FOND)),
     consultation: () => document.body.classList.contains('consultation'),
   };
 
