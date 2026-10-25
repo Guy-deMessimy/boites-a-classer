@@ -148,7 +148,7 @@
 .av-victoire-details { color: #6b5a3a; font-size: .92rem; }
 .av-grandes-etoiles { display: flex; justify-content: center; gap: .4rem; margin: .3rem 0; }
 .av-grande-etoile { font-size: 3.4rem; line-height: 1; color: #e0d3b0; transition: color .2s; }
-.av-grande-etoile.allumee { color: #f5b301; text-shadow: 0 0 14px rgb(245 179 1 / .7); animation: av-etoile .5s cubic-bezier(.2, 1.8, .4, 1); }
+.av-grande-etoile.allumee { color: #9a6700; text-shadow: 0 0 14px rgb(154 103 0 / .45); animation: av-etoile .5s cubic-bezier(.2, 1.8, .4, 1); }
 @keyframes av-etoile { from { scale: .2; rotate: -40deg; } }
 
 .av-feu { position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
@@ -179,9 +179,11 @@
   box-shadow: 0 6px 18px rgb(0 0 0 / .18);
 }
 .av-hud[hidden] { display: none; }
-.av-hud-etoiles { color: #f5a301; letter-spacing: .05em; }
+.av-hud-etoiles { color: #9a6700; letter-spacing: .05em; }
+@media screen and (prefers-color-scheme: dark) { .av-hud-etoiles { color: #f5c451; } }
 .av-hud-temps.depasse { color: var(--faux, #d93a3a); }
 .av-hud button { min-height: 30px; padding: .15rem .65rem; border: 1px solid var(--ligne, #ccd); border-radius: 999px; background: var(--surface, #fff); color: inherit; font: inherit; cursor: pointer; }
+@media (pointer: coarse) { .av-hud button { min-height: 44px; padding-inline: .85rem; } }
 .av-hud-quitter { padding: .15rem .5rem !important; }
 
 @media (max-width: 700px) {
