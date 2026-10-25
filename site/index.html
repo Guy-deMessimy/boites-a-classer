@@ -270,6 +270,9 @@
     .bouton:hover { transform: translateY(-2px); }
     .scene .connexion { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
     .scene .connexion .bouton { padding: .5rem .95rem; font-size: .95rem; }
+    /* Anneau de focus hors du bouton : lisible sur le fond clair, sombre, et les thèmes (orange, vert, rose…). */
+    .bouton:focus-visible,
+    footer a:focus-visible { outline: 3px solid var(--encre); outline-offset: 3px; }
 
     /* Le plateau : des boîtes emboîtées en relief (elles suivent un peu la souris) et des cartes qui viennent s'y ranger
        (script plus bas) ; la classification est juste : la chouette a des plumes, la grenouille et le poisson sont des
@@ -439,6 +442,7 @@
         <p class="sous-titre">Un logiciel gratuit pour apprendre à classer dans des boîtes emboîtées, selon les attributs partagés : êtres vivants, aliments, mots, nombres, figures, villes, périodes de l'histoire, vocabulaire anglais.</p>
         <div class="appels">
           <a class="bouton grand" href="app/index.html">Ouvrir le logiciel</a>
+          <a class="bouton" href="https://boites-a-classer.sumupstore.com/" target="_blank" rel="noopener noreferrer" aria-label="Abonnement (nouvel onglet)">Abonnement</a>
           <button class="bouton secondaire" type="button" id="voir-bande-annonce">▶ Bande-annonce</button>
           <a class="bouton secondaire" href="#telecharger">Télécharger</a>
         </div>
@@ -695,7 +699,7 @@
     </ul>
 
     <footer class="panneau">
-      Version <span id="version">4.2.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="nouveautes/">Nouveautés</a> · <a href="aide/">Service client</a> · <a href="confidentialite/">Confidentialité</a>
+      Version <span id="version">4.2.0</span> · Logiciel libre sous licence <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GNU GPL v3</a> · <a href="https://github.com/Guy-deMessimy/boites-a-classer">Code source</a> · <a href="nouveautes/">Nouveautés</a> · <a href="https://boites-a-classer.sumupstore.com/" target="_blank" rel="noopener noreferrer" aria-label="Abonnement (nouvel onglet)">Abonnement</a> · <a href="aide/">Service client</a> · <a href="confidentialite/">Confidentialité</a>
     </footer>
   </main>
 

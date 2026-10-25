@@ -48,7 +48,19 @@
     body { margin: 0; background: var(--fond); color: var(--encre); font: 16px/1.5 "Space Grotesk", system-ui, sans-serif; }
     main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
     a { color: var(--accent); }
-    .retour { display: inline-block; margin-bottom: 12px; }
+    .entete { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+    .retour { display: inline-block; }
+    .abo {
+      display: inline-block;
+      padding: .45rem 1rem;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--accent-encre);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .abo:hover { filter: brightness(1.08); }
+    .abo:focus-visible { outline: 3px solid var(--encre); outline-offset: 3px; }
     h1 { margin: 0 0 6px; font-size: clamp(1.5rem, 5vw, 2rem); }
     .intro { margin: 0 0 6px; color: var(--doux); }
     .qui { margin: 0 0 16px; padding: 8px 12px; border-radius: 12px; background: var(--accent-doux); font-size: .92rem; }
@@ -103,7 +115,10 @@
 </head>
 <body>
   <main>
-    <a class="retour" href="../" data-nom-site>← Boîtes à classer</a>
+    <nav class="entete" aria-label="Liens du site">
+      <a class="retour" href="../" data-nom-site>← Boîtes à classer</a>
+      <a class="abo" href="https://boites-a-classer.sumupstore.com/" target="_blank" rel="noopener noreferrer" aria-label="Abonnement (nouvel onglet)">Abonnement</a>
+    </nav>
     <h1>💬 Service client</h1>
     <p class="intro">Une question, un problème, une idée ? Écrivez ici : l'administrateur du site vous répond sur cette page.</p>
     <p class="qui" id="qui"></p>

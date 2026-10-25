@@ -67,6 +67,7 @@
       cursor: pointer;
     }
     .bouton:hover { border-color: var(--accent); }
+    .bouton:focus-visible { outline: 3px solid var(--encre); outline-offset: 3px; }
     .bouton[aria-disabled="true"] { opacity: .4; pointer-events: none; }
     .bouton:disabled { opacity: .5; cursor: default; }
     .bouton.principal { background: var(--accent); border-color: var(--accent); color: var(--accent-encre); }
@@ -174,6 +175,7 @@
     <header>
       <h1>🎓 Mes classes</h1>
       <span class="moi" id="moi"></span>
+      <a class="bouton principal" href="https://boites-a-classer.sumupstore.com/" target="_blank" rel="noopener noreferrer" aria-label="Abonnement (nouvel onglet)">Abonnement</a>
       <a class="bouton" href="../aide/">💬 Service client</a>
       <a class="bouton" href="../app/index.html">Ouvrir le logiciel</a>
       <button type="button" class="bouton" id="deconnecter" hidden>Se déconnecter</button>

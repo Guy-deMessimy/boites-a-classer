@@ -4,16 +4,32 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <meta http-equiv="refresh" content="3; url=/">
-  <title>Boîtes à classer est gratuit</title>
+  <title>Abonnement · Boîtes à classer</title>
   <link rel="icon" href="/icone.png">
   <style>
-    /* L'abonnement (2.5) a été retiré : cette page remplace l'ancienne, encore gardée en cache, et renvoie à l'accueil. */
+    /* Ancienne adresse d'abonnement : elle mène maintenant vers la boutique, au lieu de l'accueil. */
     body { margin: 0; display: grid; place-items: center; min-height: 100vh; padding: 16px; font: 17px/1.5 system-ui, sans-serif; text-align: center; background: #f6f4ef; color: #1f2430; }
-    @media (prefers-color-scheme: dark) { body { background: #15171c; color: #ecedf0; } a { color: #5b8ff0; } }
+    main { max-width: 36em; }
+    h1 { margin: 0 0 8px; font-size: 1.6rem; }
+    p { margin: 0 0 16px; }
+    a { color: #2f6fde; }
+    .bouton { display: inline-block; padding: .65rem 1.1rem; border-radius: 999px; background: #2f6fde; color: #fff; font-weight: 600; text-decoration: none; }
+    .bouton:hover { filter: brightness(1.08); }
+    .bouton:focus-visible, a:focus-visible { outline: 3px solid #1f2430; outline-offset: 3px; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #15171c; color: #ecedf0; }
+      a { color: #5b8ff0; }
+      .bouton { background: #5b8ff0; color: #0d1220; }
+      .bouton:focus-visible, a:focus-visible { outline-color: #ecedf0; }
+    }
   </style>
 </head>
 <body>
-  <p>Il n'y a plus d'abonnement : Boîtes à classer est entièrement gratuit.<br><a href="/">Retour à l'accueil</a></p>
+  <main>
+    <h1>Abonnement</h1>
+    <p>L'abonnement se prend sur la boutique. Le lien s'ouvre dans un nouvel onglet.</p>
+    <p><a class="bouton" href="https://boites-a-classer.sumupstore.com/" target="_blank" rel="noopener noreferrer" aria-label="Abonnement (nouvel onglet)">Abonnement</a></p>
+    <p><a href="/">Retour à l'accueil</a></p>
+  </main>
 </body>
 </html>
